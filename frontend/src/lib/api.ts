@@ -17,6 +17,9 @@ import type {
   PreviewImportSysacad,
   ResultadoImportSysacad,
   ResultadoSincCalendario,
+  TaskCreate,
+  TaskOut,
+  TaskUpdate,
   TipoEventoCalendario,
   TipoMateria,
   TurnoPref,
@@ -361,6 +364,52 @@ export async function sincronizarCalendario(): Promise<ResultadoSincCalendario> 
   return res.json() as Promise<ResultadoSincCalendario>;
 }
 
+// ---------------------------------------------------------------------------
+// Tareas (to-do list)
+// ---------------------------------------------------------------------------
+
+export function listarTareas(usuarioId = 1): Promise<TaskOut[]> {
+  return request<TaskOut[]>(`/tareas?usuario_id=${usuarioId}`, { revalidate: 0 });
+}
+
+export async function crearTarea(payload: TaskCreate, usuarioId = 1): Promise<TaskOut> {
+  const res = await fetch(`${MUTATION_BASE}/tareas?usuario_id=${usuarioId}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    let body: unknown = null;
+    try { body = await res.json(); } catch { /* ignorar */ }
+    throw new ApiError(res.status, body);
+  }
+  return res.json() as Promise<TaskOut>;
+}
+
+export async function actualizarTarea(id: number, payload: TaskUpdate): Promise<TaskOut> {
+  const res = await fetch(`${MUTATION_BASE}/tareas/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    let body: unknown = null;
+    try { body = await res.json(); } catch { /* ignorar */ }
+    throw new ApiError(res.status, body);
+  }
+  return res.json() as Promise<TaskOut>;
+}
+
+export async function eliminarTarea(id: number): Promise<void> {
+  const res = await fetch(`${MUTATION_BASE}/tareas/${id}`, {
+    method: "DELETE",
+    headers: { Accept: "application/json" },
+  });
+  if (!res.ok && res.status !== 404) {
+    throw new ApiError(res.status, null);
+  }
+}
+
 export const api = {
   getGrafo,
   listarMaterias,
@@ -380,4 +429,8 @@ export const api = {
   seleccionarCursada,
   deseleccionarCursada,
   optimizarHorario,
+  listarTareas,
+  crearTarea,
+  actualizarTarea,
+  eliminarTarea,
 };

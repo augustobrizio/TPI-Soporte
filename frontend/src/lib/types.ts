@@ -223,6 +223,51 @@ export interface EventoCalendarioCreate {
   tipo: TipoEventoCalendario;
 }
 
+// ---------------------------------------------------------------------------
+// Tareas (to-do list) — refleja `app/schemas/task.py`
+// ---------------------------------------------------------------------------
+
+export type PrioridadTask = "alta" | "media" | "baja";
+export type TipoTask = "examen" | "tp" | "entrega" | "lectura" | "estudio" | "personal";
+
+export interface TaskOut {
+  id: number;
+  usuario_id: number;
+  titulo: string;
+  descripcion: string | null;
+  completada: boolean;
+  fecha_vencimiento: string | null;
+  prioridad: PrioridadTask | null;
+  tipo: TipoTask | null;
+  estimado_horas: number | null;
+  materia_codigo: string | null;
+  orden: number;
+  created_at: string;
+}
+
+export interface TaskCreate {
+  titulo: string;
+  descripcion?: string | null;
+  fecha_vencimiento?: string | null;
+  prioridad?: PrioridadTask | null;
+  tipo?: TipoTask | null;
+  estimado_horas?: number | null;
+  materia_codigo?: string | null;
+  orden?: number;
+}
+
+export interface TaskUpdate {
+  titulo?: string | null;
+  descripcion?: string | null;
+  completada?: boolean | null;
+  fecha_vencimiento?: string | null;
+  prioridad?: PrioridadTask | null;
+  tipo?: TipoTask | null;
+  estimado_horas?: number | null;
+  materia_codigo?: string | null;
+  orden?: number | null;
+}
+
 export interface ResultadoSincCalendario {
   fuentes_procesadas: number;
   eventos_detectados: number;

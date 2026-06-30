@@ -27,6 +27,7 @@ from app.db.models.profesor import (  # noqa: F401
     MateriaProfesor,
     Profesor,
 )
+from app.db.models.task import Task  # noqa: F401
 from app.db.models.usuario import Usuario  # noqa: F401
 
 __all__ = [
@@ -50,5 +51,6 @@ __all__ = [
     "TipoEventoCalendario",
     "TipoMateria",
     "Usuario",
+    "Task",
     "UsuarioMateria",
 ]
