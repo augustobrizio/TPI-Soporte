@@ -1,5 +1,6 @@
 import {
   ApiError,
+  getComisionesCursables,
   getEventosHoyCalendario,
   getGrafo,
   getProximosEventosCalendario,
@@ -8,7 +9,9 @@ import type {
   ContadoresGrafo,
   EventoCalendarioOut,
   GrafoResponse,
+  MateriaCursableOut,
 } from "@/lib/types";
+import { materiaIcon } from "@/lib/materiaIcon";
 
 import { ProgresoHero } from "@/components/dashboard/ProgresoHero";
 import { AgendaHoy, type AgendaItem } from "@/components/dashboard/AgendaHoy";
@@ -86,19 +89,76 @@ async function obtenerGrafoSeguro(): Promise<{
   }
 }
 
-async function obtenerCalendarioSeguro(): Promise<{
+// 2do cuatrimestre arranca ~20 de julio.
+function cuatriActual(): 1 | 2 {
+  const hoy = new Date();
+  const m = hoy.getMonth();
+  const d = hoy.getDate();
+  return m > 6 || (m === 6 && d >= 20) ? 2 : 1;
+}
+
+const DIAS_JS = ["domingo", "lunes", "martes", "miercoles", "jueves", "viernes", "sabado"];
+const normDia = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+
+function duracionMinHorario(ini: string | null, fin: string | null): number {
+  if (!ini || !fin) return 0;
+  const toMin = (t: string) => { const [h, m] = t.split(":").map(Number); return h * 60 + (m || 0); };
+  let d = toMin(fin) - toMin(ini);
+  if (d < 0) d += 24 * 60;
+  return d;
+}
+
+/** Clases de hoy a partir de las comisiones que el alumno eligió en Horarios. */
+function clasesDeHoy(actual: MateriaCursableOut[], todos: MateriaCursableOut[]): AgendaItem[] {
+  // Resolver la comisión elegida por materia (cruzando ambos cuatris para las anuales).
+  const selCom = new Map<string, number>();
+  for (const m of todos) {
+    if (m.cursada_seleccionada_id == null) continue;
+    for (const com of m.comisiones) {
+      if (com.cursada_id === m.cursada_seleccionada_id) selCom.set(m.materia_codigo, com.comision_id);
+    }
+  }
+  const diaHoy = normDia(DIAS_JS[new Date().getDay()]);
+  const items: AgendaItem[] = [];
+  for (const m of actual) {
+    const cid = selCom.get(m.materia_codigo);
+    if (cid == null) continue;
+    const com = m.comisiones.find((c) => c.comision_id === cid);
+    if (!com) continue;
+    com.horarios.forEach((h, idx) => {
+      if (!h.dia || normDia(h.dia) !== diaHoy) return;
+      items.push({
+        id: `clase-${com.cursada_id}-${idx}`,
+        titulo: m.materia_nombre,
+        detalle: [com.comision_nombre, h.aula].filter(Boolean).join(" · ") || "Clase",
+        hora: h.hora_inicio?.slice(0, 5) ?? "",
+        duracionMin: duracionMinHorario(h.hora_inicio, h.hora_fin),
+        icono: materiaIcon(m.materia_nombre),
+      });
+    });
+  }
+  items.sort((a, b) => a.hora.localeCompare(b.hora));
+  return items;
+}
+
+async function obtenerDiaSeguro(): Promise<{
   agenda: AgendaItem[];
   finalesProximos: number | undefined;
   error: string | null;
 }> {
   try {
-    const [hoy, proximos] = await Promise.all([
+    const cuatri = cuatriActual();
+    const [hoy, proximos, c1, c2] = await Promise.all([
       getEventosHoyCalendario("ISI"),
-      getProximosEventosCalendario(20, "ISI"),
+      getProximosEventosCalendario(30, "ISI"),
+      getComisionesCursables(USUARIO_ID, 2025, 1),
+      getComisionesCursables(USUARIO_ID, 2025, 2),
     ]);
+    const clases = clasesDeHoy(cuatri === 1 ? c1 : c2, [...c1, ...c2]);
     return {
-      agenda: hoy.map(eventoToAgendaItem),
-      finalesProximos: proximos.filter((e) => e.tipo === "examen").length,
+      // Primero las clases de hoy (con hora real), luego los eventos del calendario.
+      agenda: [...clases, ...hoy.map(eventoToAgendaItem)],
+      finalesProximos: proximos.filter((e) => e.tipo === "mesa").length,
       error: null,
     };
   } catch (err) {
@@ -155,9 +215,9 @@ function iconoTipo(tipo: EventoCalendarioOut["tipo"]): string {
 // ---------------------------------------------------------------------------
 
 export default async function DashboardHome() {
-  const [{ grafo, error }, calendario] = await Promise.all([
+  const [{ grafo, error }, dia] = await Promise.all([
     obtenerGrafoSeguro(),
-    obtenerCalendarioSeguro(),
+    obtenerDiaSeguro(),
   ]);
   const contadores = grafo?.contadores ?? CONTADORES_VACIOS;
   const enCursada = contadores.cursando;
@@ -170,9 +230,9 @@ export default async function DashboardHome() {
           en modo degradado.
         </div>
       )}
-      {calendario.error && (
+      {dia.error && (
         <div className="bg-error/10 border border-error/30 rounded-2xl px-4 py-3 text-sm text-error font-medium">
-          No pude traer tu calendario del backend ({calendario.error}).
+          No pude traer tu día del backend ({dia.error}).
         </div>
       )}
 
@@ -181,14 +241,14 @@ export default async function DashboardHome() {
         carrera={CARRERA}
         contadores={contadores}
         enCursada={enCursada}
-        finalesProximos={calendario.finalesProximos}
+        finalesProximos={dia.finalesProximos}
         esMock={!grafo}
       />
 
       {/* Bento grid: 12 columnas, asimetrico segun DESIGN.md */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
         <div className="md:col-span-8">
-          <AgendaHoy items={calendario.agenda} esMock={Boolean(calendario.error)} />
+          <AgendaHoy items={dia.agenda} esMock={Boolean(dia.error)} />
         </div>
         <div className="md:col-span-4">
           <ChatSnippet

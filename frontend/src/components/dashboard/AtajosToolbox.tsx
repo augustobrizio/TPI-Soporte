@@ -9,10 +9,10 @@ interface Atajo {
 }
 
 const ATAJOS: readonly Atajo[] = [
-  { href: "/materias", icon: "account_tree", label: "Correlativas", color: "primary" },
-  { href: "/materias/promedio", icon: "grade", label: "Promedio", color: "secondary" },
-  { href: "/profesores", icon: "badge", label: "Profesores", color: "tertiary" },
-  { href: "/calendario", icon: "calendar_month", label: "Calendario", color: "primary" },
+  { href: "/horarios", icon: "schedule", label: "Horarios", color: "primary" },
+  { href: "/materias", icon: "account_tree", label: "Correlativas", color: "secondary" },
+  { href: "/calendario", icon: "calendar_month", label: "Calendario", color: "tertiary" },
+  { href: "/profesores", icon: "badge", label: "Profesores", color: "primary" },
   { href: "/novedades", icon: "campaign", label: "Novedades", color: "secondary" },
   {
     href: "https://campus.frro.utn.edu.ar",

@@ -9,22 +9,22 @@ interface Accion {
 
 const ACCIONES: readonly Accion[] = [
   {
+    href: "/horarios",
+    icon: "schedule",
+    label: "Armar mis horarios",
+    color: "primary",
+  },
+  {
     href: "/materias",
     icon: "account_tree",
     label: "Actualizar mi cursada",
-    color: "primary",
+    color: "secondary",
   },
   {
     href: "/profesores",
     icon: "star",
     label: "Calificar a un profesor",
     color: "tertiary",
-  },
-  {
-    href: "/novedades",
-    icon: "campaign",
-    label: "Ver novedades del centro",
-    color: "secondary",
   },
 ] as const;
 
