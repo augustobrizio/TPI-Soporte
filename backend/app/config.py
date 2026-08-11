@@ -63,6 +63,20 @@ class Settings(BaseSettings):
     ingesta_instagram_horas: int = Field(default=6, alias="INGESTA_INSTAGRAM_HORAS")
     ingesta_utn_web_horas: int = Field(default=24, alias="INGESTA_UTN_WEB_HORAS")
 
+    # Origenes permitidos por CORS, separados por coma. En dev alcanza el
+    # default (localhost); en produccion se agrega el dominio del frontend
+    # desplegado. Va por env y no hardcodeado porque la URL de Amplify recien
+    # se conoce despues de desplegar.
+    cors_origins: str = Field(
+        default="http://localhost:3000,http://localhost:3001,http://localhost:3002",
+        alias="CORS_ORIGINS",
+    )
+
+    @property
+    def cors_origins_list(self) -> list[str]:
+        """Origenes de CORS normalizados (sin espacios ni vacios)."""
+        return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+
     @property
     def instagram_handles_list(self) -> list[str]:
         """Handles normalizados (sin ``@`` ni espacios, sin vacíos)."""

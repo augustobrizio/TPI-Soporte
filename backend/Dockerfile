@@ -13,3 +13,21 @@ WORKDIR /app
 # Copiar ambos archivos para que cambios en cualquiera invaliden el cache
 COPY pyproject.toml uv.lock ./
 RUN uv sync --no-dev --frozen
+
+# Logs sin buffer: si Python bufferea stdout, CloudWatch no muestra nada hasta
+# que el buffer se llena (o el proceso muere), y se pierde el rastro de errores.
+ENV PYTHONUNBUFFERED=1 \
+    PATH="/app/.venv/bin:$PATH"
+
+# El codigo va DESPUES de las deps: cambiar un .py no reinvalida el layer de
+# uv sync. En docker-compose este COPY queda tapado por el bind mount de
+# ./backend:/app (por eso alcanzaba sin el en dev), pero App Runner solo
+# recibe la imagen: sin esto arrancaria sin codigo.
+COPY . .
+
+EXPOSE 8000
+
+# Sin --reload (es de dev: vigila archivos y reinicia, cuesta CPU y rompe el
+# manejo de senales). Se invoca el binario del venv directo, no `uv run`, para
+# no depender de que uv resuelva el lock en runtime.
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

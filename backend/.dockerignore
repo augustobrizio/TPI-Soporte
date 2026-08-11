@@ -1,0 +1,28 @@
+# Que NO entra a la imagen. Sin esto, el `COPY . .` del Dockerfile mete
+# adentro cosas que van de secretos a basura de varios cientos de MB.
+
+# Secretos: una imagen se pushea a ECR y cualquiera con acceso al repo puede
+# leer sus layers. Las credenciales van por variables de entorno de App Runner.
+.env
+.env.*
+!.env.example
+
+# El venv del host: se arma adentro con `uv sync` y ademas seria incompatible
+# (binarios de Windows/Mac vs Amazon Linux).
+.venv/
+venv/
+
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Ni tests ni datos locales hacen falta en runtime.
+tests/
+data/
+*.db
+*.sqlite3
+
+.git/
+.gitignore

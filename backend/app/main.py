@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import calendario, comisiones, materias, novedades, profesores, usuario_materia
+from app.config import get_settings
 from app.workers import scheduler as scheduler_mod
 
 
@@ -26,11 +27,10 @@ app = FastAPI(title="UTNHub API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://localhost:3001",
-        "http://localhost:3002",
-    ],
+    # Por env (CORS_ORIGINS): el dominio del frontend cambia entre local y
+    # produccion. No se usa "*" porque con allow_credentials=True el browser
+    # rechaza el wildcard.
+    allow_origins=get_settings().cors_origins_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
