@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from sqlalchemy import select
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import Session, contains_eager, joinedload, selectinload
 
 from app.db.models.academico import Comision, Cursada, Horario, UsuarioMateria
 
@@ -67,9 +67,13 @@ def cursadas_para_materias(
             Comision.anio == anio,
         )
         .options(
+            # comision y materia son many-to-one: se pliegan al query principal
+            # sin multiplicar filas. `contains_eager` ademas reutiliza el JOIN
+            # que ya hace el WHERE de arriba, asi que sale gratis. horarios es
+            # one-to-many y sigue por selectinload (un JOIN duplicaria cursadas).
+            contains_eager(Cursada.comision),
+            joinedload(Cursada.materia),
             selectinload(Cursada.horarios),
-            selectinload(Cursada.materia),
-            selectinload(Cursada.comision),
         )
         .order_by(Comision.nombre)
     )

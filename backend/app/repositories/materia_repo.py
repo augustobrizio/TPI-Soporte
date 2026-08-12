@@ -70,28 +70,30 @@ def upsert_materia(db: Session, **fields) -> Materia:
 # Correlatividad
 # ---------------------------------------------------------------------------
 def correlativas_de(
-    db: Session, codigos: Iterable[str]
+    db: Session, codigos: Iterable[str], *, con_requerida: bool = False
 ) -> Sequence[Correlatividad]:
-    """Trae las correlativas de un conjunto de materias (un único query)."""
+    """Trae las correlativas de un conjunto de materias (un único query).
+
+    ``con_requerida`` precarga la materia requerida. Solo hace falta para armar
+    mensajes con ``corr.requerida.nombre``; calcular estados usa nada más las
+    columnas ``materia_requerida`` y ``tipo``. Cada eager-load de más es un
+    round-trip a Neon (~190 ms), asi que por defecto no se precarga.
+    """
     codigos = list(codigos)
     if not codigos:
         return []
-    stmt = (
-        select(Correlatividad)
-        .where(Correlatividad.materia_codigo.in_(codigos))
-        .options(
-            selectinload(Correlatividad.materia),
-            selectinload(Correlatividad.requerida),
-        )
-    )
+    stmt = select(Correlatividad).where(Correlatividad.materia_codigo.in_(codigos))
+    if con_requerida:
+        stmt = stmt.options(selectinload(Correlatividad.requerida))
     return db.execute(stmt).scalars().all()
 
 
 def correlativas_de_materia(
     db: Session, materia_codigo: str
 ) -> Sequence[Correlatividad]:
-    """Correlativas de una sola materia."""
-    return correlativas_de(db, [materia_codigo])
+    """Correlativas de una sola materia, con la requerida precargada (los
+    callers arman los faltantes con ``corr.requerida.nombre``)."""
+    return correlativas_de(db, [materia_codigo], con_requerida=True)
 
 
 def upsert_correlativa(
@@ -132,6 +134,29 @@ def condiciones_usuario(
         UsuarioMateria.usuario_id == usuario_id
     )
     return {codigo: condicion for codigo, condicion in db.execute(stmt).all()}
+
+
+def condiciones_y_cursadas_usuario(
+    db: Session, usuario_id: int
+) -> tuple[dict[str, CondicionMateria], dict[str, int]]:
+    """``(condiciones, cursadas_elegidas)`` del usuario en un solo query.
+
+    Ambos mapas salen de la misma fila de ``usuario_materia``; pedirlos por
+    separado son dos round-trips a Neon para leer la misma tabla.
+    """
+    stmt = select(
+        UsuarioMateria.materia_codigo,
+        UsuarioMateria.condicion,
+        UsuarioMateria.cursada_id,
+    ).where(UsuarioMateria.usuario_id == usuario_id)
+
+    condiciones: dict[str, CondicionMateria] = {}
+    cursadas: dict[str, int] = {}
+    for codigo, condicion, cursada_id in db.execute(stmt).all():
+        condiciones[codigo] = condicion
+        if cursada_id is not None:
+            cursadas[codigo] = cursada_id
+    return condiciones, cursadas
 
 
 def notas_usuario(db: Session, usuario_id: int) -> dict[str, float | None]:

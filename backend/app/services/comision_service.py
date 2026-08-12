@@ -6,9 +6,13 @@ from datetime import time
 
 from sqlalchemy.orm import Session
 
-from sqlalchemy import select
-
-from app.db.models.academico import CondicionMateria, Cursada, Materia, UsuarioMateria
+from app.db.models.academico import (
+    CondicionMateria,
+    Correlatividad,
+    Cursada,
+    Materia,
+    UsuarioMateria,
+)
 from app.repositories import comision_repo, materia_repo, review_repo
 from app.services import review_service
 from app.schemas.comision import (
@@ -124,7 +128,20 @@ def materias_cursables_con_comisiones(
     (por si el usuario quiere cambiar de comisión).
     """
     todas_las_materias = materia_repo.list_materias(db)
-    condiciones = materia_repo.condiciones_usuario(db, usuario_id)
+    # Condiciones y cursadas elegidas salen juntas: son la misma fila de
+    # usuario_materia (materia_codigo -> cursada_id para las seleccionadas).
+    condiciones, selecciones = materia_repo.condiciones_y_cursadas_usuario(
+        db, usuario_id
+    )
+
+    # Todas las correlativas en un solo query e indexadas por materia destino.
+    # Pedirlas de a una dentro del loop hacía ~50 round-trips contra Neon (que
+    # es remota): 17s de latencia de red para 10 KB de datos.
+    correlativas_por_materia: dict[str, list[Correlatividad]] = {}
+    for corr in materia_repo.correlativas_de(
+        db, [m.codigo for m in todas_las_materias]
+    ):
+        correlativas_por_materia.setdefault(corr.materia_codigo, []).append(corr)
 
     # Determinar qué materias son cursables o cursando
     codigos_objetivo: list[str] = []
@@ -133,28 +150,17 @@ def materias_cursables_con_comisiones(
         # Excluir las ya terminadas
         if condicion in (CondicionMateria.APROBADO, CondicionMateria.REGULAR):
             continue
-        correlativas = materia_repo.correlativas_de_materia(db, materia.codigo)
-        from app.services.correlatividad_service import calcular_estado
-        estado = calcular_estado(materia, condicion, correlativas, condiciones)
+        estado = correlatividad_service.calcular_estado(
+            materia,
+            condicion,
+            correlativas_por_materia.get(materia.codigo, []),
+            condiciones,
+        )
         if estado in ("cursable", "cursando"):
             codigos_objetivo.append(materia.codigo)
 
     if not codigos_objetivo:
         return []
-
-    # Selecciones actuales del usuario (materia_codigo -> cursada_id)
-    stmt_sel = (
-        select(UsuarioMateria.materia_codigo, UsuarioMateria.cursada_id)
-        .where(
-            UsuarioMateria.usuario_id == usuario_id,
-            UsuarioMateria.cursada_id.is_not(None),
-        )
-    )
-    selecciones: dict[str, int] = {
-        row.materia_codigo: row.cursada_id
-        for row in db.execute(stmt_sel).all()
-        if row.cursada_id is not None
-    }
 
     cursadas = comision_repo.cursadas_para_materias(
         db, codigos=codigos_objetivo, anio=anio, cuatrimestre=cuatrimestre
