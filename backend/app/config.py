@@ -5,8 +5,13 @@ pydantic-settings para tipado y validación.
 """
 from functools import lru_cache
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Secreto de firma para desarrollo. Es publico (esta en el repo) a proposito:
+# sirve para que `docker compose up` funcione sin configurar nada, y el
+# validator de abajo impide que llegue a produccion.
+JWT_SECRET_DEV = "dev-only-inseguro-no-usar-en-produccion"
 
 
 class Settings(BaseSettings):
@@ -18,6 +23,16 @@ class Settings(BaseSettings):
 
     database_url: str = Field(..., alias="DATABASE_URL")
     environment: str = Field(default="dev", alias="ENVIRONMENT")
+
+    # --- Autenticacion (RF-01, RNF-02, RNF-05) ---
+    # Clave con la que se firman los JWT. Quien la tenga puede emitir tokens
+    # validos para cualquier usuario, asi que en prod es obligatoria: el
+    # validator de abajo impide arrancar con el default de desarrollo.
+    jwt_secret: str = Field(default=JWT_SECRET_DEV, alias="JWT_SECRET")
+    jwt_algorithm: str = Field(default="HS256", alias="JWT_ALGORITHM")
+    # Duracion de la sesion. RNF-05 pide que sea configurable. 12 h por
+    # default: cubre una jornada sin obligar a re-loguearse a mitad de cursada.
+    jwt_expire_minutes: int = Field(default=720, alias="JWT_EXPIRE_MINUTES")
 
     # Clasificador IA de novedades (OpenAI). gpt-4o-mini: barato y suficiente.
     openai_api_key: str | None = Field(default=None, alias="OPENAI_API_KEY")
@@ -71,6 +86,22 @@ class Settings(BaseSettings):
         default="http://localhost:3000,http://localhost:3001,http://localhost:3002",
         alias="CORS_ORIGINS",
     )
+
+    @model_validator(mode="after")
+    def _exigir_jwt_secret_propio_en_prod(self) -> "Settings":
+        """Falla el arranque si prod quedo con el secreto de desarrollo.
+
+        Es preferible no levantar a levantar con una clave que esta publicada
+        en el repo: con ella cualquiera puede firmar un token y hacerse pasar
+        por cualquier usuario, incluido un admin.
+        """
+        if self.environment == "prod" and self.jwt_secret == JWT_SECRET_DEV:
+            raise ValueError(
+                "JWT_SECRET no esta configurado y ENVIRONMENT=prod. Genera uno "
+                "con `python -c \"import secrets; print(secrets.token_urlsafe(48))\"` "
+                "y cargalo como secreto del servicio."
+            )
+        return self
 
     @property
     def cors_origins_list(self) -> list[str]:

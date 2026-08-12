@@ -23,7 +23,11 @@
       "pymupdf>=1.25",
       "httpx>=0.28",
       "python-jose[cryptography]>=3.4",
-      "passlib[bcrypt]>=1.7",
+      # bcrypt directo y no passlib: passlib 1.7.4 (ultima release, 2020) lee
+      # `bcrypt.__about__.__version__`, atributo que bcrypt elimino en 4.1, y
+      # rompe al hashear contra el bcrypt 5.x que instala este lock.
+      "bcrypt>=4.1",
+      "email-validator>=2.2",
       "rapidfuzz>=3.0",
       "openpyxl>=3.1",
       "boto3>=1.35",

@@ -11,6 +11,25 @@ class DomainError(Exception):
     """Base para errores de negocio."""
 
 
+class EmailYaRegistrado(DomainError):
+    """Ya existe una cuenta con ese email."""
+
+    def __init__(self, email: str):
+        self.email = email
+        super().__init__(f"Ya existe una cuenta con el email '{email}'.")
+
+
+class CredencialesInvalidas(DomainError):
+    """Email inexistente o contraseña incorrecta.
+
+    Un único error para los dos casos, a propósito: distinguirlos le confirma
+    a un atacante qué mails están registrados.
+    """
+
+    def __init__(self) -> None:
+        super().__init__("Email o contraseña incorrectos.")
+
+
 class MateriaInexistente(DomainError):
     """Se intento operar sobre una materia que no esta en el plan."""
 

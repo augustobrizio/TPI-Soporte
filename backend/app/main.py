@@ -4,7 +4,15 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import calendario, comisiones, materias, novedades, profesores, usuario_materia
+from app.api import (
+    auth,
+    calendario,
+    comisiones,
+    materias,
+    novedades,
+    profesores,
+    usuario_materia,
+)
 from app.config import get_settings
 from app.workers import scheduler as scheduler_mod
 
@@ -36,6 +44,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth.router)
 app.include_router(materias.router)
 app.include_router(profesores.router)
 app.include_router(usuario_materia.router)
