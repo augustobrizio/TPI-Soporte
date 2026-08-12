@@ -196,7 +196,7 @@ export function CalendarioView({ eventos: eventosProp }: { eventos: EventoCalend
         <button
           onClick={() => setModal({ modo: "crear", fecha: diaSel ?? toISODate(HOY) })}
           className="cal-card flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold font-label shrink-0"
-          style={{ color: "#0b1326", background: "linear-gradient(135deg,#adc6ff,#7dffa2)", boxShadow: "0 4px 16px -4px rgba(173,198,255,0.5)" }}
+          style={{ color: "#09090b", background: "#fafafa", boxShadow: "0 4px 16px -4px rgba(0,0,0,0.45)" }}
         >
           <span className="material-symbols-outlined text-[18px]">add</span>
           Nuevo Evento
@@ -212,16 +212,16 @@ export function CalendarioView({ eventos: eventosProp }: { eventos: EventoCalend
           <p className="text-sm text-outline mt-1.5">{subtitulo}</p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex gap-0.5 p-0.5 rounded-xl shrink-0" style={{ background: "rgba(6,14,32,0.9)" }}>
+          <div className="flex gap-0.5 p-0.5 rounded-xl shrink-0" style={{ background: "rgba(5,5,6,0.9)" }}>
             {(["mes", "semana", "agenda"] as Vista[]).map((v) => (
               <button key={v} onClick={() => { setVista(v); setDiaSel(null); }} className="px-3.5 py-1.5 rounded-lg text-xs font-bold font-label capitalize transition-all"
-                style={{ color: vista === v ? "#0b1326" : "rgba(195,198,209,0.7)", background: vista === v ? "#adc6ff" : "transparent" }}>{v}</button>
+                style={{ color: vista === v ? "#09090b" : "rgba(163,163,163,0.7)", background: vista === v ? "#fafafa" : "transparent" }}>{v}</button>
             ))}
           </div>
           {/* El nav siempre ocupa espacio para evitar que los botones se muevan al cambiar a agenda */}
           <div
             className={`flex items-center gap-0.5 p-0.5 rounded-xl shrink-0 transition-opacity duration-150 ${vista === "agenda" ? "opacity-0 pointer-events-none" : "opacity-100"}`}
-            style={{ background: "rgba(6,14,32,0.9)" }}
+            style={{ background: "rgba(5,5,6,0.9)" }}
             aria-hidden={vista === "agenda"}
           >
             <IconBtn icon="chevron_left" onClick={() => nav(-1)} label={vista === "semana" ? "Semana anterior" : "Mes anterior"} />
@@ -258,8 +258,8 @@ export function CalendarioView({ eventos: eventosProp }: { eventos: EventoCalend
             const solo = visibles.size === 1 && on;
             return (
               <button key={t} onClick={() => toggleTipo(t)} className="cal-chip flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold font-label"
-                style={{ background: on ? `rgba(${TIPO[t].rgb},0.16)` : "rgba(34,42,61,0.4)", color: on ? TIPO[t].text : "rgba(141,145,155,0.6)", opacity: on ? 1 : 0.6, boxShadow: solo ? `inset 0 0 0 1.5px rgba(${TIPO[t].rgb},0.7)` : on ? `inset 0 0 0 1px rgba(${TIPO[t].rgb},0.35)` : "none" }}>
-                <span className="w-1.5 h-1.5 rounded-full" style={{ background: on ? `rgb(${TIPO[t].rgb})` : "rgba(141,145,155,0.5)" }} />
+                style={{ background: on ? `rgba(${TIPO[t].rgb},0.16)` : "rgba(35,35,39,0.4)", color: on ? TIPO[t].text : "rgba(115,115,115,0.6)", opacity: on ? 1 : 0.6, boxShadow: solo ? `inset 0 0 0 1.5px rgba(${TIPO[t].rgb},0.7)` : on ? `inset 0 0 0 1px rgba(${TIPO[t].rgb},0.35)` : "none" }}>
+                <span className="w-1.5 h-1.5 rounded-full" style={{ background: on ? `rgb(${TIPO[t].rgb})` : "rgba(115,115,115,0.5)" }} />
                 {TIPO[t].label}
               </button>
             );
@@ -269,7 +269,7 @@ export function CalendarioView({ eventos: eventosProp }: { eventos: EventoCalend
           <span className="h-4 w-px bg-outline/15 mx-0.5 self-center" />
 
           {/* Filtro de horizonte temporal */}
-          <div className="flex gap-0.5 p-0.5 rounded-xl" style={{ background: "rgba(6,14,32,0.85)" }}>
+          <div className="flex gap-0.5 p-0.5 rounded-xl" style={{ background: "rgba(5,5,6,0.85)" }}>
             {([7, 14, 30, 60, null] as (number | null)[]).map((d) => {
               const active = horizonte === d;
               return (
@@ -278,7 +278,7 @@ export function CalendarioView({ eventos: eventosProp }: { eventos: EventoCalend
                   onClick={() => setHorizonte(d)}
                   title={d === null ? "Sin límite de tiempo" : `Próximos ${d} días`}
                   className="px-2 py-0.5 rounded-lg text-[10px] font-bold font-label transition-all"
-                  style={{ color: active ? "#0b1326" : "rgba(195,198,209,0.5)", background: active ? "#c3c6d1" : "transparent" }}
+                  style={{ color: active ? "#09090b" : "rgba(163,163,163,0.5)", background: active ? "#a3a3a3" : "transparent" }}
                 >
                   {d === null ? "Todo" : `${d}d`}
                 </button>
@@ -324,7 +324,7 @@ export function CalendarioView({ eventos: eventosProp }: { eventos: EventoCalend
 
 function SearchBar({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
-    <div className="flex items-center gap-2 px-3 h-10 rounded-xl" style={{ background: "rgba(34,42,61,0.5)", boxShadow: "inset 0 0 0 1px rgba(141,145,155,0.12)" }}>
+    <div className="flex items-center gap-2 px-3 h-10 rounded-xl" style={{ background: "rgba(35,35,39,0.5)", boxShadow: "inset 0 0 0 1px rgba(115,115,115,0.12)" }}>
       <span className="material-symbols-outlined text-[18px] text-outline/60">search</span>
       <input value={value} onChange={(e) => onChange(e.target.value)} placeholder="Buscar eventos, exámenes o TPs…" className="flex-1 bg-transparent outline-none text-sm text-on-surface placeholder:text-outline/45 min-w-0" />
       {value && (
@@ -348,7 +348,7 @@ function MonthGrid({ ancla, eventos, diaSel, onSelDia, onEvento, onCrear }: { an
     <div className="space-y-2">
       <div className="grid grid-cols-7">
         {DIAS_LBL.map((d) => (
-          <div key={d} className="text-center font-headline uppercase pb-2" style={{ fontSize: "11px", fontWeight: 800, letterSpacing: "0.12em", color: "rgba(141,145,155,0.6)" }}>{d}</div>
+          <div key={d} className="text-center font-headline uppercase pb-2" style={{ fontSize: "11px", fontWeight: 800, letterSpacing: "0.12em", color: "rgba(115,115,115,0.6)" }}>{d}</div>
         ))}
       </div>
 
@@ -372,13 +372,13 @@ function MonthGrid({ ancla, eventos, diaSel, onSelDia, onEvento, onCrear }: { an
               title="Clic: ver · Doble clic: agregar evento"
               className={`cal-day min-h-[116px] rounded-xl p-2 overflow-hidden flex flex-col cursor-pointer select-none ${esHoy ? "cal-today-glow" : ""} ${sel ? "cal-card" : ""}`}
               style={{
-                background: sel ? "rgba(173,198,255,0.14)" : esMes ? "rgba(34,42,61,0.32)" : "rgba(34,42,61,0.1)",
+                background: sel ? "rgba(173,198,255,0.14)" : esMes ? "rgba(35,35,39,0.32)" : "rgba(35,35,39,0.1)",
                 boxShadow,
                 opacity: esMes ? 1 : 0.4,
               }}
             >
               <div className="flex items-center justify-between mb-1.5">
-                <span className="text-xs font-bold font-headline flex items-center justify-center" style={{ color: esHoy ? "#0b1326" : sel ? "#eaf0ff" : "#dae2fd", background: esHoy ? "#7dffa2" : "transparent", width: esHoy ? "20px" : "auto", height: esHoy ? "20px" : "auto", borderRadius: "6px" }}>{dia.getDate()}</span>
+                <span className="text-xs font-bold font-headline flex items-center justify-center" style={{ color: esHoy ? "#09090b" : sel ? "#fafafa" : "#fafafa", background: esHoy ? "#7dffa2" : "transparent", width: esHoy ? "20px" : "auto", height: esHoy ? "20px" : "auto", borderRadius: "6px" }}>{dia.getDate()}</span>
                 {delDia.length > 0 && (
                   <div className="flex gap-0.5">
                     {ORDEN_TIPOS.filter((t) => delDia.some((e) => e.tipo === t)).map((t) => (
@@ -421,10 +421,10 @@ function WeekGrid({ ancla, eventos, diaSel, onSelDia, onEvento, onCrear }: { anc
         const weekBorder = calcBorderShadow(delDia);
         const weekShadow = [sel ? "inset 0 0 0 1px rgba(173,198,255,0.4)" : null, weekBorder ?? null].filter(Boolean).join(", ") || undefined;
         return (
-          <div key={key} onClick={() => onSelDia(key)} onDoubleClick={() => onCrear(key)} title="Clic: ver · Doble clic: agregar evento" className={`rounded-xl p-2.5 min-h-[200px] flex flex-col cursor-pointer select-none ${esHoy ? "cal-today-glow" : ""}`} style={{ background: sel ? "rgba(173,198,255,0.12)" : "rgba(34,42,61,0.28)", boxShadow: weekShadow }}>
+          <div key={key} onClick={() => onSelDia(key)} onDoubleClick={() => onCrear(key)} title="Clic: ver · Doble clic: agregar evento" className={`rounded-xl p-2.5 min-h-[200px] flex flex-col cursor-pointer select-none ${esHoy ? "cal-today-glow" : ""}`} style={{ background: sel ? "rgba(173,198,255,0.12)" : "rgba(35,35,39,0.28)", boxShadow: weekShadow }}>
             <div className="mb-2">
-              <p className="text-[10px] uppercase tracking-wider font-bold font-label" style={{ color: esHoy ? "#9cffc2" : "rgba(141,145,155,0.7)" }}>{DIAS_LBL[i]}</p>
-              <p className="text-lg font-black font-headline" style={{ color: esHoy ? "#9cffc2" : "#dae2fd" }}>{dia.getDate()}</p>
+              <p className="text-[10px] uppercase tracking-wider font-bold font-label" style={{ color: esHoy ? "#9cffc2" : "rgba(115,115,115,0.7)" }}>{DIAS_LBL[i]}</p>
+              <p className="text-lg font-black font-headline" style={{ color: esHoy ? "#9cffc2" : "#fafafa" }}>{dia.getDate()}</p>
             </div>
             <div className="space-y-1.5 flex-1">
               {delDia.length === 0 ? <p className="text-[10px] text-outline/25 font-label">—</p> : delDia.map((e) => (
@@ -461,9 +461,9 @@ function AgendaList({ eventos, onEvento, onEditar, query }: { eventos: EventoCal
         return (
           <div key={iso} className="flex gap-4">
             <div className="shrink-0 w-14 text-center pt-1">
-              <p className="text-2xl font-black font-headline leading-none" style={{ color: esHoy ? "#9cffc2" : "#dae2fd" }}>{dia}</p>
-              <p className="text-[10px] uppercase tracking-wider font-bold font-label mt-0.5" style={{ color: "rgba(141,145,155,0.7)" }}>{mes}</p>
-              <p className="text-[9px] font-label mt-1" style={{ color: esHoy ? "#9cffc2" : "rgba(141,145,155,0.45)" }}>{countdown(n)}</p>
+              <p className="text-2xl font-black font-headline leading-none" style={{ color: esHoy ? "#9cffc2" : "#fafafa" }}>{dia}</p>
+              <p className="text-[10px] uppercase tracking-wider font-bold font-label mt-0.5" style={{ color: "rgba(115,115,115,0.7)" }}>{mes}</p>
+              <p className="text-[9px] font-label mt-1" style={{ color: esHoy ? "#9cffc2" : "rgba(115,115,115,0.45)" }}>{countdown(n)}</p>
             </div>
             <div className="flex-1 space-y-2 min-w-0">
               {evs.map((e) => (
@@ -478,7 +478,7 @@ function AgendaList({ eventos, onEvento, onEditar, query }: { eventos: EventoCal
                 >
                   <div className="flex items-center gap-2">
                     <span className="text-[15px]">{TIPO[e.tipo].emoji}</span>
-                    <p className="font-headline font-bold text-[13px] flex-1 min-w-0 truncate" style={{ color: "#eaf0ff" }}>{e.titulo}</p>
+                    <p className="font-headline font-bold text-[13px] flex-1 min-w-0 truncate" style={{ color: "#fafafa" }}>{e.titulo}</p>
                     {e.origen === "usuario" && (
                       <button
                         onClick={(ev) => { ev.stopPropagation(); onEditar(e); }}
@@ -490,8 +490,8 @@ function AgendaList({ eventos, onEvento, onEditar, query }: { eventos: EventoCal
                     )}
                     <span className="text-[10px] font-bold font-label px-2 py-0.5 rounded-md shrink-0" style={{ color: TIPO[e.tipo].text, background: `rgba(${TIPO[e.tipo].rgb},0.14)` }}>{TIPO[e.tipo].label}</span>
                   </div>
-                  <p className="text-[11px] mt-1 pl-[23px]" style={{ color: "rgba(195,198,209,0.6)" }}>{rangoEvento(e)}</p>
-                  {e.descripcion && <p className="text-[11px] mt-1 pl-[23px] line-clamp-2" style={{ color: "rgba(141,145,155,0.7)" }}>{e.descripcion}</p>}
+                  <p className="text-[11px] mt-1 pl-[23px]" style={{ color: "rgba(163,163,163,0.6)" }}>{rangoEvento(e)}</p>
+                  {e.descripcion && <p className="text-[11px] mt-1 pl-[23px] line-clamp-2" style={{ color: "rgba(115,115,115,0.7)" }}>{e.descripcion}</p>}
                 </div>
               ))}
             </div>
@@ -507,7 +507,7 @@ function AgendaList({ eventos, onEvento, onEditar, query }: { eventos: EventoCal
 function SideArrow({ dir, onClick, label }: { dir: "left" | "right"; onClick: () => void; label: string }) {
   return (
     <button onClick={onClick} aria-label={label} className="absolute top-1/2 -translate-y-1/2 z-10 w-9 h-16 rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 hover:!opacity-100 transition-opacity duration-200"
-      style={{ [dir]: "6px", background: "rgba(8,14,30,0.6)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", color: "rgba(218,226,253,0.92)", boxShadow: "0 6px 18px -6px rgba(0,0,0,0.6)" }}>
+      style={{ [dir]: "6px", background: "rgba(9,9,11,0.6)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", color: "rgba(250,250,250,0.92)", boxShadow: "0 6px 18px -6px rgba(0,0,0,0.6)" }}>
       <span className="material-symbols-outlined text-[24px]">{dir === "left" ? "chevron_left" : "chevron_right"}</span>
     </button>
   );
@@ -520,17 +520,17 @@ function ProximoPanel({ evento }: { evento: EventoCalendarioOut | null }) {
   const cfg = TIPO[evento.tipo];
   const n = diffDias(toISODate(new Date(evento.fecha_inicio)));
   return (
-    <section className="cal-panel rounded-2xl p-5 relative overflow-hidden" style={{ background: `linear-gradient(150deg, rgba(${cfg.rgb},0.16), rgba(${cfg.rgb},0.03)), rgba(18,26,46,0.6)` }}>
+    <section className="cal-panel rounded-2xl p-5 relative overflow-hidden" style={{ background: `linear-gradient(150deg, rgba(${cfg.rgb},0.16), rgba(${cfg.rgb},0.03)), rgba(18,18,21,0.6)` }}>
       <p className="text-[10px] uppercase tracking-[0.18em] font-bold font-label mb-3" style={{ color: cfg.text }}>Próximo evento importante</p>
       <div className="flex items-center gap-2 mb-2">
         <span className="text-[18px]">{cfg.emoji}</span>
         <span className="text-[10px] font-bold uppercase tracking-wider font-label px-2 py-0.5 rounded-full" style={{ color: cfg.text, background: `rgba(${cfg.rgb},0.16)` }}>{cfg.label}</span>
       </div>
-      <h3 className="text-xl font-black font-headline leading-tight" style={{ color: "#eaf0ff" }}>{evento.titulo}</h3>
-      <p className="text-sm mt-1.5" style={{ color: "rgba(195,198,209,0.7)" }}>{rangoEvento(evento)}</p>
+      <h3 className="text-xl font-black font-headline leading-tight" style={{ color: "#fafafa" }}>{evento.titulo}</h3>
+      <p className="text-sm mt-1.5" style={{ color: "rgba(163,163,163,0.7)" }}>{rangoEvento(evento)}</p>
       <div className="mt-4 flex items-baseline gap-2">
         <span className="text-[34px] font-black font-headline leading-none" style={{ color: cfg.text }}>{n <= 0 ? (n === 0 ? "Hoy" : "—") : n}</span>
-        {n > 0 && <span className="text-sm font-label" style={{ color: "rgba(195,198,209,0.7)" }}>{n === 1 ? "día restante" : "días restantes"}</span>}
+        {n > 0 && <span className="text-sm font-label" style={{ color: "rgba(163,163,163,0.7)" }}>{n === 1 ? "día restante" : "días restantes"}</span>}
       </div>
     </section>
   );
@@ -538,7 +538,7 @@ function ProximoPanel({ evento }: { evento: EventoCalendarioOut | null }) {
 
 function DiaPanel({ fechaISO, eventos, onAgregar, onEditar, onRendir, onCerrar }: { fechaISO: string; eventos: EventoCalendarioOut[]; onAgregar: () => void; onEditar: (e: EventoCalendarioOut) => void; onRendir: (e: EventoCalendarioOut) => void; onCerrar: () => void }) {
   return (
-    <section className="cal-panel rounded-2xl p-5" style={{ background: "linear-gradient(150deg, rgba(173,198,255,0.1), rgba(18,26,46,0.6))" }}>
+    <section className="cal-panel rounded-2xl p-5" style={{ background: "linear-gradient(150deg, rgba(173,198,255,0.1), rgba(18,18,21,0.6))" }}>
       <div className="flex items-center justify-between mb-3">
         <p className="text-[10px] uppercase tracking-[0.16em] font-bold text-primary font-label">{fechaLarga(fechaISO)}</p>
         <button onClick={onCerrar} aria-label="Cerrar" className="w-7 h-7 rounded-lg flex items-center justify-center text-outline hover:text-on-surface hover:bg-surface-container-high transition-colors">
@@ -561,10 +561,10 @@ function DiaPanel({ fechaISO, eventos, onAgregar, onEditar, onRendir, onCerrar }
                 style={{ cursor: editable ? "pointer" : "default" }}
               >
                 <span className="text-[14px]">{cfg.emoji}</span>
-                <p className="font-headline font-bold text-[13px] flex-1 min-w-0 truncate" style={{ color: "#eaf0ff" }}>{e.titulo}</p>
+                <p className="font-headline font-bold text-[13px] flex-1 min-w-0 truncate" style={{ color: "#fafafa" }}>{e.titulo}</p>
                 {editable && <span className="material-symbols-outlined text-[15px] text-outline/60">edit</span>}
               </button>
-              {e.descripcion && <p className="text-[11px] mt-1.5" style={{ color: "rgba(141,145,155,0.75)" }}>{e.descripcion}</p>}
+              {e.descripcion && <p className="text-[11px] mt-1.5" style={{ color: "rgba(115,115,115,0.75)" }}>{e.descripcion}</p>}
               {esMesa && (
                 <button
                   onClick={() => onRendir(e)}
@@ -579,7 +579,7 @@ function DiaPanel({ fechaISO, eventos, onAgregar, onEditar, onRendir, onCerrar }
           );
         })}
       </div>
-      <button onClick={onAgregar} className="cal-card mt-3 w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold font-label" style={{ background: "rgba(173,198,255,0.14)", color: "#adc6ff" }}>
+      <button onClick={onAgregar} className="cal-card mt-3 w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold font-label" style={{ background: "rgba(173,198,255,0.14)", color: "#fafafa" }}>
         <span className="material-symbols-outlined text-[16px]">add</span>Agregar evento este día
       </button>
     </section>

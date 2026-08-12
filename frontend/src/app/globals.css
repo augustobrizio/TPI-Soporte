@@ -5,8 +5,11 @@
 /* =====================================================================
  * Shell "Vercel × UTN" (Sidebar/TopNav/Novedades) — tokens light/dark.
  * Namespace propio (--shell-*), separado de los tokens de Kinetic
- * Blueprint (surface/on-surface) que usan las paginas viejas del grafo,
- * materias y calendario — esas siguen dark-only, sin tocar.
+ * Blueprint (surface/on-surface) que usan el grafo, materias, horarios y
+ * calendario — esas paginas siguen siendo dark-only.
+ * Las dos escalas comparten el mismo negro neutro: `--shell-canvas` ==
+ * `surface` (#09090b) y `--shell-panel` == `surface-container-low`, para
+ * que el shell y el contenido no desentonen. Ver tailwind.config.ts.
  * ===================================================================*/
 
 :root {
@@ -65,7 +68,7 @@
   .bg-blueprint {
     background-image: radial-gradient(
       circle at 2px 2px,
-      rgba(67, 71, 80, 0.18) 1px,
+      rgba(82, 82, 91, 0.18) 1px,
       transparent 0
     );
     background-size: 40px 40px;
@@ -93,7 +96,7 @@
   }
 
   .node-locked {
-    border: 1px solid rgba(67, 71, 80, 0.45);
+    border: 1px solid rgba(82, 82, 91, 0.45);
   }
 
   /* Material Symbols — copia el setup del Stitch. */
@@ -119,7 +122,7 @@
 
   /* Glass overlay — para topbar y popovers flotantes. */
   .glass {
-    background-color: rgba(49, 57, 77, 0.6);
+    background-color: rgba(36, 36, 40, 0.6);
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
   }
@@ -218,7 +221,7 @@
 
 /* Paneles con profundidad en lugar de bordes (estilo Linear/Vercel) */
 .cal-panel {
-  background: rgba(18, 26, 46, 0.55);
+  background: rgba(18, 18, 21, 0.55);
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 14px 36px -16px rgba(0, 0, 0, 0.55);
 }
 
@@ -233,7 +236,7 @@
   100% { background-position: 420px 0; }
 }
 .cal-skel {
-  background: linear-gradient(90deg, rgba(141,145,155,0.06) 25%, rgba(141,145,155,0.14) 37%, rgba(141,145,155,0.06) 63%);
+  background: linear-gradient(90deg, rgba(115,115,115,0.06) 25%, rgba(115,115,115,0.14) 37%, rgba(115,115,115,0.06) 63%);
   background-size: 840px 100%;
   animation: cal-shimmer 1.4s infinite linear;
   border-radius: 10px;

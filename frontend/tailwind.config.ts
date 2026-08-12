@@ -6,8 +6,15 @@ import type { Config } from "tailwindcss";
  * Reglas duras (DESIGN.md):
  *  - prohibido usar borders 1px solid grises para secciones (usar tonal layering).
  *  - prohibido drop-shadows (usar glows con `box-shadow`).
- *  - el blanco puro #ffffff esta vetado, siempre usar `on-surface` (#dae2fd).
+ *  - el blanco puro #ffffff esta vetado, siempre usar `on-surface`.
  *  - estados de los nodos: aprobado (#7dffa2), regular (#ffb950), cursable (#adc6ff).
+ *
+ * La escala de superficies es NEUTRA (negro), alineada con los tokens
+ * `--shell-*` de globals.css que usan Sidebar/TopNav/Novedades: antes era
+ * azul marino (#0b1326) y las paginas viejas desentonaban con el shell.
+ * `surface` == `--shell-canvas` y `surface-container-low` == `--shell-panel`.
+ * Los acentos (primary/secondary/tertiary) no cambian: son la identidad del
+ * sistema y contrastan mejor sobre negro.
  */
 const config: Config = {
   darkMode: "class",
@@ -19,19 +26,19 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        outline: "#8d919b",
-        "on-surface-variant": "#c3c6d1",
-        "surface-container-low": "#131b2e",
-        "surface-container-high": "#222a3d",
+        outline: "#737373",
+        "on-surface-variant": "#a3a3a3",
+        "surface-container-low": "#0c0c0e",
+        "surface-container-high": "#1a1a1e",
         primary: "#adc6ff",
-        "surface-dim": "#0b1326",
-        "on-background": "#dae2fd",
-        "inverse-on-surface": "#283044",
+        "surface-dim": "#09090b",
+        "on-background": "#fafafa",
+        "inverse-on-surface": "#232327",
         "surface-tint": "#adc6ff",
         error: "#ffb4ab",
-        background: "#0b1326",
+        background: "#09090b",
         "primary-fixed-dim": "#adc6ff",
-        "on-surface": "#dae2fd",
+        "on-surface": "#fafafa",
         "on-secondary": "#003918",
         "on-primary-fixed": "#001a41",
         "tertiary-container": "#4f3200",
@@ -42,28 +49,28 @@ const config: Config = {
         "tertiary-fixed-dim": "#ffb950",
         "on-tertiary-fixed-variant": "#624000",
         "on-primary": "#002e69",
-        "outline-variant": "#434750",
+        "outline-variant": "#2a2a2e",
         "secondary-fixed-dim": "#00e475",
         "on-error-container": "#ffdad6",
-        "surface-container": "#171f33",
+        "surface-container": "#121215",
         "tertiary-fixed": "#ffddb3",
-        "surface-container-lowest": "#060e20",
+        "surface-container-lowest": "#050506",
         "on-tertiary": "#452b00",
         "on-secondary-fixed": "#00210b",
         "on-tertiary-container": "#db9200",
-        "surface-variant": "#2d3449",
-        surface: "#0b1326",
+        "surface-variant": "#232327",
+        surface: "#09090b",
         "on-primary-container": "#6fa1ff",
         "on-error": "#690005",
-        "inverse-surface": "#dae2fd",
-        "surface-bright": "#31394d",
+        "inverse-surface": "#fafafa",
+        "surface-bright": "#2a2a2f",
         "secondary-container": "#05e777",
         secondary: "#7dffa2",
         "on-tertiary-fixed": "#291800",
         "primary-container": "#003678",
         tertiary: "#ffb950",
         "on-primary-fixed-variant": "#004494",
-        "surface-container-highest": "#2d3449",
+        "surface-container-highest": "#232327",
         "primary-fixed": "#d8e2ff",
         "inverse-primary": "#005ac1",
       },

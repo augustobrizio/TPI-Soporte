@@ -90,7 +90,7 @@ export function GrafoCanvas({
   return (
     <div
       ref={containerRef}
-      className="relative w-full h-[920px] bg-surface-container-lowest rounded-3xl overflow-hidden bg-blueprint group select-none border border-outline-variant/10 shadow-[inset_0_0_60px_rgba(11,19,38,0.6)]"
+      className="relative w-full h-[920px] bg-surface-container-lowest rounded-3xl overflow-hidden bg-blueprint group select-none border border-outline-variant/10 shadow-[inset_0_0_60px_rgba(9,9,11,0.6)]"
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
@@ -124,7 +124,7 @@ export function GrafoCanvas({
             x={col.x + NODE_W / 2}
             y={LABEL_Y}
             textAnchor="middle"
-            fill="var(--color-on-surface-variant, #a0a8b4)"
+            fill="var(--color-on-surface-variant, #a3a3a3)"
             fontSize="12"
             fontWeight="800"
             fontFamily="inherit"
@@ -301,7 +301,7 @@ const ESTADO_STYLES: Record<
     iconColor: "text-outline",
     icon: "lock",
     progress: "w-0",
-    backColor: "#6b7280",
+    backColor: "#737373",
     backLabel: "Bloqueada",
   },
 };

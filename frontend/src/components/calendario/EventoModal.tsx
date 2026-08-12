@@ -67,15 +67,15 @@ export function EventoModal({ modo, evento, fechaInicial, plantilla, onSubmit, o
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       onClick={onClose}
-      style={{ background: "rgba(6,10,22,0.7)", backdropFilter: "blur(6px)" }}
+      style={{ background: "rgba(5,5,6,0.7)", backdropFilter: "blur(6px)" }}
     >
       <div
         onClick={(e) => e.stopPropagation()}
         className="relative w-full max-w-[460px] rounded-2xl overflow-hidden"
-        style={{ background: "#0e1626", border: "1px solid rgba(141,145,155,0.16)", boxShadow: "0 24px 60px rgba(0,0,0,0.5)" }}
+        style={{ background: "#121215", border: "1px solid rgba(115,115,115,0.16)", boxShadow: "0 24px 60px rgba(0,0,0,0.5)" }}
       >
         {/* Header */}
-        <div className="flex items-center gap-3 px-5 py-4" style={{ borderBottom: "1px solid rgba(141,145,155,0.12)" }}>
+        <div className="flex items-center gap-3 px-5 py-4" style={{ borderBottom: "1px solid rgba(115,115,115,0.12)" }}>
           <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: `rgba(${TIPO[tipo].rgb},0.16)`, border: `1px solid rgba(${TIPO[tipo].rgb},0.25)` }}>
             <span className="material-symbols-outlined text-[20px]" style={{ color: TIPO[tipo].text }}>{TIPO[tipo].icon}</span>
           </div>
@@ -99,9 +99,9 @@ export function EventoModal({ modo, evento, fechaInicial, plantilla, onSubmit, o
                   onClick={() => setTipo(t)}
                   className="flex-1 flex items-center justify-center gap-1.5 rounded-lg py-2 text-[12px] font-bold font-label transition-all"
                   style={{
-                    color: on ? "#0b1326" : "rgba(195,198,209,0.72)",
-                    background: on ? TIPO[t].text : "rgba(34,42,61,0.6)",
-                    border: `1px solid ${on ? TIPO[t].text : "rgba(141,145,155,0.18)"}`,
+                    color: on ? "#09090b" : "rgba(163,163,163,0.72)",
+                    background: on ? TIPO[t].text : "rgba(35,35,39,0.6)",
+                    border: `1px solid ${on ? TIPO[t].text : "rgba(115,115,115,0.18)"}`,
                   }}
                 >
                   <span>{TIPO[t].emoji}</span> {TIPO[t].label}
@@ -145,7 +145,7 @@ export function EventoModal({ modo, evento, fechaInicial, plantilla, onSubmit, o
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3.5 flex items-center gap-2" style={{ borderTop: "1px solid rgba(141,145,155,0.12)" }}>
+        <div className="px-5 py-3.5 flex items-center gap-2" style={{ borderTop: "1px solid rgba(115,115,115,0.12)" }}>
           {modo === "editar" && onEliminar && (
             <button
               onClick={borrar}
@@ -164,7 +164,7 @@ export function EventoModal({ modo, evento, fechaInicial, plantilla, onSubmit, o
             onClick={guardar}
             disabled={!valido || guardando}
             className="px-4 py-2 rounded-lg text-xs font-bold font-label transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-            style={{ background: "#adc6ff", color: "#0b1326", boxShadow: "0 2px 10px rgba(173,198,255,0.25)" }}
+            style={{ background: "#fafafa", color: "#09090b", boxShadow: "0 2px 10px rgba(0,0,0,0.35)" }}
           >
             {guardando ? "Guardando…" : modo === "crear" ? "Crear" : "Guardar"}
           </button>
@@ -178,7 +178,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   return (
     <label className="block">
       <span className="block text-[10px] uppercase tracking-[0.12em] font-bold font-label text-outline/60 mb-1.5">{label}</span>
-      <div className="rounded-lg px-3 py-2" style={{ background: "rgba(34,42,61,0.5)", border: "1px solid rgba(141,145,155,0.16)" }}>
+      <div className="rounded-lg px-3 py-2" style={{ background: "rgba(35,35,39,0.5)", border: "1px solid rgba(115,115,115,0.16)" }}>
         {children}
       </div>
     </label>

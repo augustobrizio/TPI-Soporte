@@ -385,7 +385,7 @@ export function HorariosBuilder({ materias1, materias2, cuatriInicial }: Props) 
     <div className="flex flex-col" style={{ height: "calc(100vh - 4rem)" }}>
 
       {/* ── Header (compacto) ── */}
-      <div className="flex items-center gap-4 px-5 shrink-0" style={{ height: "46px", borderBottom: "1px solid rgba(141,145,155,0.1)" }}>
+      <div className="flex items-center gap-4 px-5 shrink-0" style={{ height: "46px", borderBottom: "1px solid rgba(115,115,115,0.1)" }}>
         <h1 className="text-[15px] font-black font-headline text-on-surface tracking-tight leading-none shrink-0">
           Armador de Horarios
         </h1>
@@ -412,22 +412,22 @@ export function HorariosBuilder({ materias1, materias2, cuatriInicial }: Props) 
           onClick={() => setOptAbierto(true)}
           title="Optimización de horarios"
           className="hz-yearchip flex items-center gap-1.5 px-3.5 py-1.5 rounded-[10px] text-xs font-bold font-label shrink-0"
-          style={{ color: "#0b1326", background: "linear-gradient(135deg,#adc6ff,#7dffa2)", boxShadow: "0 2px 10px rgba(173,198,255,0.22)" }}
+          style={{ color: "#09090b", background: "#fafafa", boxShadow: "0 2px 10px rgba(0,0,0,0.35)" }}
         >
           <span className="material-symbols-outlined text-[16px]">auto_awesome</span>
           Optimizar
         </button>
 
-        <div className="flex gap-0.5 p-0.5 rounded-[10px] shrink-0" style={{ backgroundColor: "rgba(6,14,32,0.9)", border: "1px solid rgba(141,145,155,0.1)" }}>
+        <div className="flex gap-0.5 p-0.5 rounded-[10px] shrink-0" style={{ backgroundColor: "rgba(5,5,6,0.9)", border: "1px solid rgba(115,115,115,0.1)" }}>
           {["1° Cuatrimestre", "2° Cuatrimestre"].map((label, i) => (
             <button
               key={i}
               onClick={() => switchCuatrimestre(i as Idx)}
               className="hz-yearchip px-3.5 py-1.5 rounded-lg text-xs font-bold font-label"
               style={{
-                color: cuatrimestre === i ? "#0b1326" : "rgba(195,198,209,0.7)",
-                backgroundColor: cuatrimestre === i ? "#adc6ff" : "transparent",
-                boxShadow: cuatrimestre === i ? "0 2px 8px rgba(173,198,255,0.25)" : undefined,
+                color: cuatrimestre === i ? "#09090b" : "rgba(163,163,163,0.7)",
+                backgroundColor: cuatrimestre === i ? "#fafafa" : "transparent",
+                boxShadow: cuatrimestre === i ? "0 2px 8px rgba(0,0,0,0.35)" : undefined,
               }}
             >
               {label}
@@ -440,7 +440,7 @@ export function HorariosBuilder({ materias1, materias2, cuatriInicial }: Props) 
       <div className="flex flex-1 min-h-0">
 
         {/* ── Panel izquierdo: tarjetas de materia ── */}
-        <div className="shrink-0 flex flex-col" style={{ width: "232px", borderRight: "1px solid rgba(141,145,155,0.1)" }}>
+        <div className="shrink-0 flex flex-col" style={{ width: "232px", borderRight: "1px solid rgba(115,115,115,0.1)" }}>
           {/* Filtro por año — chips */}
           <div className="flex flex-wrap gap-1.5 px-3 pt-2.5 pb-2.5 shrink-0">
             {years.map(y => {
@@ -452,9 +452,9 @@ export function HorariosBuilder({ materias1, materias2, cuatriInicial }: Props) 
                   className="hz-yearchip rounded-lg text-[11px] font-bold font-label"
                   style={{
                     padding: "5px 11px",
-                    color: on ? "#0b1326" : "rgba(195,198,209,0.7)",
-                    background: on ? "#adc6ff" : "rgba(34,42,61,0.6)",
-                    border: `1px solid ${on ? "#adc6ff" : "rgba(141,145,155,0.18)"}`,
+                    color: on ? "#09090b" : "rgba(163,163,163,0.7)",
+                    background: on ? "#fafafa" : "rgba(35,35,39,0.6)",
+                    border: `1px solid ${on ? "#fafafa" : "rgba(115,115,115,0.18)"}`,
                   }}
                 >
                   {y}° Año
@@ -467,9 +467,9 @@ export function HorariosBuilder({ materias1, materias2, cuatriInicial }: Props) 
                 className="hz-yearchip rounded-lg text-[11px] font-bold font-label"
                 style={{
                   padding: "5px 11px",
-                  color: anioFiltro === "E" ? "#0b1326" : "rgba(195,198,209,0.7)",
-                  background: anioFiltro === "E" ? "#ffb950" : "rgba(34,42,61,0.6)",
-                  border: `1px solid ${anioFiltro === "E" ? "#ffb950" : "rgba(141,145,155,0.18)"}`,
+                  color: anioFiltro === "E" ? "#09090b" : "rgba(163,163,163,0.7)",
+                  background: anioFiltro === "E" ? "#ffb950" : "rgba(35,35,39,0.6)",
+                  border: `1px solid ${anioFiltro === "E" ? "#ffb950" : "rgba(115,115,115,0.18)"}`,
                 }}
               >
                 Electivas
@@ -524,7 +524,7 @@ export function HorariosBuilder({ materias1, materias2, cuatriInicial }: Props) 
                         <p
                           className="font-headline"
                           style={{
-                            fontSize: "12px", fontWeight: 800, lineHeight: 1.15, color: "#eaf0ff",
+                            fontSize: "12px", fontWeight: 800, lineHeight: 1.15, color: "#fafafa",
                             letterSpacing: "-0.01em",
                             overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box",
                             WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
@@ -532,7 +532,7 @@ export function HorariosBuilder({ materias1, materias2, cuatriInicial }: Props) 
                         >
                           {mat.nombre}
                         </p>
-                        <p className="font-label" style={{ fontSize: "9.5px", fontWeight: 500, color: "rgba(141,145,155,0.8)", marginTop: "1px" }}>
+                        <p className="font-label" style={{ fontSize: "9.5px", fontWeight: 500, color: "rgba(115,115,115,0.8)", marginTop: "1px" }}>
                           {comisVista.length} comisión{comisVista.length !== 1 ? "es" : ""}
                           {mat.anual ? " · anual" : ""}
                         </p>
@@ -541,7 +541,7 @@ export function HorariosBuilder({ materias1, materias2, cuatriInicial }: Props) 
 
                     {/* Chips de comisión */}
                     {comisVista.length === 0 ? (
-                      <p style={{ fontSize: "10px", color: "rgba(141,145,155,0.35)" }}>
+                      <p style={{ fontSize: "10px", color: "rgba(115,115,115,0.35)" }}>
                         Sin comisiones este cuatrimestre.
                       </p>
                     ) : (
@@ -574,9 +574,9 @@ export function HorariosBuilder({ materias1, materias2, cuatriInicial }: Props) 
                                 fontSize: "11px",
                                 fontWeight: 700,
                                 letterSpacing: "0.01em",
-                                border: `1px solid ${conflict ? "rgba(141,145,155,0.1)" : "rgba(141,145,155,0.22)"}`,
-                                background: conflict ? "rgba(11,19,38,0.4)" : "rgba(34,42,61,0.8)",
-                                color: conflict ? "rgba(141,145,155,0.3)" : "#dce0ea",
+                                border: `1px solid ${conflict ? "rgba(115,115,115,0.1)" : "rgba(115,115,115,0.22)"}`,
+                                background: conflict ? "rgba(9,9,11,0.4)" : "rgba(35,35,39,0.8)",
+                                color: conflict ? "rgba(115,115,115,0.3)" : "#fafafa",
                                 cursor: conflict ? "not-allowed" : "grab",
                                 textDecoration: conflict ? "line-through" : undefined,
                               }}
@@ -676,8 +676,8 @@ function ScheduleGrid({
         className="flex shrink-0"
         style={{
           paddingLeft: `${LABEL_W}px`,
-          background: "rgba(8,14,30,0.75)",
-          borderBottom: "1px solid rgba(141,145,155,0.16)",
+          background: "rgba(9,9,11,0.75)",
+          borderBottom: "1px solid rgba(115,115,115,0.16)",
         }}
       >
         {dias.map((dia, i) => (
@@ -687,9 +687,9 @@ function ScheduleGrid({
             style={{
               flex: 1,
               fontSize: "11px", fontWeight: 800, letterSpacing: "0.12em",
-              color: "rgba(218,226,253,0.95)",
+              color: "rgba(250,250,250,0.95)",
               padding: "14px 0",
-              borderLeft: i === 0 ? "none" : "1px solid rgba(141,145,155,0.1)",
+              borderLeft: i === 0 ? "none" : "1px solid rgba(115,115,115,0.1)",
             }}
           >
             {DIA_LABEL[dia] ?? dia.slice(0, 3).toUpperCase()}
@@ -700,9 +700,9 @@ function ScheduleGrid({
       {/* Cuerpo */}
       <div className="flex flex-1" style={{ minHeight: 0 }}>
         {/* Etiquetas de módulo (horas) — más contraste y peso */}
-        <div className="shrink-0" style={{ width: `${LABEL_W}px`, position: "relative", borderRight: "1px solid rgba(141,145,155,0.1)" }}>
+        <div className="shrink-0" style={{ width: `${LABEL_W}px`, position: "relative", borderRight: "1px solid rgba(115,115,115,0.1)" }}>
           {modulosVis.map(t => (
-            <div key={t} className="font-label" style={{ position: "absolute", top: `${pct(moduloH(t))}%`, right: "10px", transform: "translateY(-50%)", fontSize: "11px", fontWeight: 700, color: "rgba(195,198,209,0.78)", letterSpacing: "0.01em", whiteSpace: "nowrap" }}>
+            <div key={t} className="font-label" style={{ position: "absolute", top: `${pct(moduloH(t))}%`, right: "10px", transform: "translateY(-50%)", fontSize: "11px", fontWeight: 700, color: "rgba(163,163,163,0.78)", letterSpacing: "0.01em", whiteSpace: "nowrap" }}>
               {t}
             </div>
           ))}
@@ -712,7 +712,7 @@ function ScheduleGrid({
         <div className="relative flex" style={{ flex: 1 }}>
           {/* Líneas horizontales en los módulos — un poco más visibles para seguir la fila */}
           {modulosVis.map(t => (
-            <div key={t} style={{ position: "absolute", left: 0, right: 0, top: `${pct(moduloH(t))}%`, borderTop: "1px solid rgba(141,145,155,0.1)", pointerEvents: "none" }} />
+            <div key={t} style={{ position: "absolute", left: 0, right: 0, top: `${pct(moduloH(t))}%`, borderTop: "1px solid rgba(115,115,115,0.1)", pointerEvents: "none" }} />
           ))}
 
           {dias.map((dia, i) => (
@@ -722,8 +722,8 @@ function ScheduleGrid({
               style={{
                 flex: 1,
                 // Fondo alternado muy sutil + separadores de columna definidos
-                background: i % 2 === 1 ? "rgba(141,145,155,0.025)" : "transparent",
-                borderLeft: i === 0 ? "none" : "1px solid rgba(141,145,155,0.09)",
+                background: i % 2 === 1 ? "rgba(115,115,115,0.025)" : "transparent",
+                borderLeft: i === 0 ? "none" : "1px solid rgba(115,115,115,0.09)",
               }}
             >
               {seleccionados.map(sel => {
@@ -748,7 +748,7 @@ function ScheduleGrid({
                           position: "absolute", top: `${top}%`, height: `${height}%`, left: "4px", right: "4px",
                           borderRadius: "8px", overflow: "hidden", cursor: "pointer",
                           // Evento SÓLIDO estilo Linear: base opaca + tinte de color suave, borde discreto.
-                          background: `linear-gradient(0deg, rgba(${color.rgb},0.14), rgba(${color.rgb},0.14)), #141d33`,
+                          background: `linear-gradient(0deg, rgba(${color.rgb},0.14), rgba(${color.rgb},0.14)), #1a1a1e`,
                           border: `1px solid rgba(${color.rgb},0.26)`,
                           borderLeft: `3px solid rgb(${color.rgb})`,
                           boxShadow: "0 1px 2px rgba(0,0,0,0.25)",
@@ -760,7 +760,7 @@ function ScheduleGrid({
                         {/* Botón quitar (hover) */}
                         <span
                           className="material-symbols-outlined opacity-0 group-hover:opacity-100"
-                          style={{ position: "absolute", top: "3px", right: "3px", fontSize: "14px", color: color.text, transition: "opacity 0.15s", background: "rgba(8,14,30,0.7)", borderRadius: "6px", padding: "1px" }}
+                          style={{ position: "absolute", top: "3px", right: "3px", fontSize: "14px", color: color.text, transition: "opacity 0.15s", background: "rgba(9,9,11,0.7)", borderRadius: "6px", padding: "1px" }}
                         >
                           close
                         </span>
@@ -779,14 +779,14 @@ function ScheduleGrid({
 
                         {/* Nivel 2 — comisión */}
                         {showCom && sel.comision_nombre && (
-                          <p className="font-label" style={{ fontSize: "10.5px", fontWeight: 700, lineHeight: 1.2, marginTop: "4px", color: "rgba(234,240,255,0.9)", letterSpacing: "0.02em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          <p className="font-label" style={{ fontSize: "10.5px", fontWeight: 700, lineHeight: 1.2, marginTop: "4px", color: "rgba(250,250,250,0.9)", letterSpacing: "0.02em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                             {sel.comision_nombre}
                           </p>
                         )}
 
                         {/* Nivel 3 — horario (presente pero discreto) */}
                         {showHora && (
-                          <p className="font-label" style={{ fontSize: "9.5px", fontWeight: 500, lineHeight: 1.2, marginTop: "auto", paddingTop: "4px", color: "rgba(195,198,209,0.55)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          <p className="font-label" style={{ fontSize: "9.5px", fontWeight: 500, lineHeight: 1.2, marginTop: "auto", paddingTop: "4px", color: "rgba(163,163,163,0.55)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                             {h.hora_inicio?.slice(0, 5) ?? ""} – {h.hora_fin?.slice(0, 5) ?? ""}
                           </p>
                         )}
@@ -802,10 +802,10 @@ function ScheduleGrid({
       {/* Empty / drop hint */}
       {(seleccionados.length === 0 || dragging) && (
         <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "10px", pointerEvents: "none" }}>
-          <span className="material-symbols-outlined" style={{ fontSize: "40px", color: dragging ? "rgba(125,255,162,0.4)" : "rgba(141,145,155,0.14)", fontVariationSettings: "'FILL' 0" }}>
+          <span className="material-symbols-outlined" style={{ fontSize: "40px", color: dragging ? "rgba(125,255,162,0.4)" : "rgba(115,115,115,0.14)", fontVariationSettings: "'FILL' 0" }}>
             {dragging ? "add_circle" : "calendar_view_week"}
           </span>
-          <p style={{ fontSize: "12px", color: dragging ? "rgba(125,255,162,0.6)" : "rgba(141,145,155,0.3)" }}>
+          <p style={{ fontSize: "12px", color: dragging ? "rgba(125,255,162,0.6)" : "rgba(115,115,115,0.3)" }}>
             {dragging ? "Soltá para agregar a tu cursada" : "Elegí una materia y arrastrá sus comisiones acá"}
           </p>
         </div>

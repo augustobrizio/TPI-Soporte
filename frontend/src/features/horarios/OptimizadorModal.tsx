@@ -143,17 +143,17 @@ export function OptimizadorModal({ materias, preseleccionados, anio, cuatrimestr
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       onClick={onClose}
-      style={{ background: "rgba(6,10,22,0.7)", backdropFilter: "blur(6px)" }}
+      style={{ background: "rgba(5,5,6,0.7)", backdropFilter: "blur(6px)" }}
     >
       <div
         onClick={e => e.stopPropagation()}
         className="relative w-full max-w-[640px] max-h-[88vh] flex flex-col rounded-2xl overflow-hidden"
-        style={{ background: "#0e1626", border: "1px solid rgba(141,145,155,0.16)", boxShadow: "0 24px 60px rgba(0,0,0,0.5)" }}
+        style={{ background: "#121215", border: "1px solid rgba(115,115,115,0.16)", boxShadow: "0 24px 60px rgba(0,0,0,0.5)" }}
       >
         {/* Header */}
-        <div className="flex items-center gap-3 px-5 py-4 shrink-0" style={{ borderBottom: "1px solid rgba(141,145,155,0.12)" }}>
-          <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(173,198,255,0.14)", border: "1px solid rgba(173,198,255,0.25)" }}>
-            <span className="material-symbols-outlined text-[20px]" style={{ color: "#adc6ff" }}>auto_awesome</span>
+        <div className="flex items-center gap-3 px-5 py-4 shrink-0" style={{ borderBottom: "1px solid rgba(115,115,115,0.12)" }}>
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(173,198,255,0.14)", border: "1px solid rgba(0,0,0,0.35)" }}>
+            <span className="material-symbols-outlined text-[20px]" style={{ color: "#fafafa" }}>auto_awesome</span>
           </div>
           <div className="flex-1 min-w-0">
             <h2 className="text-[15px] font-black font-headline text-on-surface leading-none">Optimización de horarios</h2>
@@ -182,14 +182,14 @@ export function OptimizadorModal({ materias, preseleccionados, anio, cuatrimestr
                           onClick={() => setCriterio(c.id)}
                           className="text-left rounded-xl p-3 transition-all"
                           style={{
-                            background: on ? "rgba(173,198,255,0.1)" : "rgba(34,42,61,0.5)",
-                            border: `1px solid ${on ? "rgba(173,198,255,0.45)" : "rgba(141,145,155,0.16)"}`,
+                            background: on ? "rgba(173,198,255,0.1)" : "rgba(35,35,39,0.5)",
+                            border: `1px solid ${on ? "rgba(173,198,255,0.45)" : "rgba(115,115,115,0.16)"}`,
                             boxShadow: on ? "0 0 14px rgba(173,198,255,0.1)" : undefined,
                           }}
                         >
-                          <span className="material-symbols-outlined text-[20px]" style={{ color: on ? "#adc6ff" : "rgba(195,198,209,0.7)" }}>{c.icon}</span>
-                          <p className="font-headline font-bold text-[12.5px] mt-1.5" style={{ color: on ? "#eaf0ff" : "#c3c6d1" }}>{c.titulo}</p>
-                          <p className="text-[10.5px] leading-snug mt-1" style={{ color: "rgba(141,145,155,0.8)" }}>{c.desc}</p>
+                          <span className="material-symbols-outlined text-[20px]" style={{ color: on ? "#fafafa" : "rgba(163,163,163,0.7)" }}>{c.icon}</span>
+                          <p className="font-headline font-bold text-[12.5px] mt-1.5" style={{ color: on ? "#fafafa" : "#a3a3a3" }}>{c.titulo}</p>
+                          <p className="text-[10.5px] leading-snug mt-1" style={{ color: "rgba(115,115,115,0.8)" }}>{c.desc}</p>
                         </button>
                       );
                     })}
@@ -206,9 +206,9 @@ export function OptimizadorModal({ materias, preseleccionados, anio, cuatrimestr
                             onClick={() => setTurno(t.id)}
                             className="flex-1 flex items-center justify-center gap-1.5 rounded-lg py-2 text-[12px] font-bold font-label transition-all"
                             style={{
-                              color: on ? "#0b1326" : "rgba(195,198,209,0.72)",
-                              background: on ? "#adc6ff" : "rgba(34,42,61,0.6)",
-                              border: `1px solid ${on ? "#adc6ff" : "rgba(141,145,155,0.18)"}`,
+                              color: on ? "#09090b" : "rgba(163,163,163,0.72)",
+                              background: on ? "#fafafa" : "rgba(35,35,39,0.6)",
+                              border: `1px solid ${on ? "#fafafa" : "rgba(115,115,115,0.18)"}`,
                             }}
                           >
                             <span className="material-symbols-outlined text-[16px]">{t.icon}</span>
@@ -228,9 +228,9 @@ export function OptimizadorModal({ materias, preseleccionados, anio, cuatrimestr
                           onClick={() => setDiaLibre(null)}
                           className="rounded-lg px-3 py-1.5 text-[11px] font-bold font-label transition-all"
                           style={{
-                            color: diaLibre === null ? "#0b1326" : "rgba(195,198,209,0.72)",
-                            background: diaLibre === null ? "#adc6ff" : "rgba(34,42,61,0.6)",
-                            border: `1px solid ${diaLibre === null ? "#adc6ff" : "rgba(141,145,155,0.18)"}`,
+                            color: diaLibre === null ? "#09090b" : "rgba(163,163,163,0.72)",
+                            background: diaLibre === null ? "#fafafa" : "rgba(35,35,39,0.6)",
+                            border: `1px solid ${diaLibre === null ? "#fafafa" : "rgba(115,115,115,0.18)"}`,
                           }}
                         >
                           Cualquiera
@@ -243,9 +243,9 @@ export function OptimizadorModal({ materias, preseleccionados, anio, cuatrimestr
                               onClick={() => setDiaLibre(on ? null : d.id)}
                               className="rounded-lg px-3 py-1.5 text-[11px] font-bold font-label transition-all"
                               style={{
-                                color: on ? "#0b1326" : "rgba(195,198,209,0.72)",
-                                background: on ? "#adc6ff" : "rgba(34,42,61,0.6)",
-                                border: `1px solid ${on ? "#adc6ff" : "rgba(141,145,155,0.18)"}`,
+                                color: on ? "#09090b" : "rgba(163,163,163,0.72)",
+                                background: on ? "#fafafa" : "rgba(35,35,39,0.6)",
+                                border: `1px solid ${on ? "#fafafa" : "rgba(115,115,115,0.18)"}`,
                               }}
                             >
                               {d.label}
@@ -285,16 +285,16 @@ export function OptimizadorModal({ materias, preseleccionados, anio, cuatrimestr
                                   key={m.codigo}
                                   onClick={() => toggle(m.codigo)}
                                   className="w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 transition-colors text-left"
-                                  style={{ background: on ? `rgba(${m.rgb},0.08)` : "rgba(34,42,61,0.4)", border: `1px solid ${on ? `rgba(${m.rgb},0.3)` : "rgba(141,145,155,0.1)"}` }}
+                                  style={{ background: on ? `rgba(${m.rgb},0.08)` : "rgba(35,35,39,0.4)", border: `1px solid ${on ? `rgba(${m.rgb},0.3)` : "rgba(115,115,115,0.1)"}` }}
                                 >
                                   <span
                                     className="w-4 h-4 rounded-[5px] flex items-center justify-center shrink-0"
-                                    style={{ background: on ? `rgb(${m.rgb})` : "transparent", border: `1.5px solid ${on ? `rgb(${m.rgb})` : "rgba(141,145,155,0.4)"}` }}
+                                    style={{ background: on ? `rgb(${m.rgb})` : "transparent", border: `1.5px solid ${on ? `rgb(${m.rgb})` : "rgba(115,115,115,0.4)"}` }}
                                   >
-                                    {on && <span className="material-symbols-outlined" style={{ fontSize: "13px", color: "#0b1326", fontVariationSettings: "'FILL' 1" }}>check</span>}
+                                    {on && <span className="material-symbols-outlined" style={{ fontSize: "13px", color: "#09090b", fontVariationSettings: "'FILL' 1" }}>check</span>}
                                   </span>
                                   <span className="material-symbols-outlined shrink-0" style={{ fontSize: "16px", color: m.text }}>{materiaIcon(m.nombre)}</span>
-                                  <span className="flex-1 min-w-0 text-[12px] font-medium truncate" style={{ color: on ? "#eaf0ff" : "#c3c6d1" }}>
+                                  <span className="flex-1 min-w-0 text-[12px] font-medium truncate" style={{ color: on ? "#fafafa" : "#a3a3a3" }}>
                                     {m.nombre}
                                     {m.anual && <span className="text-[9px] text-outline/60 ml-1.5">anual</span>}
                                   </span>
@@ -315,7 +315,7 @@ export function OptimizadorModal({ materias, preseleccionados, anio, cuatrimestr
               </div>
 
               {/* Footer */}
-              <div className="px-5 py-3.5 shrink-0 flex items-center justify-end gap-2" style={{ borderTop: "1px solid rgba(141,145,155,0.12)" }}>
+              <div className="px-5 py-3.5 shrink-0 flex items-center justify-end gap-2" style={{ borderTop: "1px solid rgba(115,115,115,0.12)" }}>
                 <button onClick={onClose} className="px-4 py-2 rounded-lg text-xs font-bold font-label text-outline hover:text-on-surface transition-colors">
                   Cancelar
                 </button>
@@ -323,7 +323,7 @@ export function OptimizadorModal({ materias, preseleccionados, anio, cuatrimestr
                   onClick={ejecutar}
                   disabled={seleccion.size === 0 || fase === "loading"}
                   className="px-4 py-2 rounded-lg text-xs font-bold font-label flex items-center gap-1.5 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                  style={{ background: "#adc6ff", color: "#0b1326", boxShadow: "0 2px 10px rgba(173,198,255,0.25)" }}
+                  style={{ background: "#fafafa", color: "#09090b", boxShadow: "0 2px 10px rgba(0,0,0,0.35)" }}
                 >
                   {fase === "loading"
                     ? <><span className="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>Optimizando…</>
@@ -362,8 +362,8 @@ function ResultadoView({
             <p className="text-[11px] text-outline">Se evaluaron {resultado.combinaciones_evaluadas.toLocaleString("es-AR")} combinaciones.</p>
           )}
         </div>
-        <div className="px-5 py-3.5 shrink-0 flex justify-end" style={{ borderTop: "1px solid rgba(141,145,155,0.12)" }}>
-          <button onClick={onVolver} className="px-4 py-2 rounded-lg text-xs font-bold font-label" style={{ background: "rgba(34,42,61,0.7)", color: "#dce0ea", border: "1px solid rgba(141,145,155,0.2)" }}>
+        <div className="px-5 py-3.5 shrink-0 flex justify-end" style={{ borderTop: "1px solid rgba(115,115,115,0.12)" }}>
+          <button onClick={onVolver} className="px-4 py-2 rounded-lg text-xs font-bold font-label" style={{ background: "rgba(35,35,39,0.7)", color: "#fafafa", border: "1px solid rgba(115,115,115,0.2)" }}>
             Volver a elegir
           </button>
         </div>
@@ -402,7 +402,7 @@ function ResultadoView({
                       key={d}
                       onClick={() => onElegirDia(d)}
                       className="hz-yearchip rounded-lg px-3 py-1.5 text-[11px] font-bold font-label capitalize"
-                      style={{ color: "#0b1326", background: "#ffce8f" }}
+                      style={{ color: "#09090b", background: "#ffce8f" }}
                     >
                       {DIA_NOMBRE[d] ?? d}
                     </button>
@@ -425,16 +425,16 @@ function ResultadoView({
               <div
                 key={a.cursada_id}
                 className="rounded-xl p-3"
-                style={{ background: `linear-gradient(0deg, rgba(${rgb},0.08), rgba(${rgb},0.08)), rgba(34,42,61,0.4)`, border: `1px solid rgba(${rgb},0.22)`, borderLeft: `3px solid rgb(${rgb})` }}
+                style={{ background: `linear-gradient(0deg, rgba(${rgb},0.08), rgba(${rgb},0.08)), rgba(35,35,39,0.4)`, border: `1px solid rgba(${rgb},0.22)`, borderLeft: `3px solid rgb(${rgb})` }}
               >
                 <div className="flex items-center gap-2.5">
                   <span className="material-symbols-outlined shrink-0" style={{ fontSize: "18px", color: text }}>{materiaIcon(a.materia_nombre)}</span>
-                  <p className="font-headline font-bold text-[13px] flex-1 min-w-0 truncate" style={{ color: "#eaf0ff" }}>{a.materia_nombre}</p>
+                  <p className="font-headline font-bold text-[13px] flex-1 min-w-0 truncate" style={{ color: "#fafafa" }}>{a.materia_nombre}</p>
                   <span className="text-[11px] font-bold font-label px-2 py-0.5 rounded-md shrink-0" style={{ background: `rgba(${rgb},0.16)`, color: text }}>
                     {a.comision_nombre ?? `#${a.comision_id}`}
                   </span>
                 </div>
-                <p className="text-[10.5px] font-label mt-1.5 pl-[28px]" style={{ color: "rgba(195,198,209,0.65)" }}>
+                <p className="text-[10.5px] font-label mt-1.5 pl-[28px]" style={{ color: "rgba(163,163,163,0.65)" }}>
                   {resumenHorarios(a.horarios)}
                 </p>
               </div>
@@ -443,7 +443,7 @@ function ResultadoView({
         </div>
       </div>
 
-      <div className="px-5 py-3.5 shrink-0 flex items-center justify-end gap-2" style={{ borderTop: "1px solid rgba(141,145,155,0.12)" }}>
+      <div className="px-5 py-3.5 shrink-0 flex items-center justify-end gap-2" style={{ borderTop: "1px solid rgba(115,115,115,0.12)" }}>
         <button onClick={onVolver} className="px-4 py-2 rounded-lg text-xs font-bold font-label text-outline hover:text-on-surface transition-colors">
           Volver a elegir
         </button>
@@ -462,9 +462,9 @@ function ResultadoView({
 
 function Metric({ icon, valor, label }: { icon: string; valor: string; label: string }) {
   return (
-    <div className="rounded-xl px-3 py-2.5 flex flex-col items-center text-center" style={{ background: "rgba(34,42,61,0.5)", border: "1px solid rgba(141,145,155,0.14)" }}>
-      <span className="material-symbols-outlined text-[18px] mb-1" style={{ color: "#adc6ff" }}>{icon}</span>
-      <p className="font-headline font-black text-[14px] leading-none" style={{ color: "#eaf0ff" }}>{valor}</p>
+    <div className="rounded-xl px-3 py-2.5 flex flex-col items-center text-center" style={{ background: "rgba(35,35,39,0.5)", border: "1px solid rgba(115,115,115,0.14)" }}>
+      <span className="material-symbols-outlined text-[18px] mb-1" style={{ color: "#fafafa" }}>{icon}</span>
+      <p className="font-headline font-black text-[14px] leading-none" style={{ color: "#fafafa" }}>{valor}</p>
       <p className="text-[9.5px] text-outline/60 mt-1 font-label">{label}</p>
     </div>
   );

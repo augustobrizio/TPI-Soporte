@@ -59,7 +59,7 @@ export function ChatSnippet({ ultimaPregunta, haceTexto, conversacionId }: Props
 
       <Link
         href={href}
-        className="mt-4 w-full py-3 bg-primary-container text-primary-fixed rounded-xl text-sm font-bold hover:brightness-110 transition flex items-center justify-center gap-2"
+        className="mt-4 w-full py-3 bg-on-surface text-surface rounded-xl text-sm font-bold hover:opacity-90 transition flex items-center justify-center gap-2"
       >
         {hayHistorial ? "Retomar conversacion" : "Iniciar chat"}
         <span className="material-symbols-outlined text-[16px]">arrow_forward</span>

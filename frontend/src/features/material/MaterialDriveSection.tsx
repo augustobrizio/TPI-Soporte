@@ -254,7 +254,7 @@ export function MaterialDriveSection() {
                     href={driveUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="mt-4 inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-on-primary"
+                    className="mt-4 inline-flex items-center gap-2 rounded-xl bg-on-surface px-4 py-2 text-sm font-bold text-surface"
                   >
                     Abrir en Drive
                     <span className="material-symbols-outlined text-[18px]">open_in_new</span>
