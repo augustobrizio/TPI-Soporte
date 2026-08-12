@@ -21,7 +21,6 @@ import { ImportarSysacadBoton } from "./ImportarSysacadBoton";
 import { AyudaModal } from "./AyudaModal";
 import { cuatriSortKey, cuatriLabel } from "./layout";
 
-const USUARIO_ID = 1;
 
 // ---------------------------------------------------------------------------
 // Logica de cascada client-side
@@ -234,9 +233,9 @@ export function MateriasGraphView({ grafo, tipo }: Props) {
       const intended = intendedState.current[cod];
       delete intendedState.current[cod];
       if (intended === null) {
-        promises.push(eliminarEstado(USUARIO_ID, cod));
+        promises.push(eliminarEstado(cod));
       } else if (intended !== undefined) {
-        promises.push(registrarEstado(USUARIO_ID, cod, { condicion: intended, forzar: true }));
+        promises.push(registrarEstado(cod, { condicion: intended, forzar: true }));
       }
     }
     const navigate = () => {
@@ -279,9 +278,9 @@ export function MateriasGraphView({ grafo, tipo }: Props) {
       void (async () => {
         try {
           if (intended === null) {
-            await eliminarEstado(USUARIO_ID, codigo);
+            await eliminarEstado(codigo);
           } else if (intended !== undefined) {
-            await registrarEstado(USUARIO_ID, codigo, {
+            await registrarEstado(codigo, {
               condicion: intended,
               forzar: true,
             });
@@ -394,7 +393,7 @@ export function MateriasGraphView({ grafo, tipo }: Props) {
             <HeaderStats contadores={contadores} />
             {promedio !== null && <PromedioCard promedio={promedio} />}
           </div>
-          <ImportarSysacadBoton usuarioId={USUARIO_ID} />
+          <ImportarSysacadBoton />
         </div>
       </header>
 
@@ -495,7 +494,7 @@ export function MateriasGraphView({ grafo, tipo }: Props) {
           onClose={() => setModalCodigo(null)}
           onDelete={async () => {
             setModalCodigo(null);
-            await eliminarEstado(USUARIO_ID, nodoModal.codigo);
+            await eliminarEstado(nodoModal.codigo);
             setRegistros((prev) => {
               const next = { ...prev };
               delete next[nodoModal.codigo];

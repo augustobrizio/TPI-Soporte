@@ -12,11 +12,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ImportarSysacadModal } from "./ImportarSysacadModal";
 
-interface Props {
-  usuarioId?: number;
-}
-
-export function ImportarSysacadBoton({ usuarioId = 1 }: Props) {
+export function ImportarSysacadBoton() {
   const [abierto, setAbierto] = useState(false);
   const router = useRouter();
 
@@ -48,7 +44,6 @@ export function ImportarSysacadBoton({ usuarioId = 1 }: Props) {
 
       {abierto && (
         <ImportarSysacadModal
-          usuarioId={usuarioId}
           onClose={() => setAbierto(false)}
           onImportado={handleImportado}
         />

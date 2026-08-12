@@ -1,9 +1,5 @@
 import type { NextConfig } from "next";
 
-// URL del backend. En local es el docker-compose; en produccion, la del
-// servicio de App Runner (se setea como variable de entorno en Amplify).
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   images: {
@@ -11,15 +7,10 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "lh3.googleusercontent.com" },
     ],
   },
-  // Proxy para mutaciones client-side: evita CORS en dev y simplifica prod.
-  async rewrites() {
-    return [
-      {
-        source: "/api/backend/:path*",
-        destination: `${API_URL}/:path*`,
-      },
-    ];
-  },
+  // El proxy de /api/backend/* ya no es un rewrite: ahora es un route handler
+  // (`app/api/backend/[...path]/route.ts`) porque tiene que leer la cookie de
+  // sesion (httpOnly) y mandar el `Authorization` al backend, cosa que un
+  // rewrite no puede hacer.
 };
 
 export default nextConfig;

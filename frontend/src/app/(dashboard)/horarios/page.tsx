@@ -14,8 +14,8 @@ function cuatrimestrePorDefecto(): 0 | 1 {
 // Carga ambos cuatrimestres en paralelo → el switch de cuatrimestre es instantáneo (client-side)
 export default async function HorariosPage() {
   const [materias1, materias2] = await Promise.all([
-    getComisionesCursables(1, 2025, 1).catch((): MateriaCursableOut[] => []),
-    getComisionesCursables(1, 2025, 2).catch((): MateriaCursableOut[] => []),
+    getComisionesCursables(2025, 1).catch((): MateriaCursableOut[] => []),
+    getComisionesCursables(2025, 2).catch((): MateriaCursableOut[] => []),
   ]);
 
   return (

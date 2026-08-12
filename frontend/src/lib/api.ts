@@ -47,8 +47,31 @@ export class ApiError extends Error {
 }
 
 interface FetchOptions extends RequestInit {
-  /** segundos de revalidacion del cache (Server Component). */
+  /**
+   * Segundos de revalidacion del cache (Server Component). Default 60.
+   *
+   * **Todo endpoint cuya respuesta dependa del usuario logueado tiene que
+   * pasar `revalidate: 0`.** El cache de Next es por URL: si se cachea una
+   * respuesta por-usuario, el siguiente que pida la misma URL se lleva los
+   * datos del anterior.
+   */
   revalidate?: number;
+}
+
+/**
+ * Header de autorizacion para las lecturas de Server Components.
+ *
+ * Solo corre en el servidor: en el browser no hay token al que acceder (la
+ * cookie es httpOnly) y esas llamadas van por `/api/backend/*`, que pone el
+ * header del otro lado. El import es dinamico porque `next/headers` no existe
+ * en el bundle del cliente y este archivo tambien se bundlea para el browser.
+ */
+async function headerAuth(): Promise<Record<string, string>> {
+  if (typeof window !== "undefined") return {};
+  const { cookies } = await import("next/headers");
+  const { COOKIE_SESION } = await import("./sessionCookie");
+  const token = (await cookies()).get(COOKIE_SESION)?.value;
+  return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 async function request<T>(path: string, options: FetchOptions = {}): Promise<T> {
@@ -60,6 +83,7 @@ async function request<T>(path: string, options: FetchOptions = {}): Promise<T> 
     headers: {
       "Content-Type": "application/json",
       Accept: "application/json",
+      ...(await headerAuth()),
       ...(init.headers ?? {}),
     },
     // Server Components: cachear con revalidacion. Default 60s.
@@ -85,12 +109,11 @@ async function request<T>(path: string, options: FetchOptions = {}): Promise<T> 
 
 export interface GrafoParams {
   tipo: TipoMateria;
-  usuarioId?: number;
 }
 
-export function getGrafo({ tipo, usuarioId }: GrafoParams): Promise<GrafoResponse> {
+/** Grafo del usuario logueado (el backend lo saca del token). */
+export function getGrafo({ tipo }: GrafoParams): Promise<GrafoResponse> {
   const qs = new URLSearchParams({ tipo });
-  if (usuarioId !== undefined) qs.set("usuario_id", String(usuarioId));
   // revalidate: 0 → nunca cachear. El grafo es user-specific y cambia con cada mutacion.
   return request<GrafoResponse>(`/materias/grafo?${qs.toString()}`, { revalidate: 0 });
 }
@@ -177,11 +200,10 @@ export function listarCentros(): Promise<CentroOut[]> {
 const MUTATION_BASE = "/api/backend";
 
 export async function registrarEstado(
-  usuarioId: number,
   codigo: string,
   payload: { condicion: string; forzar?: boolean },
 ): Promise<unknown> {
-  const res = await fetch(`${MUTATION_BASE}/usuarios/${usuarioId}/materias/${codigo}`, {
+  const res = await fetch(`${MUTATION_BASE}/mi/materias/${codigo}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     body: JSON.stringify(payload),
@@ -194,8 +216,8 @@ export async function registrarEstado(
   return res.json();
 }
 
-export async function eliminarEstado(usuarioId: number, codigo: string): Promise<void> {
-  const res = await fetch(`${MUTATION_BASE}/usuarios/${usuarioId}/materias/${codigo}`, {
+export async function eliminarEstado(codigo: string): Promise<void> {
+  const res = await fetch(`${MUTATION_BASE}/mi/materias/${codigo}`, {
     method: "DELETE",
     headers: { Accept: "application/json" },
   });
@@ -205,8 +227,8 @@ export async function eliminarEstado(usuarioId: number, codigo: string): Promise
 }
 
 /** Elimina TODOS los registros de cursada del usuario (reset masivo). */
-export async function resetearTodosRegistros(usuarioId: number): Promise<{ eliminados: number }> {
-  const res = await fetch(`${MUTATION_BASE}/usuarios/${usuarioId}/materias`, {
+export async function resetearTodosRegistros(): Promise<{ eliminados: number }> {
+  const res = await fetch(`${MUTATION_BASE}/mi/materias`, {
     method: "DELETE",
     headers: { Accept: "application/json" },
   });
@@ -222,11 +244,10 @@ export async function resetearTodosRegistros(usuarioId: number): Promise<{ elimi
  * No toca la DB.
  */
 export async function previewImportarSysacad(
-  usuarioId: number,
   texto: string,
 ): Promise<PreviewImportSysacad> {
   const res = await fetch(
-    `${MUTATION_BASE}/usuarios/${usuarioId}/materias/importar-sysacad/preview`,
+    `${MUTATION_BASE}/mi/materias/importar-sysacad/preview`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
@@ -245,11 +266,10 @@ export async function previewImportarSysacad(
  * Paso 2 OCR: aplica la importacion con los items que el alumno confirmo.
  */
 export async function confirmarImportarSysacad(
-  usuarioId: number,
   payload: ConfirmarImportIn,
 ): Promise<ResultadoImportSysacad> {
   const res = await fetch(
-    `${MUTATION_BASE}/usuarios/${usuarioId}/materias/importar-sysacad/confirmar`,
+    `${MUTATION_BASE}/mi/materias/importar-sysacad/confirmar`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
@@ -269,12 +289,10 @@ export async function confirmarImportarSysacad(
 // ---------------------------------------------------------------------------
 
 export function getComisionesCursables(
-  usuarioId: number,
   anio: number,
   cuatrimestre: number,
 ): Promise<MateriaCursableOut[]> {
   const qs = new URLSearchParams({
-    usuario_id: String(usuarioId),
     anio: String(anio),
     cuatrimestre: String(cuatrimestre),
   });
@@ -284,12 +302,11 @@ export function getComisionesCursables(
 }
 
 export async function seleccionarCursada(
-  usuarioId: number,
   materia_codigo: string,
   cursada_id: number,
 ): Promise<unknown> {
   const res = await fetch(
-    `${MUTATION_BASE}/usuarios/${usuarioId}/materias/${materia_codigo}/cursada`,
+    `${MUTATION_BASE}/mi/materias/${materia_codigo}/cursada`,
     {
       method: "PUT",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
@@ -329,11 +346,10 @@ export async function optimizarHorario(
 }
 
 export async function deseleccionarCursada(
-  usuarioId: number,
   materia_codigo: string,
 ): Promise<void> {
   const res = await fetch(
-    `${MUTATION_BASE}/usuarios/${usuarioId}/materias/${materia_codigo}/cursada`,
+    `${MUTATION_BASE}/mi/materias/${materia_codigo}/cursada`,
     {
       method: "DELETE",
       headers: { Accept: "application/json" },

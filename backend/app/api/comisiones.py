@@ -6,6 +6,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
+from app.api.deps import UsuarioActual
 from app.db.session import get_db
 from app.schemas.comision import (
     ComisionOut,
@@ -65,8 +66,8 @@ def comisiones_con_profesores(
     summary="Materias cursables con sus comisiones y horarios",
 )
 def materias_cursables(
+    usuario: UsuarioActual,
     db: Annotated[Session, Depends(get_db)],
-    usuario_id: int = Query(..., description="ID del usuario"),
     anio: int = Query(2025, description="Año académico"),
     cuatrimestre: int = Query(..., ge=1, le=2, description="1 o 2"),
 ) -> list[MateriaCursableOut]:
@@ -77,19 +78,19 @@ def materias_cursables(
     """
     return comision_service.materias_cursables_con_comisiones(
         db,
-        usuario_id=usuario_id,
+        usuario_id=usuario.id,
         anio=anio,
         cuatrimestre=cuatrimestre,
     )
 
 
 @router.put(
-    "/usuarios/{usuario_id}/materias/{codigo}/cursada",
+    "/mi/materias/{codigo}/cursada",
     response_model=UsuarioMateriaOut,
     summary="Seleccionar comisión para una materia",
 )
 def seleccionar_cursada(
-    usuario_id: int,
+    usuario: UsuarioActual,
     codigo: str,
     payload: SeleccionarCursadaIn,
     db: Annotated[Session, Depends(get_db)],
@@ -102,7 +103,7 @@ def seleccionar_cursada(
     try:
         registro = comision_service.seleccionar_cursada(
             db,
-            usuario_id=usuario_id,
+            usuario_id=usuario.id,
             materia_codigo=codigo,
             cursada_id=payload.cursada_id,
         )
@@ -121,12 +122,12 @@ def seleccionar_cursada(
 
 
 @router.delete(
-    "/usuarios/{usuario_id}/materias/{codigo}/cursada",
+    "/mi/materias/{codigo}/cursada",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Quitar comisión seleccionada",
 )
 def deseleccionar_cursada(
-    usuario_id: int,
+    usuario: UsuarioActual,
     codigo: str,
     db: Annotated[Session, Depends(get_db)],
 ) -> None:
@@ -134,10 +135,10 @@ def deseleccionar_cursada(
 
     Devuelve 404 si el usuario no tiene cursada seleccionada para esa materia.
     """
-    ok = comision_service.deseleccionar_cursada(db, usuario_id, codigo)
+    ok = comision_service.deseleccionar_cursada(db, usuario.id, codigo)
     if not ok:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"El usuario {usuario_id} no tiene cursada seleccionada para '{codigo}'.",
+            detail=f"No tenés cursada seleccionada para la materia '{codigo}'.",
         )
     db.commit()

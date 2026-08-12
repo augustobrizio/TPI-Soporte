@@ -16,7 +16,6 @@ import type { ItemImportMapeado, PreviewImportSysacad, ResultadoImportSysacad } 
 import { ApiError, confirmarImportarSysacad, previewImportarSysacad, resetearTodosRegistros } from "@/lib/api";
 
 interface Props {
-  usuarioId?: number;
   onClose: () => void;
   onImportado?: () => void;
 }
@@ -39,7 +38,7 @@ const CONDICION_CLS: Record<string, string> = {
   none: "text-outline",
 };
 
-export function ImportarSysacadModal({ usuarioId = 1, onClose, onImportado }: Props) {
+export function ImportarSysacadModal({ onClose, onImportado }: Props) {
   const [paso, setPaso] = useState<Paso>("pegar");
   const [texto, setTexto] = useState("");
   const [preview, setPreview] = useState<PreviewImportSysacad | null>(null);
@@ -61,7 +60,7 @@ export function ImportarSysacadModal({ usuarioId = 1, onClose, onImportado }: Pr
     setPaso("analizando");
     setError(null);
     try {
-      const prev = await previewImportarSysacad(usuarioId, texto);
+      const prev = await previewImportarSysacad(texto);
       setPreview(prev);
       setItems(prev.items);
       setPaso("preview");
@@ -98,7 +97,7 @@ export function ImportarSysacadModal({ usuarioId = 1, onClose, onImportado }: Pr
     setPaso("confirmando");
     setError(null);
     try {
-      const res = await confirmarImportarSysacad(usuarioId, { items, forzar: true, reemplazar });
+      const res = await confirmarImportarSysacad({ items, forzar: true, reemplazar });
       setResultado(res);
       setPaso("exito");
       onImportado?.();
@@ -198,7 +197,7 @@ export function ImportarSysacadModal({ usuarioId = 1, onClose, onImportado }: Pr
                       onClick={async () => {
                         setReseteando(true);
                         try {
-                          await resetearTodosRegistros(usuarioId);
+                          await resetearTodosRegistros();
                           onImportado?.(); // para que el grafo se refresque
                         } catch {
                           setError("No se pudo borrar. Intentá de nuevo.");

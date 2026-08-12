@@ -7,7 +7,6 @@ import { materiaIcon } from "@/lib/materiaIcon";
 import type { AsignacionOut, HorarioOut, MateriaCursableOut } from "@/lib/types";
 import { OptimizadorModal, type OptMateria } from "./OptimizadorModal";
 
-const USUARIO_ID = 1;
 const ANIO_ACADEMICO = 2025;
 
 const DIAS = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes"];
@@ -302,12 +301,12 @@ export function HorariosBuilder({ materias1, materias2, cuatriInicial }: Props) 
     setLoadingCodigo(mat.codigo);
     try {
       if (yaEsta) {
-        await deseleccionarCursada(USUARIO_ID, mat.codigo);
+        await deseleccionarCursada(mat.codigo);
         setSeleccion(p => { const n = new Map(p); n.delete(mat.codigo); return n; });
       } else {
         const cu = mat.anual ? (com.c[idx] ?? com.c[idx === 0 ? 1 : 0]) : com.c[idx];
         if (!cu) return;
-        await seleccionarCursada(USUARIO_ID, mat.codigo, cu.cursada_id);
+        await seleccionarCursada(mat.codigo, cu.cursada_id);
         setSeleccion(p => new Map(p).set(mat.codigo, { comisionId: com.comision_id, cuatri: mat.anual ? null : idx }));
       }
     } catch (e) { console.error(e); }
@@ -320,7 +319,7 @@ export function HorariosBuilder({ materias1, materias2, cuatriInicial }: Props) 
   async function quitarMateria(codigo: string) {
     setLoadingCodigo(codigo);
     try {
-      await deseleccionarCursada(USUARIO_ID, codigo);
+      await deseleccionarCursada(codigo);
       setSeleccion(p => { const n = new Map(p); n.delete(codigo); return n; });
     } catch (e) { console.error(e); }
     finally {
@@ -353,7 +352,7 @@ export function HorariosBuilder({ materias1, materias2, cuatriInicial }: Props) 
       return n;
     });
     try {
-      await Promise.all(asignaciones.map(a => seleccionarCursada(USUARIO_ID, a.materia_codigo, a.cursada_id)));
+      await Promise.all(asignaciones.map(a => seleccionarCursada(a.materia_codigo, a.cursada_id)));
     } catch (e) { console.error(e); }
     startTransition(() => router.refresh());
   }

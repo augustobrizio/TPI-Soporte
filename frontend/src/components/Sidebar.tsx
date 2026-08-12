@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+
+import { LogoutButton } from "@/features/auth/LogoutButton";
 import { useSidebar } from "./SidebarContext";
 
 interface NavItem {
@@ -40,7 +42,14 @@ function Tooltip({ label }: { label: string }) {
   );
 }
 
-export function Sidebar() {
+/** Datos del usuario logueado, resueltos en el layout (Server Component). */
+export interface UsuarioSidebar {
+  nombre: string;
+  detalle: string;
+  iniciales: string;
+}
+
+export function Sidebar({ usuario }: { usuario: UsuarioSidebar }) {
   const pathname = usePathname();
   const { collapsed, toggle } = useSidebar();
 
@@ -136,21 +145,30 @@ export function Sidebar() {
       <div className={`shrink-0 border-t border-[var(--shell-border)] pb-4 pt-3 ${collapsed ? "px-2" : "px-3"}`}>
         <div className={`group relative flex cursor-pointer items-center gap-3 rounded-lg transition-colors hover:bg-[var(--shell-hover)] ${collapsed ? "justify-center px-0 py-2.5" : "px-3 py-2.5"}`}>
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[#1CA4DF]/25 bg-[#1CA4DF]/10 font-headline text-xs font-extrabold text-[var(--shell-accent-fg)]">
-            JR
+            {usuario.iniciales}
           </div>
           {!collapsed && (
             <>
               <div className="min-w-0 flex-1 leading-none">
-                <p className="truncate text-xs font-semibold text-[var(--shell-fg)]">Julian Rossi</p>
-                <p className="mt-0.5 truncate text-[10px] text-[var(--shell-fg-dim)]">Leg. 194.201</p>
+                <p className="truncate text-xs font-semibold text-[var(--shell-fg)]">
+                  {usuario.nombre}
+                </p>
+                <p className="mt-0.5 truncate text-[10px] text-[var(--shell-fg-dim)]">
+                  {usuario.detalle}
+                </p>
               </div>
               <span className="material-symbols-outlined text-[16px] text-[var(--shell-fg-dim)] transition-colors group-hover:text-[var(--shell-fg-muted)]">
                 unfold_more
               </span>
             </>
           )}
-          {collapsed && <Tooltip label="Julian Rossi" />}
+          {collapsed && <Tooltip label={usuario.nombre} />}
         </div>
+
+        <LogoutButton
+          collapsed={collapsed}
+          tooltip={<Tooltip label="Cerrar sesión" />}
+        />
       </div>
     </aside>
   );

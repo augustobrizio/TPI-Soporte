@@ -11,6 +11,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
+from app.api.deps import UsuarioActual
 from app.db.session import get_db
 from app.schemas.materia import (
     GrafoResponse,
@@ -37,22 +38,19 @@ def listar_materias(
 
 @router.get("/grafo", response_model=GrafoResponse)
 def grafo_materias(
+    usuario: UsuarioActual,
     db: Annotated[Session, Depends(get_db)],
     tipo: TipoMateriaLiteral = Query(..., description="troncal o electiva"),
-    usuario_id: int | None = Query(
-        None,
-        description=(
-            "ID de usuario. Si se omite, los nodos quedan en estado 'libre' "
-            "(modo público)."
-        ),
-    ),
 ) -> GrafoResponse:
-    """Grafo de materias para una pestaña.
+    """Grafo de materias del usuario de la sesión.
 
     Devuelve nodos (con estado calculado para el usuario) y edges
     (correlativas). El frontend usa este shape para pintar el árbol.
+
+    El usuario sale del token: antes venía por query string, así que bastaba
+    cambiar `?usuario_id=` para ver el avance de cualquier otro alumno.
     """
-    return materia_service.construir_grafo(db, tipo=tipo, usuario_id=usuario_id)
+    return materia_service.construir_grafo(db, tipo=tipo, usuario_id=usuario.id)
 
 
 @router.get("/{codigo}", response_model=MateriaOut)
@@ -70,30 +68,24 @@ def get_materia(
     return MateriaOut.model_validate(materia)
 
 
-@router.get(
-    "/{codigo}/puede-cursar/{usuario_id}",
-    response_model=ValidacionCorrelativas,
-)
+@router.get("/{codigo}/puede-cursar", response_model=ValidacionCorrelativas)
 def puede_cursar(
     codigo: str,
-    usuario_id: int,
+    usuario: UsuarioActual,
     db: Annotated[Session, Depends(get_db)],
 ) -> ValidacionCorrelativas:
-    """¿El usuario cumple las correlativas para CURSAR esta materia?"""
-    return correlatividad_service.puede_cursar(db, usuario_id, codigo)
+    """¿El usuario de la sesión cumple las correlativas para CURSAR la materia?"""
+    return correlatividad_service.puede_cursar(db, usuario.id, codigo)
 
 
-@router.get(
-    "/{codigo}/puede-rendir/{usuario_id}",
-    response_model=ValidacionCorrelativas,
-)
+@router.get("/{codigo}/puede-rendir", response_model=ValidacionCorrelativas)
 def puede_rendir(
     codigo: str,
-    usuario_id: int,
+    usuario: UsuarioActual,
     db: Annotated[Session, Depends(get_db)],
 ) -> ValidacionCorrelativas:
-    """¿El usuario cumple las correlativas para RENDIR el final?
+    """¿El usuario de la sesión cumple las correlativas para RENDIR el final?
 
     Aplica la regla especial de Proyecto Final (todas las troncales aprobadas).
     """
-    return correlatividad_service.puede_rendir(db, usuario_id, codigo)
+    return correlatividad_service.puede_rendir(db, usuario.id, codigo)

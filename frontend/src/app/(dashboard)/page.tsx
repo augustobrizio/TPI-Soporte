@@ -12,6 +12,7 @@ import type {
   MateriaCursableOut,
 } from "@/lib/types";
 import { materiaIcon } from "@/lib/materiaIcon";
+import { getUsuarioActual } from "@/lib/auth";
 
 import { ProgresoHero } from "@/components/dashboard/ProgresoHero";
 import { AgendaHoy, type AgendaItem } from "@/components/dashboard/AgendaHoy";
@@ -23,11 +24,9 @@ import {
 } from "@/components/dashboard/NovedadesAlertas";
 import { AtajosToolbox } from "@/components/dashboard/AtajosToolbox";
 
-// Hardcoded mientras no hay auth — alineado con lo que ya hace materias/page.tsx.
-// Cuando exista AuthProvider real, esto pasa a venir de la sesion.
-const USUARIO_ID = 1;
-const NOMBRE = "Julian";
-const CARRERA = "Ingenieria en Sistemas - 3er Anio";
+// La carrera todavia no esta en el modelo `Usuario` (solo hay legajo y anio
+// de ingreso), asi que por ahora es fija. El nombre sale de la sesion.
+const CARRERA = "Ingenieria en Sistemas de Informacion";
 
 // Fallback de contadores si el backend no responde. Mantiene la UI usable
 // y evita arrastrar un null por todo el render.
@@ -78,7 +77,7 @@ async function obtenerGrafoSeguro(): Promise<{
   error: string | null;
 }> {
   try {
-    const grafo = await getGrafo({ tipo: "troncal", usuarioId: USUARIO_ID });
+    const grafo = await getGrafo({ tipo: "troncal" });
     return { grafo, error: null };
   } catch (err) {
     if (err instanceof ApiError) {
@@ -151,8 +150,8 @@ async function obtenerDiaSeguro(): Promise<{
     const [hoy, proximos, c1, c2] = await Promise.all([
       getEventosHoyCalendario("ISI"),
       getProximosEventosCalendario(30, "ISI"),
-      getComisionesCursables(USUARIO_ID, 2025, 1),
-      getComisionesCursables(USUARIO_ID, 2025, 2),
+      getComisionesCursables(2025, 1),
+      getComisionesCursables(2025, 2),
     ]);
     const clases = clasesDeHoy(cuatri === 1 ? c1 : c2, [...c1, ...c2]);
     return {
@@ -215,9 +214,10 @@ function iconoTipo(tipo: EventoCalendarioOut["tipo"]): string {
 // ---------------------------------------------------------------------------
 
 export default async function DashboardHome() {
-  const [{ grafo, error }, dia] = await Promise.all([
+  const [{ grafo, error }, dia, usuario] = await Promise.all([
     obtenerGrafoSeguro(),
     obtenerDiaSeguro(),
+    getUsuarioActual(),
   ]);
   const contadores = grafo?.contadores ?? CONTADORES_VACIOS;
   const enCursada = contadores.cursando;
@@ -237,7 +237,7 @@ export default async function DashboardHome() {
       )}
 
       <ProgresoHero
-        nombre={NOMBRE}
+        nombre={usuario?.nombre ?? usuario?.email ?? "Estudiante"}
         carrera={CARRERA}
         contadores={contadores}
         enCursada={enCursada}
