@@ -47,7 +47,7 @@ function UtnLogo() {
 export function TopNav() {
   const { collapsed } = useSidebar();
   return (
-    <nav className="fixed top-0 z-50 flex h-16 w-full items-center gap-4 border-b border-[var(--shell-border)] bg-[var(--shell-panel)]/90 px-6 backdrop-blur-xl">
+    <nav className="fixed top-0 z-50 flex h-16 w-full items-center gap-4 border-b border-[var(--shell-border)] bg-[var(--shell-panel-blur)] px-6 backdrop-blur-xl">
       {/* Logo + nombre — ancho alineado con la sidebar */}
       <div
         className={`flex shrink-0 items-center gap-3 transition-[width] duration-200 ease-out ${collapsed ? "w-9" : "w-56"}`}

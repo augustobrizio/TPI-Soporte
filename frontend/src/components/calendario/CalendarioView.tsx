@@ -520,7 +520,7 @@ function ProximoPanel({ evento }: { evento: EventoCalendarioOut | null }) {
   const cfg = TIPO[evento.tipo];
   const n = diffDias(toISODate(new Date(evento.fecha_inicio)));
   return (
-    <section className="cal-panel rounded-2xl p-5 relative overflow-hidden" style={{ background: `linear-gradient(150deg, rgba(${cfg.rgb},0.16), rgba(${cfg.rgb},0.03)), rgba(18,18,21,0.6)` }}>
+    <section className="cal-panel rounded-2xl p-5 relative overflow-hidden" style={{ background: `linear-gradient(150deg, rgba(${cfg.rgb},0.16), rgba(${cfg.rgb},0.03)), rgb(var(--surface-container) / 0.6)` }}>
       <p className="text-[10px] uppercase tracking-[0.18em] font-bold font-label mb-3" style={{ color: cfg.text }}>Próximo evento importante</p>
       <div className="flex items-center gap-2 mb-2">
         <span className="text-[18px]">{cfg.emoji}</span>
@@ -538,7 +538,7 @@ function ProximoPanel({ evento }: { evento: EventoCalendarioOut | null }) {
 
 function DiaPanel({ fechaISO, eventos, onAgregar, onEditar, onRendir, onCerrar }: { fechaISO: string; eventos: EventoCalendarioOut[]; onAgregar: () => void; onEditar: (e: EventoCalendarioOut) => void; onRendir: (e: EventoCalendarioOut) => void; onCerrar: () => void }) {
   return (
-    <section className="cal-panel rounded-2xl p-5" style={{ background: "linear-gradient(150deg, rgba(173,198,255,0.1), rgba(18,18,21,0.6))" }}>
+    <section className="cal-panel rounded-2xl p-5" style={{ background: "linear-gradient(150deg, rgba(173,198,255,0.1), rgb(var(--surface-container) / 0.6))" }}>
       <div className="flex items-center justify-between mb-3">
         <p className="text-[10px] uppercase tracking-[0.16em] font-bold text-primary font-label">{fechaLarga(fechaISO)}</p>
         <button onClick={onCerrar} aria-label="Cerrar" className="w-7 h-7 rounded-lg flex items-center justify-center text-outline hover:text-on-surface hover:bg-surface-container-high transition-colors">

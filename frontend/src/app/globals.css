@@ -21,6 +21,32 @@
   --shell-fg-muted: #525252;
   --shell-fg-dim: #a3a3a3;
   --shell-accent-fg: #0e7fb0;
+  color-scheme: light;
+  /* Panel translucido para la topbar (glass + backdrop-blur). El alpha va
+   * horneado en la variable: Tailwind no puede aplicar `/90` sobre un var()
+   * crudo (descarta la regla y la barra queda transparente). */
+  --shell-panel-blur: rgba(255, 255, 255, 0.9);
+
+  /* Kinetic Blueprint — escala neutra (surface/on-surface/outline) en formato
+   * canal "R G B" para que Tailwind pueda aplicar <alpha-value>. Estos son los
+   * valores CLAROS; los oscuros (identicos a los hex originales) van en .dark.
+   * Los acentos (primary/secondary/tertiary) siguen fijos en tailwind.config. */
+  --surface: 250 250 250;
+  --surface-dim: 244 244 245;
+  --surface-bright: 255 255 255;
+  --surface-container-lowest: 255 255 255;
+  --surface-container-low: 250 250 250;
+  --surface-container: 244 244 245;
+  --surface-container-high: 236 236 238;
+  --surface-container-highest: 228 228 231;
+  --background: 250 250 250;
+  --on-surface: 23 23 23;
+  --on-surface-variant: 82 82 91;
+  --on-background: 23 23 23;
+  --outline: 212 212 216;
+  --outline-variant: 228 228 231;
+  /* color del patron dotted de fondo (.bg-blueprint) */
+  --blueprint-dot: 0 0 0;
 }
 
 .dark {
@@ -32,6 +58,26 @@
   --shell-fg-muted: #a3a3a3;
   --shell-fg-dim: #737373;
   --shell-accent-fg: #4ec0ec;
+  --shell-panel-blur: rgba(12, 12, 14, 0.9);
+  color-scheme: dark;
+
+  /* Kinetic Blueprint — valores OSCUROS (identicos a los hex originales de
+   * tailwind.config.ts, ahora como canales para conservar el look dark). */
+  --surface: 9 9 11;
+  --surface-dim: 9 9 11;
+  --surface-bright: 42 42 47;
+  --surface-container-lowest: 5 5 6;
+  --surface-container-low: 12 12 14;
+  --surface-container: 18 18 21;
+  --surface-container-high: 26 26 30;
+  --surface-container-highest: 35 35 39;
+  --background: 9 9 11;
+  --on-surface: 250 250 250;
+  --on-surface-variant: 163 163 163;
+  --on-background: 250 250 250;
+  --outline: 115 115 115;
+  --outline-variant: 42 42 46;
+  --blueprint-dot: 82 82 91;
 }
 
 /* =====================================================================
@@ -41,7 +87,6 @@
 @layer base {
   html {
     @apply bg-surface text-on-surface;
-    color-scheme: dark;
   }
 
   body {
@@ -68,7 +113,7 @@
   .bg-blueprint {
     background-image: radial-gradient(
       circle at 2px 2px,
-      rgba(82, 82, 91, 0.18) 1px,
+      rgb(var(--blueprint-dot) / 0.18) 1px,
       transparent 0
     );
     background-size: 40px 40px;
@@ -221,7 +266,7 @@
 
 /* Paneles con profundidad en lugar de bordes (estilo Linear/Vercel) */
 .cal-panel {
-  background: rgba(18, 18, 21, 0.55);
+  background: rgb(var(--surface-container) / 0.55);
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 14px 36px -16px rgba(0, 0, 0, 0.55);
 }
 
