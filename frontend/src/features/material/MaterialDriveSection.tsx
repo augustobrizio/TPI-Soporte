@@ -131,12 +131,12 @@ export function MaterialDriveSection() {
   return (
     <section className="min-h-[calc(100vh-4rem)] bg-blueprint px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto flex max-w-7xl flex-col gap-6">
-        <header className="relative overflow-hidden rounded-2xl bg-surface-container-low/80 px-5 py-6 ring-1 ring-outline-variant/10 sm:px-7">
-          <div className="pointer-events-none absolute inset-y-0 right-0 w-1/2 bg-[radial-gradient(circle_at_top_right,rgba(173,198,255,0.14),transparent_55%)]" />
+        <header className="card-3d relative overflow-hidden rounded-2xl bg-surface-container-low/80 px-5 py-6 ring-1 ring-outline-variant/10 sm:px-7">
+          <div className="pointer-events-none absolute inset-y-0 right-0 w-1/2 bg-[radial-gradient(circle_at_top_right,rgb(var(--glow-primary)/0.14),transparent_55%)]" />
           <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-3xl">
               <div className="mb-4 flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.14em] text-primary/80">
-                <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/15">
+                <span className="icon-chip chip-primary flex h-8 w-8 items-center justify-center rounded-xl text-primary">
                   <span className="material-symbols-outlined text-[17px]">sync</span>
                 </span>
                 Fuente viva desde Google Drive

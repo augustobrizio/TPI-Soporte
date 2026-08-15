@@ -16,11 +16,11 @@ export interface TipoConfig {
 }
 
 export const TIPO: Record<TipoEventoCalendario, TipoConfig> = {
-  examen: { label: "Examen", plural: "Exámenes", emoji: "📝", icon: "history_edu", rgb: "255,120,120", text: "#ffb0b0", peso: 4 },
-  mesa: { label: "Mesa", plural: "Mesas de examen", emoji: "🎓", icon: "groups", rgb: "190,150,255", text: "#d3c2ff", peso: 2 },
-  trabajo_practico: { label: "TP", plural: "Trabajos prácticos", emoji: "📋", icon: "assignment", rgb: "255,160,50", text: "#ffcf8a", peso: 3 },
-  evento: { label: "Evento", plural: "Eventos", emoji: "🎉", icon: "celebration", rgb: "125,255,162", text: "#9cffc2", peso: 1 },
-  feriado: { label: "Feriado", plural: "Feriados", emoji: "🏖️", icon: "beach_access", rgb: "255,214,92", text: "#ffe4a5", peso: 0 },
+  examen: { label: "Examen", plural: "Exámenes", emoji: "📝", icon: "history_edu", rgb: "255,120,120", text: "rgb(var(--cat-examen))", peso: 4 },
+  mesa: { label: "Mesa", plural: "Mesas de examen", emoji: "🎓", icon: "groups", rgb: "190,150,255", text: "rgb(var(--cat-mesa))", peso: 2 },
+  trabajo_practico: { label: "TP", plural: "Trabajos prácticos", emoji: "📋", icon: "assignment", rgb: "255,160,50", text: "rgb(var(--cat-tp))", peso: 3 },
+  evento: { label: "Evento", plural: "Eventos", emoji: "🎉", icon: "celebration", rgb: "125,255,162", text: "rgb(var(--cat-evento))", peso: 1 },
+  feriado: { label: "Feriado", plural: "Feriados", emoji: "🏖️", icon: "beach_access", rgb: "255,214,92", text: "rgb(var(--cat-feriado))", peso: 0 },
 };
 
 export const ORDEN_TIPOS: TipoEventoCalendario[] = ["examen", "mesa", "trabajo_practico", "evento", "feriado"];

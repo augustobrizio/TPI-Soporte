@@ -13,38 +13,59 @@
  * ===================================================================*/
 
 :root {
-  --shell-canvas: #fafafa;
-  --shell-panel: #ffffff;
+  --shell-canvas: #f1f1f3;
+  --shell-panel: #fbfbfc;
   --shell-border: rgba(0, 0, 0, 0.08);
-  --shell-hover: rgba(0, 0, 0, 0.04);
-  --shell-fg: #171717;
-  --shell-fg-muted: #525252;
-  --shell-fg-dim: #a3a3a3;
+  --shell-hover: rgba(0, 0, 0, 0.045);
+  --shell-fg: #18181b;
+  --shell-fg-muted: #52525b;
+  --shell-fg-dim: #a1a1aa;
   --shell-accent-fg: #0e7fb0;
   color-scheme: light;
   /* Panel translucido para la topbar (glass + backdrop-blur). El alpha va
    * horneado en la variable: Tailwind no puede aplicar `/90` sobre un var()
    * crudo (descarta la regla y la barra queda transparente). */
-  --shell-panel-blur: rgba(255, 255, 255, 0.9);
+  --shell-panel-blur: rgba(251, 251, 252, 0.9);
 
   /* Kinetic Blueprint — escala neutra (surface/on-surface/outline) en formato
    * canal "R G B" para que Tailwind pueda aplicar <alpha-value>. Estos son los
    * valores CLAROS; los oscuros (identicos a los hex originales) van en .dark.
    * Los acentos (primary/secondary/tertiary) siguen fijos en tailwind.config. */
-  --surface: 250 250 250;
-  --surface-dim: 244 244 245;
-  --surface-bright: 255 255 255;
+  /* Off-white, no blanco puro (menos glare). Canvas mas gris que las cards +
+   * sombra (.card-3d) = jerarquia sin encandilar. */
+  --surface: 241 241 243;
+  --surface-dim: 232 232 235;
+  --surface-bright: 253 253 254;
   --surface-container-lowest: 255 255 255;
-  --surface-container-low: 250 250 250;
-  --surface-container: 244 244 245;
-  --surface-container-high: 236 236 238;
-  --surface-container-highest: 228 228 231;
-  --background: 250 250 250;
-  --on-surface: 23 23 23;
+  --surface-container-low: 250 250 251;
+  --surface-container: 248 248 249;
+  --surface-container-high: 241 241 243;
+  --surface-container-highest: 232 232 235;
+  --background: 241 241 243;
+  --on-surface: 24 24 27;
   --on-surface-variant: 82 82 91;
-  --on-background: 23 23 23;
-  --outline: 212 212 216;
-  --outline-variant: 228 228 231;
+  --on-background: 24 24 27;
+  /* `outline` se usa mucho como TEXTO (labels/metadatos), no solo borde: en
+   * claro va gris medio legible (no el gris claro de borde que no se leia). */
+  --outline: 110 110 119;
+  --outline-variant: 226 226 230;
+
+  /* Colores de categoria del calendario — variantes OSCURAS legibles sobre
+   * claro (las pasteles van en .dark). */
+  --cat-examen: 198 40 40;
+  --cat-mesa: 109 63 191;
+  --cat-tp: 180 83 9;
+  --cat-evento: 21 122 71;
+  --cat-feriado: 161 98 7;
+
+  /* Acentos LEGIBLES en claro (versiones oscuras de los pasteles del tema
+   * oscuro). El texto/bg sobre acento (--on-*) pasa a blanco. */
+  --primary: 42 99 197;
+  --secondary: 21 122 71;
+  --tertiary: 173 94 10;
+  --on-primary: 255 255 255;
+  --on-secondary: 255 255 255;
+  --on-tertiary: 255 255 255;
   /* color del patron dotted de fondo (.bg-blueprint) */
   --blueprint-dot: 0 0 0;
 
@@ -56,6 +77,20 @@
   --glow-primary: 99 140 235;
   --glow-secondary: 34 160 90;
   --glow-tertiary: 210 140 0;
+
+  /* Acentos crudos (misma identidad en ambos temas) en canal RGB, para tintar
+   * chips/números con alpha. Se comparten: al vivir en :root aplican tambien
+   * en .dark (que es el mismo <html>). */
+  --accent-primary: var(--primary);
+  --accent-secondary: var(--secondary);
+  --accent-tertiary: var(--tertiary);
+
+  /* Profundidad de cards (sheen interno + sombra en capas) — valores CLAROS. */
+  --card-sheen: rgba(255, 255, 255, 0.55);
+  --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 10px 26px -14px rgba(0, 0, 0, 0.12);
+  --card-shadow-hover: 0 2px 6px rgba(0, 0, 0, 0.07), 0 18px 42px -16px rgba(0, 0, 0, 0.18);
+  --grain-opacity: 0.5;
+  --num-glow-strength: 0;
 }
 
 .dark {
@@ -88,10 +123,33 @@
   --outline-variant: 42 42 46;
   --blueprint-dot: 82 82 91;
 
+  /* Acentos oscuros = pasteles originales (brillan sobre negro). */
+  --primary: 173 198 255;
+  --secondary: 125 255 162;
+  --tertiary: 255 185 80;
+  --on-primary: 0 46 105;
+  --on-secondary: 0 57 24;
+  --on-tertiary: 69 43 0;
+
+  /* Categorias del calendario — pasteles originales (brillan sobre negro). */
+  --cat-examen: 255 176 176;
+  --cat-mesa: 211 194 255;
+  --cat-tp: 255 207 138;
+  --cat-evento: 156 255 194;
+  --cat-feriado: 255 228 165;
+
   --glow-strength: 0.13;
   --glow-primary: 173 198 255;
   --glow-secondary: 125 255 162;
   --glow-tertiary: 255 185 80;
+
+  /* Profundidad de cards — valores OSCUROS: sheen blanco tenue arriba + sombra
+   * negra profunda (estilo Linear/Vercel sobre negro). */
+  --card-sheen: rgba(255, 255, 255, 0.06);
+  --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 30px -14px rgba(0, 0, 0, 0.55);
+  --card-shadow-hover: 0 2px 6px rgba(0, 0, 0, 0.4), 0 20px 46px -16px rgba(0, 0, 0, 0.7);
+  --grain-opacity: 0.85;
+  --num-glow-strength: 0.45;
 }
 
 /* =====================================================================
@@ -126,6 +184,7 @@
   /* Patron de fondo "blueprint": dotted radial sobre bg surface. */
   .bg-blueprint {
     background-image:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E"),
       radial-gradient(
         70% 100% at 50% 0%,
         rgb(var(--glow-primary) / 0.06),
@@ -136,9 +195,9 @@
         rgb(var(--blueprint-dot) / 0.18) 1px,
         transparent 0
       );
-    background-size: 100% 520px, 40px 40px;
-    background-repeat: no-repeat, repeat;
-    background-position: top center, top left;
+    background-size: 140px 140px, 100% 520px, 40px 40px;
+    background-repeat: repeat, no-repeat, repeat;
+    background-position: top left, top center, top left;
   }
 
   /* Glow states para los nodos del grafo. Border 1px + box-shadow blur. */
@@ -221,6 +280,81 @@
     background-image: radial-gradient(
       closest-side,
       rgb(var(--gc, var(--glow-primary)) / 0.18),
+      transparent
+    );
+  }
+
+  /* Profundidad de card: sheen interno arriba + sombra en capas (theme-aware).
+   * Estatica; el lift al hover lo maneja .cal-card en las clickeables. */
+  .card-3d {
+    box-shadow: inset 0 1px 0 0 var(--card-sheen), var(--card-shadow);
+    transition: box-shadow 0.2s ease-out, border-color 0.2s ease-out, transform 0.2s ease-out;
+  }
+  .card-3d:hover {
+    box-shadow: inset 0 1px 0 0 var(--card-sheen), var(--card-shadow-hover);
+  }
+  /* Card clickeable con relieve: ademas levanta al hover. */
+  .card-lift:hover {
+    transform: translateY(-2px);
+  }
+
+  /* Chip de icono con relieve: gradiente diagonal del acento + sheen + ring.
+   * El acento se elige con .chip-primary/secondary/tertiary. */
+  .icon-chip {
+    background-image: linear-gradient(
+      145deg,
+      rgb(var(--ac, var(--accent-primary)) / 0.22),
+      rgb(var(--ac, var(--accent-primary)) / 0.05)
+    );
+    box-shadow: inset 0 1px 0 var(--card-sheen),
+      inset 0 0 0 1px rgb(var(--ac, var(--accent-primary)) / 0.25);
+  }
+  .chip-primary { --ac: var(--accent-primary); }
+  .chip-secondary { --ac: var(--accent-secondary); }
+  .chip-tertiary { --ac: var(--accent-tertiary); }
+
+  /* Numero destacado: glow de color detras (solo se nota en oscuro; en claro
+   * --num-glow-strength es 0 para no ensuciar). */
+  .num-glow {
+    text-shadow: 0 0 16px rgb(var(--ac, var(--accent-primary)) / var(--num-glow-strength, 0));
+  }
+
+  /* Titulo de seccion con barrita de acento adelante. */
+  .sec-title {
+    position: relative;
+    padding-left: 0.75rem;
+  }
+  .sec-title::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 0.85em;
+    width: 3px;
+    border-radius: 9999px;
+    background: rgb(var(--ac, var(--accent-primary)));
+  }
+
+  /* Divider con degrade que se desvanece en las puntas (estilo Linear). */
+  .rule-fade {
+    height: 1px;
+    border: 0;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgb(var(--outline-variant)) 20%,
+      rgb(var(--outline-variant)) 80%,
+      transparent
+    );
+  }
+  .rule-fade-v {
+    width: 1px;
+    background: linear-gradient(
+      180deg,
+      transparent,
+      rgb(var(--outline-variant)) 25%,
+      rgb(var(--outline-variant)) 75%,
       transparent
     );
   }

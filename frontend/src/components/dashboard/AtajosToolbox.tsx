@@ -60,7 +60,7 @@ function AtajoTile({ atajo }: { atajo: Atajo }) {
   );
 
   const glow = atajo.color === "neutral" ? "" : `glow-card glow-${atajo.color}`;
-  const className = `${glow} p-4 bg-surface-container rounded-2xl border border-outline-variant/10 ${c.hover} transition-all cursor-pointer text-center group block`;
+  const className = `card-3d card-lift ${glow} p-4 bg-surface-container rounded-2xl border border-outline-variant/10 ${c.hover} transition-all cursor-pointer text-center group block`;
 
   if (atajo.externo) {
     return (

@@ -24,11 +24,11 @@ export function ComisionCard({ comision }: { comision: ComisionConProfesores }) 
       <DialogTrigger asChild>
         <button
           type="button"
-          className="cal-card group w-full cursor-pointer rounded-2xl border border-outline-variant/10 bg-surface-container/60 p-4 text-left transition-colors hover:border-primary/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+          className="card-3d cal-card group w-full cursor-pointer rounded-2xl border border-outline-variant/10 bg-surface-container/60 p-4 text-left transition-colors hover:border-primary/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
         >
           <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10">
-              <span className="material-symbols-outlined text-[22px] text-primary">groups</span>
+            <div className="icon-chip chip-primary flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-primary">
+              <span className="material-symbols-outlined text-[22px]">groups</span>
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
@@ -43,7 +43,8 @@ export function ComisionCard({ comision }: { comision: ComisionConProfesores }) 
             </div>
           </div>
 
-          <div className="mt-3 flex items-center justify-between border-t border-outline-variant/10 pt-2.5">
+          <hr className="rule-fade mt-3 mb-2.5" />
+          <div className="flex items-center justify-between">
             <ScoreMock comisionId={comision.id} />
             <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-on-surface-variant transition-colors group-hover:text-primary">
               Ver detalle

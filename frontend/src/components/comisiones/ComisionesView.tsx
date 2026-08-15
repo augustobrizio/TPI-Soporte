@@ -86,7 +86,7 @@ export function ComisionesView({ comisiones }: { comisiones: ComisionConProfesor
         <div className="space-y-8">
           {grupos.map(([anio, coms]) => (
             <section key={anio ?? "sin"}>
-              <h2 className="text-sm font-headline font-bold text-on-surface-variant uppercase tracking-wider mb-3">
+              <h2 className="sec-title chip-tertiary text-sm font-headline font-bold text-on-surface-variant uppercase tracking-wider mb-3">
                 {anio != null ? `${anio}° año` : "Sin año"}
                 <span className="ml-2 text-outline font-body font-normal normal-case tracking-normal">
                   {coms.length}
@@ -132,8 +132,8 @@ function FiltroAnio({
 
 function EstadoVacio({ titulo, detalle }: { titulo: string; detalle: string }) {
   return (
-    <div className="glow-card glow-tertiary bg-surface-container/40 border border-outline-variant/10 rounded-3xl p-12 flex flex-col items-center justify-center text-center min-h-[320px]">
-      <div className="glow-halo glow-tertiary w-16 h-16 rounded-2xl bg-tertiary/10 text-tertiary flex items-center justify-center mb-5">
+    <div className="card-3d glow-card glow-tertiary bg-surface-container/40 border border-outline-variant/10 rounded-3xl p-12 flex flex-col items-center justify-center text-center min-h-[320px]">
+      <div className="icon-chip chip-tertiary w-16 h-16 rounded-2xl text-tertiary flex items-center justify-center mb-5">
         <span className="material-symbols-outlined text-3xl">groups</span>
       </div>
       <h2 className="text-xl font-headline font-bold text-on-surface mb-2">{titulo}</h2>

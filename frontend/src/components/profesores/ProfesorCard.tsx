@@ -13,7 +13,7 @@ export function ProfesorCard({ profesor }: { profesor: ProfesorListItem }) {
   return (
     <Link
       href={`/profesores/${profesor.id}`}
-      className="cal-card group flex flex-col gap-4 rounded-2xl bg-surface-container/60 border border-outline-variant/10 p-5 hover:border-outline-variant/25"
+      className="card-3d cal-card group flex flex-col gap-4 rounded-2xl bg-surface-container/60 border border-outline-variant/10 p-5 hover:border-outline-variant/25"
     >
       <div className="flex items-start gap-3">
         <div

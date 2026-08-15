@@ -48,7 +48,7 @@ const STYLES: Record<
  */
 export function NovedadesAlertas({ novedades, esMock = false }: Props) {
   return (
-    <div className="glow-card glow-primary bg-surface-container rounded-3xl p-6 border border-outline-variant/10 h-full">
+    <div className="card-3d glow-card glow-primary bg-surface-container rounded-3xl p-6 border border-outline-variant/10 h-full">
       <div className="flex items-center justify-between mb-5">
         <h3 className="text-lg font-bold font-headline text-on-surface flex items-center gap-2">
           <span className="material-symbols-outlined text-error text-[20px]">

@@ -2,10 +2,10 @@ import type { ContadoresGrafo } from "@/lib/types";
 
 // Paleta semántica por tipo de KPI
 const KPI_COLORS = {
-  green:  { icon: "text-secondary/70",          value: "text-secondary"          },
-  amber:  { icon: "text-tertiary/70",            value: "text-tertiary"           },
-  blue:   { icon: "text-primary/70",             value: "text-primary"            },
-  muted:  { icon: "text-on-surface-variant/50",  value: "text-on-surface-variant" },
+  green:  { icon: "text-secondary/70",          value: "text-secondary",          ac: "chip-secondary" },
+  amber:  { icon: "text-tertiary/70",            value: "text-tertiary",           ac: "chip-tertiary"  },
+  blue:   { icon: "text-primary/70",             value: "text-primary",            ac: "chip-primary"   },
+  muted:  { icon: "text-on-surface-variant/50",  value: "text-on-surface-variant", ac: ""               },
 } as const;
 
 type KpiColor = keyof typeof KPI_COLORS;
@@ -33,7 +33,7 @@ function KpiItem({
       >
         {icon}
       </span>
-      <p className={`text-lg font-black font-headline leading-none ${c.value}`}>
+      <p className={`text-lg font-black font-headline leading-none ${c.value} ${c.ac} ${color === "muted" ? "" : "num-glow"}`}>
         {value}
         {total !== undefined && (
           <span className="text-xs font-normal text-on-surface-variant/40 ml-0.5">/{total}</span>
@@ -47,14 +47,14 @@ function KpiItem({
 }
 
 function Divider() {
-  return <div className="w-px self-stretch bg-outline-variant/10 my-2" />;
+  return <div className="rule-fade-v self-stretch my-2" />;
 }
 
 export function HeaderStats({ contadores }: { contadores: ContadoresGrafo }) {
   const creditosOk = contadores.creditos_electivas >= contadores.meta_creditos_electivas;
 
   return (
-    <div className="flex items-stretch bg-surface-container rounded-2xl border border-outline-variant/15 overflow-hidden shrink-0">
+    <div className="card-3d flex items-stretch bg-surface-container rounded-2xl border border-outline-variant/15 overflow-hidden shrink-0">
       {/* Aprobadas → verde */}
       <KpiItem icon="check_circle" label="Aprobadas" value={contadores.aprobadas} total={contadores.total} color="green" filled />
       <Divider />

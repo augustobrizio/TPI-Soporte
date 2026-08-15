@@ -199,8 +199,8 @@ function EstadoVacio({
   detalle: string;
 }) {
   return (
-    <div className="glow-card glow-secondary bg-surface-container/40 border border-outline-variant/10 rounded-3xl p-12 flex flex-col items-center justify-center text-center min-h-[320px]">
-      <div className="glow-halo glow-secondary w-16 h-16 rounded-2xl bg-secondary/10 text-secondary flex items-center justify-center mb-5">
+    <div className="card-3d glow-card glow-secondary bg-surface-container/40 border border-outline-variant/10 rounded-3xl p-12 flex flex-col items-center justify-center text-center min-h-[320px]">
+      <div className="icon-chip chip-secondary w-16 h-16 rounded-2xl text-secondary flex items-center justify-center mb-5">
         <span className="material-symbols-outlined text-3xl">{icono}</span>
       </div>
       <h2 className="text-xl font-headline font-bold text-on-surface mb-2">{titulo}</h2>

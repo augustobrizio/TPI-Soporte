@@ -38,7 +38,7 @@ export function ProgresoHero({
   const dashOffset = CIRC * (1 - porcentaje / 100);
 
   return (
-    <section className="relative bg-surface-container rounded-3xl overflow-hidden border border-outline-variant/10 p-8 md:p-10">
+    <section className="card-3d relative bg-surface-container rounded-3xl overflow-hidden border border-outline-variant/10 p-8 md:p-10">
       {/* Glow ambient en el costado derecho */}
       <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-primary-container/20 to-transparent pointer-events-none" />
       {/* Patron de "circuit" sutil arriba a la izquierda */}
@@ -115,7 +115,7 @@ export function ProgresoHero({
             />
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-4xl font-extrabold font-headline text-on-surface">
+            <span className="num-glow chip-secondary text-4xl font-extrabold font-headline text-on-surface">
               {porcentaje.toFixed(0)}%
             </span>
             <span className="text-[10px] text-outline uppercase font-bold tracking-widest font-label mt-1">
@@ -170,7 +170,7 @@ function KpiPill({
   return (
     <div className="bg-surface-container-high/60 backdrop-blur-sm border border-outline-variant/15 rounded-2xl px-4 py-3 flex items-center gap-3">
       <div
-        className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 ${c.iconBg}`}
+        className={`icon-chip chip-${color} w-10 h-10 rounded-xl flex items-center justify-center shrink-0`}
       >
         <span className={`material-symbols-outlined text-[20px] ${c.icon}`}>
           {icon}
