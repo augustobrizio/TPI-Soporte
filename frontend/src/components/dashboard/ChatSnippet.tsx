@@ -18,7 +18,7 @@ export function ChatSnippet({ ultimaPregunta, haceTexto, conversacionId }: Props
   const href = conversacionId ? `/chat/${conversacionId}` : "/chat";
 
   return (
-    <div className="bg-surface-container rounded-3xl p-6 border border-outline-variant/10 flex flex-col h-full">
+    <div className="glow-card glow-secondary bg-surface-container rounded-3xl p-6 border border-outline-variant/10 flex flex-col h-full">
       <div className="flex items-center gap-2 mb-4">
         <div className="w-8 h-8 rounded-xl bg-primary/15 border border-primary/25 flex items-center justify-center text-primary">
           <span className="material-symbols-outlined text-[18px]">smart_toy</span>

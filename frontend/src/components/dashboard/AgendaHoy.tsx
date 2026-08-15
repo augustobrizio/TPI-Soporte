@@ -24,7 +24,7 @@ interface Props {
  */
 export function AgendaHoy({ items, esMock = false }: Props) {
   return (
-    <div className="bg-surface-container rounded-3xl p-6 border border-outline-variant/10 h-full">
+    <div className="glow-card glow-primary bg-surface-container rounded-3xl p-6 border border-outline-variant/10 h-full">
       <div className="flex justify-between items-center mb-6">
         <h3 className="text-lg font-bold font-headline text-on-surface flex items-center gap-2">
           <span className="material-symbols-outlined text-primary text-[20px]">

@@ -399,7 +399,7 @@ export function MateriasGraphView({ grafo, tipo }: Props) {
 
       {/* CTA de primera vez — solo cuando no hay ningún registro cargado */}
       {!tieneRegistros && tipo === "troncal" && (
-        <div className="mb-6 rounded-2xl bg-gradient-to-r from-primary/10 via-primary/6 to-transparent border border-primary/20 px-6 py-5 flex items-start gap-4">
+        <div className="glow-band glow-primary mb-6 rounded-2xl bg-surface-container border border-primary/20 px-6 py-5 flex items-start gap-4">
           <span className="material-symbols-outlined text-[32px] text-primary mt-0.5 shrink-0">
             school
           </span>

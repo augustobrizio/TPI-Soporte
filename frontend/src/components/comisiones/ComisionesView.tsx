@@ -52,7 +52,7 @@ export function ComisionesView({ comisiones }: { comisiones: ComisionConProfesor
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
-      <header className="mb-6 space-y-2">
+      <header className="glow-band glow-tertiary bg-surface-container border border-outline-variant/10 rounded-3xl p-6 md:p-7 mb-6 space-y-2">
         <h1 className="text-4xl font-extrabold tracking-tight font-headline text-on-surface">
           Comisiones
         </h1>
@@ -132,8 +132,8 @@ function FiltroAnio({
 
 function EstadoVacio({ titulo, detalle }: { titulo: string; detalle: string }) {
   return (
-    <div className="bg-surface-container/40 border border-outline-variant/10 rounded-3xl p-12 flex flex-col items-center justify-center text-center min-h-[320px]">
-      <div className="w-16 h-16 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mb-5">
+    <div className="glow-card glow-tertiary bg-surface-container/40 border border-outline-variant/10 rounded-3xl p-12 flex flex-col items-center justify-center text-center min-h-[320px]">
+      <div className="glow-halo glow-tertiary w-16 h-16 rounded-2xl bg-tertiary/10 text-tertiary flex items-center justify-center mb-5">
         <span className="material-symbols-outlined text-3xl">groups</span>
       </div>
       <h2 className="text-xl font-headline font-bold text-on-surface mb-2">{titulo}</h2>

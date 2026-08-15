@@ -47,6 +47,15 @@
   --outline-variant: 228 228 231;
   /* color del patron dotted de fondo (.bg-blueprint) */
   --blueprint-dot: 0 0 0;
+
+  /* Glows ambientales (.glow-card / bandas-hero). En CLARO el acento crudo
+   * (celeste/verde/ambar claros) casi no se nota sobre el fondo blanco, asi
+   * que usamos variantes mas saturadas + mas fuerza. En oscuro, el acento
+   * crudo ya brilla. Esto hace que el degrade se sienta igual en ambos temas. */
+  --glow-strength: 0.22;
+  --glow-primary: 99 140 235;
+  --glow-secondary: 34 160 90;
+  --glow-tertiary: 210 140 0;
 }
 
 .dark {
@@ -78,6 +87,11 @@
   --outline: 115 115 115;
   --outline-variant: 42 42 46;
   --blueprint-dot: 82 82 91;
+
+  --glow-strength: 0.13;
+  --glow-primary: 173 198 255;
+  --glow-secondary: 125 255 162;
+  --glow-tertiary: 255 185 80;
 }
 
 /* =====================================================================
@@ -111,12 +125,20 @@
 @layer components {
   /* Patron de fondo "blueprint": dotted radial sobre bg surface. */
   .bg-blueprint {
-    background-image: radial-gradient(
-      circle at 2px 2px,
-      rgb(var(--blueprint-dot) / 0.18) 1px,
-      transparent 0
-    );
-    background-size: 40px 40px;
+    background-image:
+      radial-gradient(
+        70% 100% at 50% 0%,
+        rgb(var(--glow-primary) / 0.06),
+        transparent 70%
+      ),
+      radial-gradient(
+        circle at 2px 2px,
+        rgb(var(--blueprint-dot) / 0.18) 1px,
+        transparent 0
+      );
+    background-size: 100% 520px, 40px 40px;
+    background-repeat: no-repeat, repeat;
+    background-position: top center, top left;
   }
 
   /* Glow states para los nodos del grafo. Border 1px + box-shadow blur. */
@@ -163,6 +185,44 @@
 
   .material-symbols-filled {
     font-variation-settings: "FILL" 1, "wght" 400, "GRAD" 0, "opsz" 24;
+  }
+
+  /* ---------------------------------------------------------------------
+   * Glow ambiental reutilizable. El gradiente va como `background-image`
+   * sobre el `background-color` (bg-surface-*) que ya trae el elemento, asi
+   * pinta detras del contenido sin tocar z-index ni el markup. El acento se
+   * elige con un modificador (.glow-primary/secondary/tertiary); la fuerza y
+   * el color se ajustan solos por tema via las variables --glow-*. */
+  .glow-card {
+    background-image: radial-gradient(
+      115% 85% at 100% 0%,
+      rgb(var(--gc, var(--glow-primary)) / var(--glow-strength)),
+      transparent 60%
+    );
+    transition: border-color 0.2s ease-out;
+  }
+  .glow-card:hover {
+    border-color: rgb(var(--gc, var(--glow-primary)) / 0.35);
+  }
+  /* Banda-hero de pagina: glow mas amplio y desde la izquierda. */
+  .glow-band {
+    background-image: radial-gradient(
+      90% 130% at 0% 0%,
+      rgb(var(--gc, var(--glow-primary)) / var(--glow-strength)),
+      transparent 55%
+    );
+  }
+  .glow-primary { --gc: var(--glow-primary); }
+  .glow-secondary { --gc: var(--glow-secondary); }
+  .glow-tertiary { --gc: var(--glow-tertiary); }
+
+  /* Halo radial para el icono de los empty states. */
+  .glow-halo {
+    background-image: radial-gradient(
+      closest-side,
+      rgb(var(--gc, var(--glow-primary)) / 0.18),
+      transparent
+    );
   }
 
   /* Glass overlay — para topbar y popovers flotantes. */

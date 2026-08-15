@@ -41,7 +41,7 @@ const COLORS = {
  */
 export function AccionesRapidas() {
   return (
-    <div className="bg-surface-container rounded-3xl p-6 border border-outline-variant/10 h-full">
+    <div className="glow-card glow-tertiary bg-surface-container rounded-3xl p-6 border border-outline-variant/10 h-full">
       <h3 className="text-lg font-bold font-headline text-on-surface mb-5">
         Acciones rapidas
       </h3>
