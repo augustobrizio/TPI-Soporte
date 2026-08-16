@@ -1,0 +1,30 @@
+# Que NO entra al contexto de build. Ademas de achicar la subida a Railway,
+# evita meter secretos en layers que despues quedan en el registry.
+
+# node_modules del host: se instala adentro con `npm ci` y ademas puede traer
+# binarios nativos compilados para Windows/Mac, incompatibles con Alpine.
+node_modules/
+
+# Artefactos de build previos: el build corre limpio adentro.
+.next/
+out/
+build/
+
+# Secretos. Las variables reales se setean como variables del servicio.
+.env
+.env.*
+!.env.example
+!.env.local.example
+
+.git/
+.gitignore
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+
+# Config del editor / del agente, irrelevante en runtime.
+.vscode/
+.idea/
+README.md

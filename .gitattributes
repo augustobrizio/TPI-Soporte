@@ -1,0 +1,12 @@
+# El repo se clona en Windows, donde git tiene core.autocrlf=true y convierte a
+# CRLF al hacer checkout. Para estos archivos eso rompe cosas, asi que se fuerza
+# LF y listo.
+
+# Un .sh con CRLF revienta apenas se ejecuta: el shebang queda como
+# "#!/usr/bin/env bash\r" y bash contesta "bad interpreter".
+*.sh text eol=lf
+
+# En un Dockerfile el \r se cuela adentro de las instrucciones. Con el CMD en
+# forma shell del backend, uvicorn recibiria el puerto con un \r pegado.
+Dockerfile text eol=lf
+Dockerfile.* text eol=lf

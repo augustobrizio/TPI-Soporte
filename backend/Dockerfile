@@ -30,4 +30,10 @@ EXPOSE 8000
 # Sin --reload (es de dev: vigila archivos y reinicia, cuesta CPU y rompe el
 # manejo de senales). Se invoca el binario del venv directo, no `uv run`, para
 # no depender de que uv resuelva el lock en runtime.
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+#
+# Forma shell (no exec) a proposito: Railway asigna el puerto por la variable
+# PORT y la forma exec no pasa por el shell, con lo que uvicorn recibiria el
+# literal "${PORT}" y fallaria el healthcheck. El `exec` de adelante hace que
+# uvicorn reemplace al shell y quede como PID 1, asi le llega el SIGTERM del
+# apagado en vez de morir por timeout. El default 8000 deja intacto compose.
+CMD exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}

@@ -2,6 +2,10 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // Empaqueta el server y solo las deps que realmente se importan en
+  // .next/standalone. Sin esto la imagen de produccion tendria que cargar
+  // node_modules entero (cientos de MB) para levantar `next start`.
+  output: "standalone",
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "lh3.googleusercontent.com" },
