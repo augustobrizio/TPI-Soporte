@@ -5,7 +5,7 @@ import { AuthShell, EnlaceAuth } from "@/features/auth/AuthCard";
 import { RegisterForm } from "@/features/auth/RegisterForm";
 
 export const metadata: Metadata = {
-  title: "Crear cuenta | UTNHub",
+  title: "Crear cuenta",
 };
 
 export default function RegisterPage() {

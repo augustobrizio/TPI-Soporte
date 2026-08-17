@@ -9,7 +9,7 @@ import { AuthShell, EnlaceAuth } from "@/features/auth/AuthCard";
 import { LoginForm } from "@/features/auth/LoginForm";
 
 export const metadata: Metadata = {
-  title: "Ingresar | UTNHub",
+  title: "Ingresar",
 };
 
 export default function LoginPage() {
