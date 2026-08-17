@@ -15,7 +15,7 @@
 const CELESTE = "#1CA4DF";
 
 /** Nodo central del grafo, en coordenadas del viewBox. */
-const DESTINO = { x: 470, y: 190 };
+const DESTINO = { x: 510, y: 210 };
 
 interface Fuente {
   id: string;
@@ -43,23 +43,32 @@ interface Fuente {
 /** Radio de los nodos de origen. */
 const R = 28;
 
+/**
+ * Las fuentes van desparramadas a proposito: en columna se leian como una
+ * lista ordenada, y lo que hay que contar es lo contrario — la informacion
+ * hoy esta dispersa y recien acá converge. Por eso las `x` no se repiten y
+ * las `y` estan desfasadas entre las dos agrupaciones.
+ *
+ * Las etiquetas van DEBAJO del logo (no al costado) justamente para poder
+ * moverlos en horizontal sin que el texto de uno pise el nodo del otro.
+ */
 const FUENTES: readonly Fuente[] = [
   {
     id: "gradienteutn",
     nombre: "Gradiente UTN",
     logo: "/novedades/fuentes/gradienteutn.jpg",
-    x: 200,
-    y: 40,
-    d: "M 228 40 C 330 40, 350 190, 432 190",
+    x: 70,
+    y: 70,
+    d: "M 98 70 C 240 70, 360 140, 468 205",
     delay: "0s",
   },
   {
     id: "puebloyreforma",
     nombre: "Pueblo y Reforma",
     logo: "/novedades/fuentes/puebloyreforma.jpg",
-    x: 200,
-    y: 100,
-    d: "M 228 100 C 330 100, 360 190, 432 190",
+    x: 245,
+    y: 45,
+    d: "M 273 45 C 360 45, 400 130, 468 200",
     delay: "0.57s",
   },
   {
@@ -67,27 +76,27 @@ const FUENTES: readonly Fuente[] = [
     nombre: "Sitio UTN FRRO",
     logo: "/utn-isotipo-white.png",
     fondo: CELESTE,
-    x: 200,
-    y: 160,
-    d: "M 228 160 C 320 160, 380 190, 432 190",
+    x: 60,
+    y: 210,
+    d: "M 88 210 C 220 210, 340 205, 468 210",
     delay: "1.13s",
   },
   {
     id: "sauutnrosario",
     nombre: "SAU UTN Rosario",
     logo: "/novedades/fuentes/sauutnrosario.jpg",
-    x: 200,
-    y: 220,
-    d: "M 228 220 C 320 220, 380 190, 432 190",
+    x: 235,
+    y: 190,
+    d: "M 263 190 C 340 190, 400 200, 468 208",
     delay: "1.7s",
   },
   {
     id: "utnalumnosfrro",
     nombre: "UTN Alumnos FRRO",
     logo: "/novedades/fuentes/utnalumnosfrro.jpg",
-    x: 200,
-    y: 280,
-    d: "M 228 280 C 330 280, 360 190, 432 190",
+    x: 70,
+    y: 350,
+    d: "M 98 350 C 240 350, 360 280, 468 215",
     delay: "2.27s",
   },
   {
@@ -98,9 +107,9 @@ const FUENTES: readonly Fuente[] = [
     logo: "/novedades/fuentes/google-drive.svg",
     fondo: "#ffffff",
     contain: true,
-    x: 200,
-    y: 340,
-    d: "M 228 340 C 330 340, 350 190, 432 190",
+    x: 245,
+    y: 335,
+    d: "M 273 335 C 360 335, 400 260, 468 212",
     delay: "2.83s",
   },
 ] as const;
@@ -143,7 +152,7 @@ export function ConvergenciaFuentes({ className }: { className?: string }) {
     <div className={className}>
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
       <svg
-        viewBox="0 0 560 380"
+        viewBox="0 0 640 420"
         className="h-auto w-full"
         role="img"
         aria-label="Las publicaciones de los centros de estudiantes y del sitio de la facultad convergen en UTNHub"
@@ -180,15 +189,14 @@ export function ConvergenciaFuentes({ className }: { className?: string }) {
 
         {FUENTES.map((f) => (
           <g key={f.id}>
-            {/* Nombre a la izquierda, alineado a derecha contra el logo: sin
-                esto son cinco circulitos que no se sabe que son. */}
+            {/* Nombre centrado debajo del logo: sin esto son seis circulitos
+                que no se sabe que son. */}
             <text
-              x={f.x - R - 14}
-              y={f.y}
-              textAnchor="end"
-              dominantBaseline="middle"
+              x={f.x}
+              y={f.y + R + 20}
+              textAnchor="middle"
               className="cv-label font-body"
-              fontSize={15}
+              fontSize={16}
               fill="var(--shell-fg-muted)"
             >
               {f.nombre}
@@ -231,10 +239,10 @@ export function ConvergenciaFuentes({ className }: { className?: string }) {
         {/* Nodo de llegada */}
         <text
           x={DESTINO.x}
-          y={DESTINO.y - 52}
+          y={DESTINO.y - 62}
           textAnchor="middle"
           className="cv-label font-headline"
-          fontSize={16}
+          fontSize={18}
           fontWeight={700}
           fill="var(--shell-fg)"
         >
@@ -242,19 +250,19 @@ export function ConvergenciaFuentes({ className }: { className?: string }) {
         </text>
         <g className="cv-destino">
           <rect
-            x={DESTINO.x - 38}
-            y={DESTINO.y - 38}
-            width={76}
-            height={76}
-            rx={20}
+            x={DESTINO.x - 44}
+            y={DESTINO.y - 44}
+            width={88}
+            height={88}
+            rx={22}
             fill={CELESTE}
           />
           <image
             href="/utn-isotipo-white.png"
-            x={DESTINO.x - 21}
-            y={DESTINO.y - 21}
-            width={42}
-            height={42}
+            x={DESTINO.x - 24}
+            y={DESTINO.y - 24}
+            width={48}
+            height={48}
             preserveAspectRatio="xMidYMid meet"
           />
         </g>

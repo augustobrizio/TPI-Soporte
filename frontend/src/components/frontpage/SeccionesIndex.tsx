@@ -80,9 +80,6 @@ export function SeccionesIndex() {
         >
           Qué vas a encontrar
         </h2>
-        <p className="hidden text-sm text-[var(--shell-fg-muted)] sm:block">
-          Casi todo se navega sin cuenta.
-        </p>
       </div>
 
       {/* Bordes compartidos: se dibuja el de arriba y el de la izquierda de
