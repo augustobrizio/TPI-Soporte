@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 
 import { LogoutButton } from "@/features/auth/LogoutButton";
+import { LogoUTNHub } from "./LogoUTNHub";
 import { useSidebar } from "./SidebarContext";
 
 /**
@@ -135,14 +136,7 @@ export function Sidebar({ usuario }: { usuario: UsuarioSidebar | null }) {
       >
       {/* Logo — alineado con el TopNav (h-16) */}
       <div className={`flex h-16 shrink-0 items-center border-b border-[var(--shell-border)] ${compacto ? "justify-center px-0" : "gap-3 px-5"}`}>
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-[#1CA4DF]/25 bg-[#1CA4DF]/10">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/utn-isotipo-white.png"
-            alt="UTN"
-            className="h-5 w-5 object-contain opacity-90"
-          />
-        </div>
+        <LogoUTNHub size={36} className="shrink-0" />
         {!compacto && (
           <div className="leading-none">
             <p className="font-headline text-[15px] font-extrabold tracking-tight text-[var(--shell-fg)]">

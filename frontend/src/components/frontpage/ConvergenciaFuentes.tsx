@@ -261,7 +261,7 @@ export function ConvergenciaFuentes({ className }: { className?: string }) {
             fill={CELESTE}
           />
           <image
-            href="/utn-isotipo-white.png"
+            href="/utn-simbolo-white.png"
             x={DESTINO.x - 24}
             y={DESTINO.y - 24}
             width={48}

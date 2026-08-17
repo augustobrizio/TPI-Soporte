@@ -7,6 +7,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { LogoUTNHub } from "@/components/LogoUTNHub";
 import { cn } from "@/lib/utils";
 
 export function AuthShell({
@@ -25,11 +26,10 @@ export function AuthShell({
       <div className="w-full max-w-[400px]">
         {/* Marca */}
         <div className="mb-8 flex flex-col items-center text-center">
-          <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl border border-[#1CA4DF]/25 bg-[#1CA4DF]/10">
-            <span className="material-symbols-outlined text-[22px] text-[var(--shell-accent-fg)]">
-              school
-            </span>
-          </div>
+          {/* Version grande de la marca: acá hay lugar para que se lean los
+              trazos que convergen, que es de lo que se trata el producto. El
+              birrete generico que habia antes no decia nada. */}
+          <LogoUTNHub size={52} conLineas className="mb-4" />
           <h1 className="font-headline text-[26px] font-extrabold tracking-tight text-[var(--shell-fg)]">
             {titulo}
           </h1>

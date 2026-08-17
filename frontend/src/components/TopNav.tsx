@@ -5,6 +5,7 @@ import { Bell, LogIn, Menu, Moon, Search, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 
+import { LogoUTNHub } from "./LogoUTNHub";
 import { useSidebar } from "./SidebarContext";
 
 function ThemeToggle() {
@@ -36,16 +37,7 @@ function ThemeToggle() {
  * hairline, acento celeste institucional e isotipo UTN.
  */
 function UtnLogo() {
-  return (
-    <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-[#1CA4DF]/25 bg-[#1CA4DF]/10">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src="/utn-isotipo-white.png"
-        alt="UTN"
-        className="h-5 w-5 object-contain opacity-90"
-      />
-    </div>
-  );
+  return <LogoUTNHub size={36} className="shrink-0" />;
 }
 
 export function TopNav({ autenticado = true }: { autenticado?: boolean }) {
