@@ -46,12 +46,23 @@ function UtnLogo() {
 }
 
 export function TopNav({ autenticado = true }: { autenticado?: boolean }) {
-  const { collapsed } = useSidebar();
+  const { collapsed, toggleMobile } = useSidebar();
   return (
-    <nav className="fixed top-0 z-50 flex h-16 w-full items-center gap-4 border-b border-[var(--shell-border)] bg-[var(--shell-panel-blur)] px-6 backdrop-blur-xl">
-      {/* Logo + nombre — ancho alineado con la sidebar */}
+    <nav className="fixed top-0 z-50 flex h-16 w-full items-center gap-3 border-b border-[var(--shell-border)] bg-[var(--shell-panel-blur)] px-4 backdrop-blur-xl sm:gap-4 lg:px-6">
+      {/* Unica forma de abrir los modulos en mobile: ahi la barra es un drawer
+          fuera de pantalla. De `lg` para arriba esta siempre visible y sobra. */}
+      <button
+        type="button"
+        onClick={toggleMobile}
+        aria-label="Abrir menú"
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[var(--shell-fg-muted)] transition-colors hover:bg-[var(--shell-hover)] hover:text-[var(--shell-fg)] lg:hidden"
+      >
+        <span className="material-symbols-outlined text-[22px]">menu</span>
+      </button>
+
+      {/* Logo + nombre — de `lg` para arriba el ancho se alinea con la sidebar */}
       <div
-        className={`flex shrink-0 items-center gap-3 transition-[width] duration-200 ease-out ${collapsed ? "w-9" : "w-56"}`}
+        className={`flex shrink-0 items-center gap-3 transition-[width] duration-200 ease-out ${collapsed ? "lg:w-9" : "lg:w-56"}`}
       >
         <UtnLogo />
         {!collapsed && (
@@ -66,8 +77,9 @@ export function TopNav({ autenticado = true }: { autenticado?: boolean }) {
         )}
       </div>
 
-      {/* Buscador */}
-      <div className="flex w-72 items-center gap-2 rounded-lg border border-[var(--shell-border)] bg-[var(--shell-hover)] px-3 py-1.5 transition-colors hover:border-[var(--shell-border)] focus-within:border-[#1CA4DF]/50 focus-within:ring-1 focus-within:ring-[#1CA4DF]/20">
+      {/* Buscador — abajo de `md` no entra: con el hamburger, el logo y las
+          acciones desbordaba la barra. */}
+      <div className="hidden w-72 items-center gap-2 rounded-lg border border-[var(--shell-border)] bg-[var(--shell-hover)] px-3 py-1.5 transition-colors focus-within:border-[#1CA4DF]/50 focus-within:ring-1 focus-within:ring-[#1CA4DF]/20 hover:border-[var(--shell-border)] md:flex">
         <span className="material-symbols-outlined shrink-0 text-[16px] text-[var(--shell-fg-dim)]">
           search
         </span>

@@ -2,9 +2,32 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 
 import { LogoutButton } from "@/features/auth/LogoutButton";
 import { useSidebar } from "./SidebarContext";
+
+/**
+ * `true` de `lg` para arriba, el mismo corte que usan las clases `lg:` del
+ * shell. Hace falta en JS —y no solo en CSS— porque el modo compacto no es
+ * cuestion de ancho sino de que se renderiza: con la barra colapsada se
+ * ocultan los textos y aparecen tooltips. Sin esto, un usuario que colapso la
+ * barra en la compu abriria el drawer del celular en 256px de ancho pero sin
+ * un solo texto adentro.
+ */
+function useEsEscritorio() {
+  const [esEscritorio, setEsEscritorio] = useState(true);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const sync = () => setEsEscritorio(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+
+  return esEscritorio;
+}
 
 interface NavItem {
   label: string;
@@ -52,15 +75,48 @@ export interface UsuarioSidebar {
 /** `null` = visitante sin cuenta: en vez del avatar van los accesos a entrar. */
 export function Sidebar({ usuario }: { usuario: UsuarioSidebar | null }) {
   const pathname = usePathname();
-  const { collapsed, toggle } = useSidebar();
+  const { collapsed, toggle, mobileOpen, closeMobile } = useSidebar();
+  const esEscritorio = useEsEscritorio();
+
+  // Colapsar es una preferencia de escritorio: el drawer del celular se abre
+  // siempre completo.
+  const compacto = collapsed && esEscritorio;
+
+  // Al navegar se cierra solo. Sin esto, tocar una seccion deja el menu
+  // abierto tapando justo lo que se acaba de abrir.
+  useEffect(() => {
+    closeMobile();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
 
   return (
-    <aside
-      className="fixed left-0 top-0 z-40 flex h-screen flex-col border-r border-[var(--shell-border)] bg-[var(--shell-panel)] transition-[width] duration-200 ease-out"
-      style={{ width: collapsed ? "64px" : "256px" }}
-    >
+    <>
+      {/* Fondo que atrapa el toque para cerrar. Solo existe con el drawer
+          abierto, asi no bloquea clicks en escritorio. */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-[55] bg-black/50 lg:hidden"
+          onClick={closeMobile}
+          aria-hidden="true"
+        />
+      )}
+
+      <aside
+        className={[
+          // z alto solo en mobile: el drawer tapa el TopNav (z-50). En
+          // escritorio vuelve a z-40, que es como estaba, y el TopNav sigue
+          // pasando por encima del header de la barra.
+          "fixed left-0 top-0 z-[60] flex h-screen flex-col border-r border-[var(--shell-border)] bg-[var(--shell-panel)] lg:z-40",
+          // Mobile: ancho fijo y entra/sale deslizando.
+          "w-64 transition-transform duration-200 ease-out",
+          mobileOpen ? "translate-x-0" : "-translate-x-full",
+          // Escritorio: siempre visible, y el ancho lo manda `collapsed`.
+          "lg:translate-x-0 lg:w-[var(--sb-w)] lg:transition-[width]",
+        ].join(" ")}
+        style={{ "--sb-w": compacto ? "64px" : "256px" } as React.CSSProperties}
+      >
       {/* Logo — alineado con el TopNav (h-16) */}
-      <div className={`flex h-16 shrink-0 items-center border-b border-[var(--shell-border)] ${collapsed ? "justify-center px-0" : "gap-3 px-5"}`}>
+      <div className={`flex h-16 shrink-0 items-center border-b border-[var(--shell-border)] ${compacto ? "justify-center px-0" : "gap-3 px-5"}`}>
         <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-[#1CA4DF]/25 bg-[#1CA4DF]/10">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -69,7 +125,7 @@ export function Sidebar({ usuario }: { usuario: UsuarioSidebar | null }) {
             className="h-5 w-5 object-contain opacity-90"
           />
         </div>
-        {!collapsed && (
+        {!compacto && (
           <div className="leading-none">
             <p className="font-headline text-[15px] font-extrabold tracking-tight text-[var(--shell-fg)]">
               UTNHub
@@ -82,8 +138,8 @@ export function Sidebar({ usuario }: { usuario: UsuarioSidebar | null }) {
       </div>
 
       {/* Navegacion — cuando está colapsada NO recortamos overflow para que los tooltips puedan salir */}
-      <nav className={`flex-1 pt-5 pb-3 space-y-0.5 ${collapsed ? "px-2 overflow-visible" : "px-3 overflow-y-auto overflow-x-hidden"}`}>
-        {!collapsed && (
+      <nav className={`flex-1 pt-5 pb-3 space-y-0.5 ${compacto ? "px-2 overflow-visible" : "px-3 overflow-y-auto overflow-x-hidden"}`}>
+        {!compacto && (
           <p className="select-none px-3 pb-3 font-label text-[9px] uppercase tracking-[0.15em] text-[var(--shell-fg-dim)]">
             Módulos
           </p>
@@ -97,60 +153,62 @@ export function Sidebar({ usuario }: { usuario: UsuarioSidebar | null }) {
               href={item.href}
               className={[
                 "group relative flex items-center gap-3 rounded-lg transition-all duration-200",
-                collapsed ? "justify-center px-0 py-2.5" : "px-3 py-2.5",
+                compacto ? "justify-center px-0 py-2.5" : "px-3 py-2.5",
                 active
                   ? "bg-[#1CA4DF]/10 text-[var(--shell-accent-fg)]"
                   : "text-[var(--shell-fg-muted)] hover:bg-[var(--shell-hover)] hover:text-[var(--shell-fg)]",
               ].join(" ")}
             >
               {/* Accent pill del item activo (solo expandido) */}
-              {active && !collapsed && (
+              {active && !compacto && (
                 <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-[#1CA4DF]" />
               )}
               <span
                 className={[
                   "material-symbols-outlined shrink-0 text-[20px] transition-transform duration-200",
-                  active || collapsed ? "" : "group-hover:translate-x-0.5",
+                  active || compacto ? "" : "group-hover:translate-x-0.5",
                 ].join(" ")}
                 style={active ? { fontVariationSettings: "'FILL' 1" } : undefined}
               >
                 {item.icon}
               </span>
-              {!collapsed && <span className="font-body text-sm font-medium">{item.label}</span>}
-              {collapsed && <Tooltip label={item.label} />}
+              {!compacto && <span className="font-body text-sm font-medium">{item.label}</span>}
+              {compacto && <Tooltip label={item.label} />}
             </Link>
           );
         })}
       </nav>
 
       {/* Toggle colapsar */}
-      <div className={`shrink-0 border-t border-[var(--shell-border)] py-2 ${collapsed ? "px-2" : "px-3"}`}>
+      {/* Colapsar es solo de escritorio: en el drawer no tiene sentido y el
+          lugar lo necesitan los modulos. */}
+      <div className={`hidden shrink-0 border-t border-[var(--shell-border)] py-2 lg:block ${compacto ? "px-2" : "px-3"}`}>
         <button
           type="button"
           onClick={toggle}
-          aria-label={collapsed ? "Expandir menú" : "Colapsar menú"}
+          aria-label={compacto ? "Expandir menú" : "Colapsar menú"}
           className={[
             "group relative flex w-full items-center gap-3 rounded-lg text-[var(--shell-fg-muted)] transition-colors hover:bg-[var(--shell-hover)] hover:text-[var(--shell-fg)]",
-            collapsed ? "justify-center px-0 py-2.5" : "px-3 py-2.5",
+            compacto ? "justify-center px-0 py-2.5" : "px-3 py-2.5",
           ].join(" ")}
         >
           <span className="material-symbols-outlined text-[20px] shrink-0">
-            {collapsed ? "left_panel_open" : "left_panel_close"}
+            {compacto ? "left_panel_open" : "left_panel_close"}
           </span>
-          {!collapsed && <span className="font-body text-sm font-medium">Colapsar</span>}
-          {collapsed && <Tooltip label="Expandir menú" />}
+          {!compacto && <span className="font-body text-sm font-medium">Colapsar</span>}
+          {compacto && <Tooltip label="Expandir menú" />}
         </button>
       </div>
 
       {/* Usuario — o los accesos a entrar, si es un visitante sin cuenta */}
-      <div className={`shrink-0 border-t border-[var(--shell-border)] pb-4 pt-3 ${collapsed ? "px-2" : "px-3"}`}>
+      <div className={`shrink-0 border-t border-[var(--shell-border)] pb-4 pt-3 ${compacto ? "px-2" : "px-3"}`}>
         {usuario ? (
           <>
-            <div className={`group relative flex cursor-pointer items-center gap-3 rounded-lg transition-colors hover:bg-[var(--shell-hover)] ${collapsed ? "justify-center px-0 py-2.5" : "px-3 py-2.5"}`}>
+            <div className={`group relative flex cursor-pointer items-center gap-3 rounded-lg transition-colors hover:bg-[var(--shell-hover)] ${compacto ? "justify-center px-0 py-2.5" : "px-3 py-2.5"}`}>
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[#1CA4DF]/25 bg-[#1CA4DF]/10 font-headline text-xs font-extrabold text-[var(--shell-accent-fg)]">
                 {usuario.iniciales}
               </div>
-              {!collapsed && (
+              {!compacto && (
                 <>
                   <div className="min-w-0 flex-1 leading-none">
                     <p className="truncate text-xs font-semibold text-[var(--shell-fg)]">
@@ -165,37 +223,37 @@ export function Sidebar({ usuario }: { usuario: UsuarioSidebar | null }) {
                   </span>
                 </>
               )}
-              {collapsed && <Tooltip label={usuario.nombre} />}
+              {compacto && <Tooltip label={usuario.nombre} />}
             </div>
 
             <LogoutButton
-              collapsed={collapsed}
+              collapsed={compacto}
               tooltip={<Tooltip label="Cerrar sesión" />}
             />
           </>
         ) : (
-          <div className={collapsed ? "space-y-1" : "space-y-2"}>
+          <div className={compacto ? "space-y-1" : "space-y-2"}>
             <Link
               href="/login"
               className={[
                 "group relative flex items-center gap-3 rounded-lg bg-[#1CA4DF]/10 text-[var(--shell-accent-fg)] transition-colors hover:bg-[#1CA4DF]/15",
-                collapsed ? "justify-center px-0 py-2.5" : "px-3 py-2.5",
+                compacto ? "justify-center px-0 py-2.5" : "px-3 py-2.5",
               ].join(" ")}
             >
               <span className="material-symbols-outlined shrink-0 text-[20px]">
                 login
               </span>
-              {!collapsed && (
+              {!compacto && (
                 <span className="font-body text-sm font-medium">
                   Iniciar sesión
                 </span>
               )}
-              {collapsed && <Tooltip label="Iniciar sesión" />}
+              {compacto && <Tooltip label="Iniciar sesión" />}
             </Link>
 
             {/* Colapsada queda solo el de entrar: dos íconos parecidos sin
                 texto no se distinguen, y desde el login se llega al registro. */}
-            {!collapsed && (
+            {!compacto && (
               <Link
                 href="/register"
                 className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-[var(--shell-fg-muted)] transition-colors hover:bg-[var(--shell-hover)] hover:text-[var(--shell-fg)]"
@@ -210,7 +268,8 @@ export function Sidebar({ usuario }: { usuario: UsuarioSidebar | null }) {
             )}
           </div>
         )}
-      </div>
-    </aside>
+        </div>
+      </aside>
+    </>
   );
 }
