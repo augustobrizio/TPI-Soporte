@@ -91,10 +91,6 @@ export default async function Portada() {
             )}
           </div>
 
-          <p className="mt-5 text-sm text-[var(--shell-fg-muted)]">
-            Sin cuenta ya podés navegar casi todo. La cuenta suma lo que depende
-            de vos: tus correlativas y tu cursada.
-          </p>
         </div>
 
         <ConvergenciaFuentes className="order-first lg:order-none" />

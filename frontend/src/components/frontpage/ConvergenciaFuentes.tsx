@@ -15,15 +15,23 @@
 const CELESTE = "#1CA4DF";
 
 /** Nodo central del grafo, en coordenadas del viewBox. */
-const DESTINO = { x: 470, y: 170 };
+const DESTINO = { x: 470, y: 190 };
 
 interface Fuente {
   id: string;
   nombre: string;
   /** Logo en `public/`. El del sitio de la facultad es el isotipo UTN. */
   logo: string;
-  /** Isotipo blanco: necesita fondo celeste para no desaparecer en claro. */
-  fondoSolido?: boolean;
+  /**
+   * Relleno del círculo detrás del logo. El isotipo UTN es blanco y sin esto
+   * desaparece en tema claro; el de Drive es transparente y necesita piso.
+   */
+  fondo?: string;
+  /**
+   * `true` = el logo entra completo y centrado (marcas con aire propio, como
+   * Drive). Por defecto las fotos de perfil llenan el círculo recortadas.
+   */
+  contain?: boolean;
   x: number;
   y: number;
   /** Curva hasta el nodo central. Sirve de línea y de riel del punto. */
@@ -41,8 +49,8 @@ const FUENTES: readonly Fuente[] = [
     nombre: "Gradiente UTN",
     logo: "/novedades/fuentes/gradienteutn.jpg",
     x: 200,
-    y: 34,
-    d: "M 228 34 C 330 34, 350 170, 432 170",
+    y: 40,
+    d: "M 228 40 C 330 40, 350 190, 432 190",
     delay: "0s",
   },
   {
@@ -50,37 +58,50 @@ const FUENTES: readonly Fuente[] = [
     nombre: "Pueblo y Reforma",
     logo: "/novedades/fuentes/puebloyreforma.jpg",
     x: 200,
-    y: 102,
-    d: "M 228 102 C 330 102, 360 170, 432 170",
-    delay: "0.7s",
+    y: 100,
+    d: "M 228 100 C 330 100, 360 190, 432 190",
+    delay: "0.57s",
   },
   {
     id: "utnfrro",
     nombre: "Sitio UTN FRRO",
     logo: "/utn-isotipo-white.png",
-    fondoSolido: true,
+    fondo: CELESTE,
     x: 200,
-    y: 170,
-    d: "M 228 170 L 432 170",
-    delay: "1.4s",
+    y: 160,
+    d: "M 228 160 C 320 160, 380 190, 432 190",
+    delay: "1.13s",
   },
   {
     id: "sauutnrosario",
     nombre: "SAU UTN Rosario",
     logo: "/novedades/fuentes/sauutnrosario.jpg",
     x: 200,
-    y: 238,
-    d: "M 228 238 C 330 238, 360 170, 432 170",
-    delay: "2.1s",
+    y: 220,
+    d: "M 228 220 C 320 220, 380 190, 432 190",
+    delay: "1.7s",
   },
   {
     id: "utnalumnosfrro",
     nombre: "UTN Alumnos FRRO",
     logo: "/novedades/fuentes/utnalumnosfrro.jpg",
     x: 200,
-    y: 306,
-    d: "M 228 306 C 330 306, 350 170, 432 170",
-    delay: "2.8s",
+    y: 280,
+    d: "M 228 280 C 330 280, 360 190, 432 190",
+    delay: "2.27s",
+  },
+  {
+    // El material de estudio se sirve desde una carpeta de Drive: es una
+    // fuente mas del hub, aunque no publique novedades.
+    id: "drive",
+    nombre: "Material en Drive",
+    logo: "/novedades/fuentes/google-drive.svg",
+    fondo: "#ffffff",
+    contain: true,
+    x: 200,
+    y: 340,
+    d: "M 228 340 C 330 340, 350 190, 432 190",
+    delay: "2.83s",
   },
 ] as const;
 
@@ -122,7 +143,7 @@ export function ConvergenciaFuentes({ className }: { className?: string }) {
     <div className={className}>
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
       <svg
-        viewBox="0 0 560 340"
+        viewBox="0 0 560 380"
         className="h-auto w-full"
         role="img"
         aria-label="Las publicaciones de los centros de estudiantes y del sitio de la facultad convergen en UTNHub"
@@ -173,17 +194,29 @@ export function ConvergenciaFuentes({ className }: { className?: string }) {
               {f.nombre}
             </text>
 
-            {f.fondoSolido && <circle cx={f.x} cy={f.y} r={R} fill={CELESTE} />}
-            <image
-              href={f.logo}
-              x={f.x - R}
-              y={f.y - R}
-              width={R * 2}
-              height={R * 2}
-              clipPath={`url(#cv-clip-${f.id})`}
-              preserveAspectRatio="xMidYMid slice"
-              opacity={f.fondoSolido ? 0.95 : 1}
-            />
+            {f.fondo && <circle cx={f.x} cy={f.y} r={R} fill={f.fondo} />}
+            {f.contain ? (
+              // Sin recorte: la marca entra completa, con aire alrededor.
+              <image
+                href={f.logo}
+                x={f.x - R * 0.55}
+                y={f.y - R * 0.55}
+                width={R * 1.1}
+                height={R * 1.1}
+                preserveAspectRatio="xMidYMid meet"
+              />
+            ) : (
+              <image
+                href={f.logo}
+                x={f.x - R}
+                y={f.y - R}
+                width={R * 2}
+                height={R * 2}
+                clipPath={`url(#cv-clip-${f.id})`}
+                preserveAspectRatio="xMidYMid slice"
+                opacity={f.fondo ? 0.95 : 1}
+              />
+            )}
             <circle
               cx={f.x}
               cy={f.y}
