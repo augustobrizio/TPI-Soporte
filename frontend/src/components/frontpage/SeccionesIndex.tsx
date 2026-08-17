@@ -1,4 +1,15 @@
 import Link from "next/link";
+import {
+  ArrowRight,
+  CalendarDays,
+  Clock,
+  Contact,
+  FolderOpen,
+  Megaphone,
+  Network,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 
 /**
  * Índice de secciones de la portada.
@@ -11,10 +22,8 @@ import Link from "next/link";
 interface Seccion {
   titulo: string;
   descripcion: string;
-  icono: string;
+  icono: LucideIcon;
   href: string;
-  /** Marca las que piden cuenta, para que no sea una sorpresa al entrar. */
-  requiereCuenta?: boolean;
 }
 
 const SECCIONES: readonly Seccion[] = [
@@ -22,51 +31,49 @@ const SECCIONES: readonly Seccion[] = [
     titulo: "Novedades",
     descripcion:
       "Avisos de la facultad y de los centros de estudiantes, reunidos automáticamente.",
-    icono: "campaign",
+    icono: Megaphone,
     href: "/novedades",
   },
   {
     titulo: "Profesores",
     descripcion:
       "Quién dicta qué, horarios de consulta y datos de contacto del Dpto. ISI.",
-    icono: "badge",
+    icono: Contact,
     href: "/profesores",
   },
   {
     titulo: "Comisiones",
     descripcion:
       "La oferta completa por año, con materias, docentes y horarios de cada comisión.",
-    icono: "groups",
+    icono: Users,
     href: "/comisiones",
   },
   {
     titulo: "Calendario",
     descripcion:
       "Mesas, exámenes, feriados y fechas académicas del ciclo lectivo.",
-    icono: "calendar_month",
+    icono: CalendarDays,
     href: "/calendario",
   },
   {
     titulo: "Material",
     descripcion: "Apuntes, parciales y resúmenes compartidos por materia.",
-    icono: "folder_open",
+    icono: FolderOpen,
     href: "/material",
   },
   {
     titulo: "Materias",
     descripcion:
       "El árbol de correlativas marcando qué podés cursar y qué rendir.",
-    icono: "account_tree",
+    icono: Network,
     href: "/materias",
-    requiereCuenta: true,
   },
   {
     titulo: "Horarios",
     descripcion:
       "Armá tu cursada combinando comisiones y detectá las superposiciones.",
-    icono: "schedule",
+    icono: Clock,
     href: "/horarios",
-    requiereCuenta: true,
   },
 ];
 
@@ -99,17 +106,13 @@ export function SeccionesIndex() {
             ].join(" ")}
           >
             <div className="flex items-center gap-2.5">
-              <span className="material-symbols-outlined text-[20px] text-[var(--shell-accent-fg)]">
-                {s.icono}
-              </span>
+              <s.icono
+                className="h-[18px] w-[18px] shrink-0 text-[var(--shell-accent-fg)]"
+                strokeWidth={1.75}
+              />
               <h3 className="font-headline text-base font-semibold text-[var(--shell-fg)]">
                 {s.titulo}
               </h3>
-              {s.requiereCuenta && (
-                <span className="ml-auto shrink-0 rounded-md border border-[var(--shell-border)] px-1.5 py-0.5 font-label text-[10px] uppercase tracking-wider text-[var(--shell-fg-dim)]">
-                  Con cuenta
-                </span>
-              )}
             </div>
 
             <p className="text-sm leading-relaxed text-[var(--shell-fg-muted)]">
@@ -118,9 +121,10 @@ export function SeccionesIndex() {
 
             <span className="mt-auto inline-flex items-center gap-1 pt-2 font-body text-sm font-medium text-[var(--shell-accent-fg)]">
               Entrar
-              <span className="material-symbols-outlined text-[16px] transition-transform duration-200 group-hover:translate-x-0.5">
-                arrow_forward
-              </span>
+              <ArrowRight
+                className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5"
+                strokeWidth={2}
+              />
             </span>
           </Link>
         ))}

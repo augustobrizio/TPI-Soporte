@@ -3,6 +3,24 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import {
+  Bot,
+  CalendarDays,
+  ChevronsUpDown,
+  Clock,
+  Contact,
+  FolderOpen,
+  House,
+  LogIn,
+  Megaphone,
+  Network,
+  PanelLeftClose,
+  PanelLeftOpen,
+  User,
+  UserPlus,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 
 import { LogoutButton } from "@/features/auth/LogoutButton";
 import { useSidebar } from "./SidebarContext";
@@ -31,21 +49,21 @@ function useEsEscritorio() {
 
 interface NavItem {
   label: string;
-  icon: string;
+  icon: LucideIcon;
   href: string;
 }
 
 const NAV_ITEMS: readonly NavItem[] = [
-  { label: "Inicio",       icon: "home",            href: "/"          },
-  { label: "Chatbot",      icon: "smart_toy",       href: "/chat"      },
-  { label: "Calendario",   icon: "calendar_month",  href: "/calendario"},
-  { label: "Materias",     icon: "account_tree",    href: "/materias"  },
-  { label: "Material",     icon: "folder_open",     href: "/material"  },
-  { label: "Horarios",     icon: "schedule",        href: "/horarios"  },
-  { label: "Comisiones",   icon: "groups",          href: "/comisiones"},
-  { label: "Novedades",    icon: "campaign",        href: "/novedades" },
-  { label: "Profesores",   icon: "badge",           href: "/profesores"},
-  { label: "Perfil",       icon: "person",          href: "/perfil"    },
+  { label: "Inicio",       icon: House,        href: "/"          },
+  { label: "Chatbot",      icon: Bot,          href: "/chat"      },
+  { label: "Calendario",   icon: CalendarDays, href: "/calendario"},
+  { label: "Materias",     icon: Network,      href: "/materias"  },
+  { label: "Material",     icon: FolderOpen,   href: "/material"  },
+  { label: "Horarios",     icon: Clock,        href: "/horarios"  },
+  { label: "Comisiones",   icon: Users,        href: "/comisiones"},
+  { label: "Novedades",    icon: Megaphone,    href: "/novedades" },
+  { label: "Profesores",   icon: Contact,      href: "/profesores"},
+  { label: "Perfil",       icon: User,         href: "/perfil"    },
 ] as const;
 
 function isActive(currentPath: string, href: string) {
@@ -137,14 +155,15 @@ export function Sidebar({ usuario }: { usuario: UsuarioSidebar | null }) {
         )}
       </div>
 
-      {/* Navegacion — cuando está colapsada NO recortamos overflow para que los tooltips puedan salir */}
-      <nav className={`flex-1 pt-5 pb-3 space-y-0.5 ${compacto ? "px-2 overflow-visible" : "px-3 overflow-y-auto overflow-x-hidden"}`}>
-        {!compacto && (
-          <p className="select-none px-3 pb-3 font-label text-[9px] uppercase tracking-[0.15em] text-[var(--shell-fg-dim)]">
-            Módulos
-          </p>
-        )}
-
+      {/* Navegacion.
+          - Colapsada NO recorta overflow, si no los tooltips quedarian
+            cortados contra el borde de la barra.
+          - Expandida scrollea, pero con la barra de scroll oculta
+            (`sin-scrollbar`): aparecia una barra gris permanente al costado
+            de los modulos que ensuciaba toda la columna. Los items entran
+            enteros en cualquier pantalla normal; el scroll queda como red de
+            seguridad para ventanas muy bajas. */}
+      <nav className={`flex-1 space-y-px pb-2 pt-3 ${compacto ? "overflow-visible px-2" : "sin-scrollbar overflow-y-auto overflow-x-hidden px-3"}`}>
         {NAV_ITEMS.map((item) => {
           const active = isActive(pathname, item.href);
           return (
@@ -152,8 +171,8 @@ export function Sidebar({ usuario }: { usuario: UsuarioSidebar | null }) {
               key={item.href}
               href={item.href}
               className={[
-                "group relative flex items-center gap-3 rounded-lg transition-all duration-200",
-                compacto ? "justify-center px-0 py-2.5" : "px-3 py-2.5",
+                "group relative flex items-center gap-3 rounded-lg transition-colors duration-150",
+                compacto ? "justify-center px-0 py-2" : "px-3 py-2",
                 active
                   ? "bg-[#1CA4DF]/10 text-[var(--shell-accent-fg)]"
                   : "text-[var(--shell-fg-muted)] hover:bg-[var(--shell-hover)] hover:text-[var(--shell-fg)]",
@@ -163,15 +182,10 @@ export function Sidebar({ usuario }: { usuario: UsuarioSidebar | null }) {
               {active && !compacto && (
                 <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-[#1CA4DF]" />
               )}
-              <span
-                className={[
-                  "material-symbols-outlined shrink-0 text-[20px] transition-transform duration-200",
-                  active || compacto ? "" : "group-hover:translate-x-0.5",
-                ].join(" ")}
-                style={active ? { fontVariationSettings: "'FILL' 1" } : undefined}
-              >
-                {item.icon}
-              </span>
+              <item.icon
+                className="h-[18px] w-[18px] shrink-0"
+                strokeWidth={active ? 2.25 : 1.75}
+              />
               {!compacto && <span className="font-body text-sm font-medium">{item.label}</span>}
               {compacto && <Tooltip label={item.label} />}
             </Link>
@@ -192,9 +206,11 @@ export function Sidebar({ usuario }: { usuario: UsuarioSidebar | null }) {
             compacto ? "justify-center px-0 py-2.5" : "px-3 py-2.5",
           ].join(" ")}
         >
-          <span className="material-symbols-outlined text-[20px] shrink-0">
-            {compacto ? "left_panel_open" : "left_panel_close"}
-          </span>
+          {compacto ? (
+            <PanelLeftOpen className="h-[18px] w-[18px] shrink-0" strokeWidth={1.75} />
+          ) : (
+            <PanelLeftClose className="h-[18px] w-[18px] shrink-0" strokeWidth={1.75} />
+          )}
           {!compacto && <span className="font-body text-sm font-medium">Colapsar</span>}
           {compacto && <Tooltip label="Expandir menú" />}
         </button>
@@ -218,9 +234,7 @@ export function Sidebar({ usuario }: { usuario: UsuarioSidebar | null }) {
                       {usuario.detalle}
                     </p>
                   </div>
-                  <span className="material-symbols-outlined text-[16px] text-[var(--shell-fg-dim)] transition-colors group-hover:text-[var(--shell-fg-muted)]">
-                    unfold_more
-                  </span>
+                  <ChevronsUpDown className="h-4 w-4 shrink-0 text-[var(--shell-fg-dim)] transition-colors group-hover:text-[var(--shell-fg-muted)]" strokeWidth={1.75} />
                 </>
               )}
               {compacto && <Tooltip label={usuario.nombre} />}
@@ -240,9 +254,7 @@ export function Sidebar({ usuario }: { usuario: UsuarioSidebar | null }) {
                 compacto ? "justify-center px-0 py-2.5" : "px-3 py-2.5",
               ].join(" ")}
             >
-              <span className="material-symbols-outlined shrink-0 text-[20px]">
-                login
-              </span>
+              <LogIn className="h-[18px] w-[18px] shrink-0" strokeWidth={1.75} />
               {!compacto && (
                 <span className="font-body text-sm font-medium">
                   Iniciar sesión
@@ -258,9 +270,7 @@ export function Sidebar({ usuario }: { usuario: UsuarioSidebar | null }) {
                 href="/register"
                 className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-[var(--shell-fg-muted)] transition-colors hover:bg-[var(--shell-hover)] hover:text-[var(--shell-fg)]"
               >
-                <span className="material-symbols-outlined shrink-0 text-[20px]">
-                  person_add
-                </span>
+                <UserPlus className="h-[18px] w-[18px] shrink-0" strokeWidth={1.75} />
                 <span className="font-body text-sm font-medium">
                   Crear cuenta
                 </span>

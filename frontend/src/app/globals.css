@@ -480,3 +480,15 @@
   animation: cal-shimmer 1.4s infinite linear;
   border-radius: 10px;
 }
+
+/* Oculta la barra de scroll pero deja scrollear. Se usa en la navegacion de
+   la sidebar: la lista de modulos entra entera en cualquier pantalla normal,
+   pero en ventanas bajas aparecia una barra gris permanente al costado que
+   ensuciaba toda la columna. */
+.sin-scrollbar {
+  scrollbar-width: none;          /* Firefox */
+  -ms-overflow-style: none;       /* Edge legacy */
+}
+.sin-scrollbar::-webkit-scrollbar {
+  display: none;                  /* Chrome, Safari */
+}

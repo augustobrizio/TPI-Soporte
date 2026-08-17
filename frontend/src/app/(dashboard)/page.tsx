@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 
 import { ConvergenciaFuentes } from "@/components/frontpage/ConvergenciaFuentes";
 import { SeccionesIndex } from "@/components/frontpage/SeccionesIndex";
@@ -69,9 +70,7 @@ export default async function Portada() {
               className="inline-flex items-center gap-2 rounded-lg bg-[#1CA4DF] px-5 py-2.5 font-body text-sm font-semibold text-white transition-opacity duration-150 hover:opacity-90"
             >
               Ver novedades
-              <span className="material-symbols-outlined text-[18px]">
-                arrow_forward
-              </span>
+              <ArrowRight className="h-[18px] w-[18px]" strokeWidth={2} />
             </Link>
 
             {usuario ? (
@@ -116,9 +115,7 @@ export default async function Portada() {
               className="group inline-flex shrink-0 items-center gap-1 font-body text-sm font-medium text-[var(--shell-accent-fg)]"
             >
               Ver todas
-              <span className="material-symbols-outlined text-[16px] transition-transform duration-200 group-hover:translate-x-0.5">
-                arrow_forward
-              </span>
+              <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" strokeWidth={2} />
             </Link>
           </div>
 
@@ -146,9 +143,7 @@ export default async function Portada() {
             className="mt-7 inline-flex items-center gap-2 rounded-lg bg-[#1CA4DF] px-5 py-2.5 font-body text-sm font-semibold text-white transition-opacity duration-150 hover:opacity-90"
           >
             Empezar
-            <span className="material-symbols-outlined text-[18px]">
-              arrow_forward
-            </span>
+            <ArrowRight className="h-[18px] w-[18px]" strokeWidth={2} />
           </Link>
         </section>
       )}

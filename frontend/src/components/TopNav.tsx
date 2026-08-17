@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Bell, LogIn, Menu, Moon, Search, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 
@@ -21,9 +22,11 @@ function ThemeToggle() {
       className="flex h-9 w-9 items-center justify-center rounded-lg text-[var(--shell-fg-muted)] transition-colors hover:bg-[var(--shell-hover)] hover:text-[var(--shell-fg)]"
       aria-label={esOscuro ? "Activar modo claro" : "Activar modo oscuro"}
     >
-      <span className="material-symbols-outlined text-[20px]">
-        {esOscuro ? "light_mode" : "dark_mode"}
-      </span>
+      {esOscuro ? (
+        <Sun className="h-[18px] w-[18px]" strokeWidth={1.75} />
+      ) : (
+        <Moon className="h-[18px] w-[18px]" strokeWidth={1.75} />
+      )}
     </button>
   );
 }
@@ -57,7 +60,7 @@ export function TopNav({ autenticado = true }: { autenticado?: boolean }) {
         aria-label="Abrir menú"
         className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[var(--shell-fg-muted)] transition-colors hover:bg-[var(--shell-hover)] hover:text-[var(--shell-fg)] lg:hidden"
       >
-        <span className="material-symbols-outlined text-[22px]">menu</span>
+        <Menu className="h-5 w-5" strokeWidth={1.75} />
       </button>
 
       {/* Logo + nombre — de `lg` para arriba el ancho se alinea con la sidebar */}
@@ -80,9 +83,7 @@ export function TopNav({ autenticado = true }: { autenticado?: boolean }) {
       {/* Buscador — abajo de `md` no entra: con el hamburger, el logo y las
           acciones desbordaba la barra. */}
       <div className="hidden w-72 items-center gap-2 rounded-lg border border-[var(--shell-border)] bg-[var(--shell-hover)] px-3 py-1.5 transition-colors focus-within:border-[#1CA4DF]/50 focus-within:ring-1 focus-within:ring-[#1CA4DF]/20 hover:border-[var(--shell-border)] md:flex">
-        <span className="material-symbols-outlined shrink-0 text-[16px] text-[var(--shell-fg-dim)]">
-          search
-        </span>
+        <Search className="h-4 w-4 shrink-0 text-[var(--shell-fg-dim)]" strokeWidth={1.75} />
         <input
           className="min-w-0 flex-1 border-none bg-transparent text-sm text-[var(--shell-fg)] placeholder:text-[var(--shell-fg-dim)] focus:outline-none"
           placeholder="Buscar materias, profesores..."
@@ -104,7 +105,7 @@ export function TopNav({ autenticado = true }: { autenticado?: boolean }) {
           className="relative flex h-9 w-9 items-center justify-center rounded-lg text-[var(--shell-fg-muted)] transition-colors hover:bg-[var(--shell-hover)] hover:text-[var(--shell-fg)]"
           aria-label="Notificaciones"
         >
-          <span className="material-symbols-outlined text-[20px]">notifications</span>
+          <Bell className="h-[18px] w-[18px]" strokeWidth={1.75} />
           <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full border-2 border-[var(--shell-panel)] bg-[#1CA4DF]" />
         </button>
 
@@ -123,7 +124,7 @@ export function TopNav({ autenticado = true }: { autenticado?: boolean }) {
             href="/login"
             className="flex h-9 items-center gap-1.5 rounded-lg border border-[#1CA4DF]/25 bg-[#1CA4DF]/10 px-3 font-body text-sm font-semibold text-[var(--shell-accent-fg)] transition-colors hover:bg-[#1CA4DF]/15"
           >
-            <span className="material-symbols-outlined text-[18px]">login</span>
+            <LogIn className="h-4 w-4" strokeWidth={2} />
             Ingresar
           </Link>
         )}
