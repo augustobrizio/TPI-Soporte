@@ -15,17 +15,13 @@
  *   que confluyen — la misma que cuenta la animacion de la portada.
  */
 
-const CELESTE = "#1CA4DF";
-
-/** Trazos que entran por la izquierda y confluyen en el borde del cuadrado. */
-const LINEAS = [
-  "M 8 8 C 32 8, 44 30, 62 45",
-  "M 3 26 C 30 26, 46 38, 62 46.5",
-  "M 1 48 L 62 48",
-  "M 3 70 C 30 70, 46 58, 62 49.5",
-  "M 8 88 C 32 88, 44 66, 62 51",
-  "M 16 100 C 40 100, 50 72, 62 52",
-] as const;
+import {
+  CELESTE,
+  CUADRADO,
+  LINEAS,
+  VIEWBOX_CON_LINEAS,
+  VIEWBOX_SOLO_MARCA,
+} from "@/lib/marca";
 
 export function LogoUTNHub({
   /** Lado del cuadrado en px. El SVG crece solo si lleva lineas. */
@@ -39,7 +35,7 @@ export function LogoUTNHub({
 }) {
   // Sin lineas el viewBox es solo el cuadrado; con lineas se estira a la
   // izquierda para darles lugar sin deformar la marca.
-  const viewBox = conLineas ? "0 0 128 96" : "64 16 64 64";
+  const viewBox = conLineas ? VIEWBOX_CON_LINEAS : VIEWBOX_SOLO_MARCA;
   const ancho = conLineas ? (size * 128) / 64 : size;
   const alto = conLineas ? (size * 96) / 64 : size;
 
@@ -64,7 +60,14 @@ export function LogoUTNHub({
           />
         ))}
 
-      <rect x={64} y={16} width={64} height={64} rx={15} fill={CELESTE} />
+      <rect
+        x={CUADRADO.x}
+        y={CUADRADO.y}
+        width={CUADRADO.lado}
+        height={CUADRADO.lado}
+        rx={CUADRADO.radio}
+        fill={CELESTE}
+      />
 
       {/* El isotipo va como imagen: es la marca real de la universidad, no una
           version dibujada a mano que se le parezca. */}

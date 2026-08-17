@@ -55,9 +55,10 @@ export const metadata: Metadata = {
     url: "/",
   },
   twitter: {
-    // `summary` y no `summary_large_image`: todavia no hay imagen de preview,
-    // y pedir la tarjeta grande sin imagen la deja vacia.
-    card: "summary",
+    // Ahora si hay imagen (app/opengraph-image.tsx), asi que la tarjeta grande
+    // tiene con que llenarse. Next agrega solo las meta og:image y
+    // twitter:image a partir de ese archivo.
+    card: "summary_large_image",
     title: TITULO,
     description: DESCRIPCION,
   },
