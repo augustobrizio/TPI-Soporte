@@ -1,4 +1,5 @@
 import { RequiereCuenta } from "@/components/RequiereCuenta";
+import { PanelPersonal } from "@/features/panel/PanelPersonal";
 import { getUsuarioActual, iniciales, nombreVisible } from "@/lib/auth";
 
 /**
@@ -96,6 +97,12 @@ export default async function PerfilPage() {
           Editar perfil, cambiar contrasena y preferencias llegan pronto. La
           logica del backend ya esta lista.
         </p>
+      </div>
+
+      {/* Panel personal: progreso, agenda del dia y atajos. Antes era la
+          portada; ahora la portada es publica y esto es lo tuyo. */}
+      <div className="mt-10 border-t border-[var(--shell-border)] pt-2">
+        <PanelPersonal />
       </div>
     </div>
   );

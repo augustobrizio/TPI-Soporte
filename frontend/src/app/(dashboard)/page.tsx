@@ -1,272 +1,161 @@
-import {
-  ApiError,
-  getComisionesCursables,
-  getEventosHoyCalendario,
-  getGrafo,
-  getProximosEventosCalendario,
-} from "@/lib/api";
-import type {
-  ContadoresGrafo,
-  EventoCalendarioOut,
-  GrafoResponse,
-  MateriaCursableOut,
-} from "@/lib/types";
-import { materiaIcon } from "@/lib/materiaIcon";
+import Link from "next/link";
+
+import { ConvergenciaFuentes } from "@/components/frontpage/ConvergenciaFuentes";
+import { SeccionesIndex } from "@/components/frontpage/SeccionesIndex";
+import { NovedadCard } from "@/features/novedades/NovedadCard";
+import { listarNovedades } from "@/lib/api";
 import { getUsuarioActual } from "@/lib/auth";
+import type { NovedadOut } from "@/lib/types";
 
-import { ProgresoHero } from "@/components/dashboard/ProgresoHero";
-import { AgendaHoy, type AgendaItem } from "@/components/dashboard/AgendaHoy";
-import { ChatSnippet } from "@/components/dashboard/ChatSnippet";
-import { AccionesRapidas } from "@/components/dashboard/AccionesRapidas";
-import {
-  NovedadesAlertas,
-  type NovedadAlerta,
-} from "@/components/dashboard/NovedadesAlertas";
-import { AtajosToolbox } from "@/components/dashboard/AtajosToolbox";
+/**
+ * Portada publica de UTNHub.
+ *
+ * Antes `/` era el dashboard personal y sin sesion rebotaba a /login; despues
+ * redirigia a /novedades. Ahora es una portada propia: que es UTNHub, que
+ * secciones tiene y las ultimas novedades reales. El dashboard se mudo a
+ * /perfil, que es donde tiene sentido lo personal.
+ */
 
-// La carrera todavia no esta en el modelo `Usuario` (solo hay legajo y anio
-// de ingreso), asi que por ahora es fija. El nombre sale de la sesion.
-const CARRERA = "Ingenieria en Sistemas de Informacion";
+const NOVEDADES_EN_PORTADA = 3;
 
-// Fallback de contadores si el backend no responde. Mantiene la UI usable
-// y evita arrastrar un null por todo el render.
-const CONTADORES_VACIOS: ContadoresGrafo = {
-  aprobadas: 0,
-  regulares: 0,
-  cursando: 0,
-  cursables: 0,
-  libres: 0,
-  total: 0,
-  porcentaje_aprobadas: 0,
-  carga_horaria_cursando: 0,
-  creditos_electivas: 0,
-  meta_creditos_electivas: 0,
-  promedio_general: null,
-};
-
-// ---------------------------------------------------------------------------
-// Mocks — se reemplazan por endpoints cuando esten implementados.
-// La forma del dato ya respeta el contrato que va a exponer el BE.
-// ---------------------------------------------------------------------------
-
-const NOVEDADES_MOCK: NovedadAlerta[] = [
-  {
-    id: "paro-adutn",
-    categoria: "Paro academico",
-    titulo: "Paro docente del 09/05",
-    resumen:
-      "ADUTN convoco a 24h de paro. Verifica el campus virtual antes de salir de tu casa: hay clases que pasan a virtual.",
-    severidad: "critica",
-  },
-  {
-    id: "insc-finales",
-    categoria: "Administrativo",
-    titulo: "Inscripcion a finales de mayo",
-    resumen:
-      "La ventana de inscripcion al turno de mayo cierra el viernes 16 a las 23:59. Recorda chequear correlativas para rendir.",
-    severidad: "importante",
-  },
-];
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-async function obtenerGrafoSeguro(): Promise<{
-  grafo: GrafoResponse | null;
-  error: string | null;
-}> {
+async function ultimasNovedades(): Promise<NovedadOut[]> {
   try {
-    const grafo = await getGrafo({ tipo: "troncal" });
-    return { grafo, error: null };
-  } catch (err) {
-    if (err instanceof ApiError) {
-      return { grafo: null, error: `Backend devolvio ${err.status}.` };
-    }
-    if (err instanceof Error) return { grafo: null, error: err.message };
-    return { grafo: null, error: "Error desconocido." };
+    return await listarNovedades({ limite: NOVEDADES_EN_PORTADA });
+  } catch {
+    // La portada no se cae por las novedades: si el backend no responde, la
+    // seccion simplemente no se muestra.
+    return [];
   }
 }
 
-// 2do cuatrimestre arranca ~20 de julio.
-function cuatriActual(): 1 | 2 {
-  const hoy = new Date();
-  const m = hoy.getMonth();
-  const d = hoy.getDate();
-  return m > 6 || (m === 6 && d >= 20) ? 2 : 1;
-}
-
-const DIAS_JS = ["domingo", "lunes", "martes", "miercoles", "jueves", "viernes", "sabado"];
-const normDia = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
-
-function duracionMinHorario(ini: string | null, fin: string | null): number {
-  if (!ini || !fin) return 0;
-  const toMin = (t: string) => { const [h, m] = t.split(":").map(Number); return h * 60 + (m || 0); };
-  let d = toMin(fin) - toMin(ini);
-  if (d < 0) d += 24 * 60;
-  return d;
-}
-
-/** Clases de hoy a partir de las comisiones que el alumno eligió en Horarios. */
-function clasesDeHoy(actual: MateriaCursableOut[], todos: MateriaCursableOut[]): AgendaItem[] {
-  // Resolver la comisión elegida por materia (cruzando ambos cuatris para las anuales).
-  const selCom = new Map<string, number>();
-  for (const m of todos) {
-    if (m.cursada_seleccionada_id == null) continue;
-    for (const com of m.comisiones) {
-      if (com.cursada_id === m.cursada_seleccionada_id) selCom.set(m.materia_codigo, com.comision_id);
-    }
-  }
-  const diaHoy = normDia(DIAS_JS[new Date().getDay()]);
-  const items: AgendaItem[] = [];
-  for (const m of actual) {
-    const cid = selCom.get(m.materia_codigo);
-    if (cid == null) continue;
-    const com = m.comisiones.find((c) => c.comision_id === cid);
-    if (!com) continue;
-    com.horarios.forEach((h, idx) => {
-      if (!h.dia || normDia(h.dia) !== diaHoy) return;
-      items.push({
-        id: `clase-${com.cursada_id}-${idx}`,
-        titulo: m.materia_nombre,
-        detalle: [com.comision_nombre, h.aula].filter(Boolean).join(" · ") || "Clase",
-        hora: h.hora_inicio?.slice(0, 5) ?? "",
-        duracionMin: duracionMinHorario(h.hora_inicio, h.hora_fin),
-        icono: materiaIcon(m.materia_nombre),
-      });
-    });
-  }
-  items.sort((a, b) => a.hora.localeCompare(b.hora));
-  return items;
-}
-
-async function obtenerDiaSeguro(): Promise<{
-  agenda: AgendaItem[];
-  finalesProximos: number | undefined;
-  error: string | null;
-}> {
-  try {
-    const cuatri = cuatriActual();
-    const [hoy, proximos, c1, c2] = await Promise.all([
-      getEventosHoyCalendario("ISI"),
-      getProximosEventosCalendario(30, "ISI"),
-      getComisionesCursables(2025, 1),
-      getComisionesCursables(2025, 2),
-    ]);
-    const clases = clasesDeHoy(cuatri === 1 ? c1 : c2, [...c1, ...c2]);
-    return {
-      // Primero las clases de hoy (con hora real), luego los eventos del calendario.
-      agenda: [...clases, ...hoy.map(eventoToAgendaItem)],
-      finalesProximos: proximos.filter((e) => e.tipo === "mesa").length,
-      error: null,
-    };
-  } catch (err) {
-    if (err instanceof ApiError) {
-      return { agenda: [], finalesProximos: undefined, error: `Backend devolvio ${err.status}.` };
-    }
-    if (err instanceof Error) {
-      return { agenda: [], finalesProximos: undefined, error: err.message };
-    }
-    return { agenda: [], finalesProximos: undefined, error: "Error desconocido." };
-  }
-}
-
-function eventoToAgendaItem(evento: EventoCalendarioOut): AgendaItem {
-  const inicio = new Date(evento.fecha_inicio);
-  const fin = evento.fecha_fin ? new Date(evento.fecha_fin) : null;
-  const duracionMin = fin
-    ? Math.max(0, Math.round((fin.getTime() - inicio.getTime()) / 60000))
-    : 0;
-  return {
-    id: evento.id,
-    titulo: evento.titulo,
-    detalle: evento.descripcion ?? etiquetaTipo(evento.tipo),
-    hora: inicio.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" }),
-    duracionMin,
-    icono: iconoTipo(evento.tipo),
-  };
-}
-
-function etiquetaTipo(tipo: EventoCalendarioOut["tipo"]): string {
-  const etiquetas: Record<EventoCalendarioOut["tipo"], string> = {
-    examen: "Examen",
-    mesa: "Mesa",
-    trabajo_practico: "TP",
-    feriado: "Feriado",
-    evento: "Evento",
-  };
-  return etiquetas[tipo];
-}
-
-function iconoTipo(tipo: EventoCalendarioOut["tipo"]): string {
-  const iconos: Record<EventoCalendarioOut["tipo"], string> = {
-    examen: "event_upcoming",
-    mesa: "groups",
-    trabajo_practico: "assignment",
-    feriado: "beach_access",
-    evento: "calendar_month",
-  };
-  return iconos[tipo];
-}
-
-// ---------------------------------------------------------------------------
-// Pagina principal del dashboard
-// ---------------------------------------------------------------------------
-
-export default async function DashboardHome() {
-  const [{ grafo, error }, dia, usuario] = await Promise.all([
-    obtenerGrafoSeguro(),
-    obtenerDiaSeguro(),
+export default async function Portada() {
+  const [novedades, usuario] = await Promise.all([
+    ultimasNovedades(),
     getUsuarioActual(),
   ]);
-  const contadores = grafo?.contadores ?? CONTADORES_VACIOS;
-  const enCursada = contadores.cursando;
 
   return (
-    <div className="p-6 md:p-8 max-w-[1400px] mx-auto space-y-6">
-      {error && (
-        <div className="bg-error/10 border border-error/30 rounded-2xl px-4 py-3 text-sm text-error font-medium">
-          No pude traer tu progreso del backend ({error}). Mostrando dashboard
-          en modo degradado.
-        </div>
-      )}
-      {dia.error && (
-        <div className="bg-error/10 border border-error/30 rounded-2xl px-4 py-3 text-sm text-error font-medium">
-          No pude traer tu día del backend ({dia.error}).
-        </div>
-      )}
+    <div className="mx-auto max-w-[1200px] px-6 py-14 md:px-10 md:py-20">
+      {/* ── Hero ─────────────────────────────────────────────────────── */}
+      {/* El visual pesa mas que el texto en la grilla: con los nombres de las
+          fuentes adentro, una columna angosta los vuelve ilegibles. */}
+      <section className="grid grid-cols-1 items-center gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)] lg:gap-14">
+        <div>
+          <p className="font-label text-[11px] uppercase tracking-[0.18em] text-[var(--shell-fg-dim)]">
+            ISI · UTN FRRO
+          </p>
 
-      <ProgresoHero
-        nombre={usuario?.nombre ?? usuario?.email ?? "Estudiante"}
-        carrera={CARRERA}
-        contadores={contadores}
-        enCursada={enCursada}
-        finalesProximos={dia.finalesProximos}
-        esMock={!grafo}
-      />
+          {/* clamp() en vez de breakpoints: el titular escala con el viewport
+              en vez de saltar de un tamaño a otro. */}
+          <h1
+            className="mt-4 font-headline font-extrabold leading-[1.05] tracking-[-0.02em] text-[var(--shell-fg)]"
+            style={{ fontSize: "clamp(2.25rem, 5vw, 3.75rem)" }}
+          >
+            Todo lo de la facultad,
+            <br />
+            en un solo lugar.
+          </h1>
 
-      {/* Bento grid: 12 columnas, asimetrico segun DESIGN.md */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-        <div className="md:col-span-8">
-          <AgendaHoy items={dia.agenda} esMock={Boolean(dia.error)} />
+          <p className="mt-6 max-w-xl text-lg leading-relaxed text-[var(--shell-fg-muted)]">
+            La información de la UTN FRRO vive desparramada entre el sitio de la
+            facultad y las cuentas de los centros de estudiantes. UTNHub la
+            reúne y la ordena: novedades, profesores, comisiones, calendario y
+            material.
+          </p>
+
+          <div className="mt-9 flex flex-wrap items-center gap-3">
+            <Link
+              href="/novedades"
+              className="inline-flex items-center gap-2 rounded-lg bg-[#1CA4DF] px-5 py-2.5 font-body text-sm font-semibold text-white transition-opacity duration-150 hover:opacity-90"
+            >
+              Ver novedades
+              <span className="material-symbols-outlined text-[18px]">
+                arrow_forward
+              </span>
+            </Link>
+
+            {usuario ? (
+              <Link
+                href="/perfil"
+                className="inline-flex items-center gap-2 rounded-lg border border-[var(--shell-border)] px-5 py-2.5 font-body text-sm font-semibold text-[var(--shell-fg)] transition-colors duration-150 hover:bg-[var(--shell-hover)]"
+              >
+                Ir a mi panel
+              </Link>
+            ) : (
+              <Link
+                href="/register"
+                className="inline-flex items-center gap-2 rounded-lg border border-[var(--shell-border)] px-5 py-2.5 font-body text-sm font-semibold text-[var(--shell-fg)] transition-colors duration-150 hover:bg-[var(--shell-hover)]"
+              >
+                Crear cuenta
+              </Link>
+            )}
+          </div>
+
+          <p className="mt-5 text-sm text-[var(--shell-fg-muted)]">
+            Sin cuenta ya podés navegar casi todo. La cuenta suma lo que depende
+            de vos: tus correlativas y tu cursada.
+          </p>
         </div>
-        <div className="md:col-span-4">
-          <ChatSnippet
-            ultimaPregunta={null}
-            haceTexto={null}
-            conversacionId={null}
-          />
-        </div>
-        <div className="md:col-span-4">
-          <AccionesRapidas />
-        </div>
-        <div className="md:col-span-8">
-          <NovedadesAlertas novedades={NOVEDADES_MOCK} esMock />
-        </div>
-        <div className="md:col-span-12">
-          <AtajosToolbox />
-        </div>
+
+        <ConvergenciaFuentes className="order-first lg:order-none" />
+      </section>
+
+      {/* ── Secciones ────────────────────────────────────────────────── */}
+      <div className="mt-24 md:mt-32">
+        <SeccionesIndex />
       </div>
+
+      {/* ── Novedades ────────────────────────────────────────────────── */}
+      {novedades.length > 0 && (
+        <section className="mt-24 md:mt-32" aria-labelledby="novedades-titulo">
+          <div className="mb-8 flex items-baseline justify-between gap-4">
+            <h2
+              id="novedades-titulo"
+              className="font-headline text-2xl font-bold tracking-tight text-[var(--shell-fg)] sm:text-3xl"
+            >
+              Últimas novedades
+            </h2>
+            <Link
+              href="/novedades"
+              className="group inline-flex shrink-0 items-center gap-1 font-body text-sm font-medium text-[var(--shell-accent-fg)]"
+            >
+              Ver todas
+              <span className="material-symbols-outlined text-[16px] transition-transform duration-200 group-hover:translate-x-0.5">
+                arrow_forward
+              </span>
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {novedades.map((n) => (
+              <NovedadCard key={n.id} novedad={n} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ── Cierre ───────────────────────────────────────────────────── */}
+      {!usuario && (
+        <section className="mt-24 rounded-xl border border-[var(--shell-border)] p-8 md:mt-32 md:p-12">
+          <h2 className="font-headline text-2xl font-bold tracking-tight text-[var(--shell-fg)]">
+            Creá tu cuenta
+          </h2>
+          <p className="mt-3 max-w-2xl leading-relaxed text-[var(--shell-fg-muted)]">
+            Cargás las materias que aprobaste una vez y UTNHub calcula solo qué
+            te queda habilitado para cursar y para rendir, y te deja armar la
+            cursada sin superposiciones.
+          </p>
+          <Link
+            href="/register"
+            className="mt-7 inline-flex items-center gap-2 rounded-lg bg-[#1CA4DF] px-5 py-2.5 font-body text-sm font-semibold text-white transition-opacity duration-150 hover:opacity-90"
+          >
+            Empezar
+            <span className="material-symbols-outlined text-[18px]">
+              arrow_forward
+            </span>
+          </Link>
+        </section>
+      )}
     </div>
   );
 }

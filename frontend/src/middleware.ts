@@ -38,14 +38,8 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // La home es el dashboard personal (progreso, agenda del dia, contadores
-  // del grafo): sin sesion no tiene nada que mostrar y quedaria todo en cero
-  // con el cartel de modo degradado. El visitante entra por Novedades, que es
-  // contenido publico y real.
-  if (pathname === "/" && !tieneSesion) {
-    return NextResponse.redirect(new URL("/novedades", request.url));
-  }
-
+  // `/` ya no redirige a ningun lado: es la portada publica. Lo personal
+  // (progreso, agenda, contadores) se mudo a /perfil.
   return NextResponse.next();
 }
 
