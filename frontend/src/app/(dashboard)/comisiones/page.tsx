@@ -2,6 +2,8 @@ import { ApiError, listarComisionesConProfesores } from "@/lib/api";
 import type { ComisionConProfesores } from "@/lib/types";
 import { ComisionesView } from "@/components/comisiones/ComisionesView";
 
+// Esta pantalla pega a `/comisiones/con-profesores`, que no pide token: es la
+// oferta de comisiones de la facultad, igual para todos. Queda publica.
 export default async function ComisionesPage() {
   let comisiones: ComisionConProfesores[] | null = null;
   let errorMsg: string | null = null;

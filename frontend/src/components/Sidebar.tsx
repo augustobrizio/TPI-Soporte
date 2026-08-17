@@ -49,7 +49,8 @@ export interface UsuarioSidebar {
   iniciales: string;
 }
 
-export function Sidebar({ usuario }: { usuario: UsuarioSidebar }) {
+/** `null` = visitante sin cuenta: en vez del avatar van los accesos a entrar. */
+export function Sidebar({ usuario }: { usuario: UsuarioSidebar | null }) {
   const pathname = usePathname();
   const { collapsed, toggle } = useSidebar();
 
@@ -141,34 +142,74 @@ export function Sidebar({ usuario }: { usuario: UsuarioSidebar }) {
         </button>
       </div>
 
-      {/* Usuario */}
+      {/* Usuario — o los accesos a entrar, si es un visitante sin cuenta */}
       <div className={`shrink-0 border-t border-[var(--shell-border)] pb-4 pt-3 ${collapsed ? "px-2" : "px-3"}`}>
-        <div className={`group relative flex cursor-pointer items-center gap-3 rounded-lg transition-colors hover:bg-[var(--shell-hover)] ${collapsed ? "justify-center px-0 py-2.5" : "px-3 py-2.5"}`}>
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[#1CA4DF]/25 bg-[#1CA4DF]/10 font-headline text-xs font-extrabold text-[var(--shell-accent-fg)]">
-            {usuario.iniciales}
-          </div>
-          {!collapsed && (
-            <>
-              <div className="min-w-0 flex-1 leading-none">
-                <p className="truncate text-xs font-semibold text-[var(--shell-fg)]">
-                  {usuario.nombre}
-                </p>
-                <p className="mt-0.5 truncate text-[10px] text-[var(--shell-fg-dim)]">
-                  {usuario.detalle}
-                </p>
+        {usuario ? (
+          <>
+            <div className={`group relative flex cursor-pointer items-center gap-3 rounded-lg transition-colors hover:bg-[var(--shell-hover)] ${collapsed ? "justify-center px-0 py-2.5" : "px-3 py-2.5"}`}>
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[#1CA4DF]/25 bg-[#1CA4DF]/10 font-headline text-xs font-extrabold text-[var(--shell-accent-fg)]">
+                {usuario.iniciales}
               </div>
-              <span className="material-symbols-outlined text-[16px] text-[var(--shell-fg-dim)] transition-colors group-hover:text-[var(--shell-fg-muted)]">
-                unfold_more
-              </span>
-            </>
-          )}
-          {collapsed && <Tooltip label={usuario.nombre} />}
-        </div>
+              {!collapsed && (
+                <>
+                  <div className="min-w-0 flex-1 leading-none">
+                    <p className="truncate text-xs font-semibold text-[var(--shell-fg)]">
+                      {usuario.nombre}
+                    </p>
+                    <p className="mt-0.5 truncate text-[10px] text-[var(--shell-fg-dim)]">
+                      {usuario.detalle}
+                    </p>
+                  </div>
+                  <span className="material-symbols-outlined text-[16px] text-[var(--shell-fg-dim)] transition-colors group-hover:text-[var(--shell-fg-muted)]">
+                    unfold_more
+                  </span>
+                </>
+              )}
+              {collapsed && <Tooltip label={usuario.nombre} />}
+            </div>
 
-        <LogoutButton
-          collapsed={collapsed}
-          tooltip={<Tooltip label="Cerrar sesión" />}
-        />
+            <LogoutButton
+              collapsed={collapsed}
+              tooltip={<Tooltip label="Cerrar sesión" />}
+            />
+          </>
+        ) : (
+          <div className={collapsed ? "space-y-1" : "space-y-2"}>
+            <Link
+              href="/login"
+              className={[
+                "group relative flex items-center gap-3 rounded-lg bg-[#1CA4DF]/10 text-[var(--shell-accent-fg)] transition-colors hover:bg-[#1CA4DF]/15",
+                collapsed ? "justify-center px-0 py-2.5" : "px-3 py-2.5",
+              ].join(" ")}
+            >
+              <span className="material-symbols-outlined shrink-0 text-[20px]">
+                login
+              </span>
+              {!collapsed && (
+                <span className="font-body text-sm font-medium">
+                  Iniciar sesión
+                </span>
+              )}
+              {collapsed && <Tooltip label="Iniciar sesión" />}
+            </Link>
+
+            {/* Colapsada queda solo el de entrar: dos íconos parecidos sin
+                texto no se distinguen, y desde el login se llega al registro. */}
+            {!collapsed && (
+              <Link
+                href="/register"
+                className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-[var(--shell-fg-muted)] transition-colors hover:bg-[var(--shell-hover)] hover:text-[var(--shell-fg)]"
+              >
+                <span className="material-symbols-outlined shrink-0 text-[20px]">
+                  person_add
+                </span>
+                <span className="font-body text-sm font-medium">
+                  Crear cuenta
+                </span>
+              </Link>
+            )}
+          </div>
+        )}
       </div>
     </aside>
   );

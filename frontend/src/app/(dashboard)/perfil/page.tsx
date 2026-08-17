@@ -1,5 +1,4 @@
-import { redirect } from "next/navigation";
-
+import { RequiereCuenta } from "@/components/RequiereCuenta";
 import { getUsuarioActual, iniciales, nombreVisible } from "@/lib/auth";
 
 /**
@@ -8,7 +7,16 @@ import { getUsuarioActual, iniciales, nombreVisible } from "@/lib/auth";
  */
 export default async function PerfilPage() {
   const usuario = await getUsuarioActual();
-  if (!usuario) redirect("/login");
+  if (!usuario) {
+    return (
+      <RequiereCuenta
+        titulo="Perfil"
+        icono="person"
+        motivo="Tus datos de cuenta: email, legajo y año de ingreso."
+        next="/perfil"
+      />
+    );
+  }
 
   const nombre = nombreVisible(usuario);
   const datos: { icono: string; label: string; valor: string; ac: string }[] = [

@@ -1,5 +1,3 @@
-import { redirect } from "next/navigation";
-
 import { Sidebar } from "@/components/Sidebar";
 import { TopNav } from "@/components/TopNav";
 import { SidebarProvider } from "@/components/SidebarContext";
@@ -16,21 +14,27 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // El middleware ya rebota a quien no tenga cookie, pero solo mira que exista.
-  // Aca se valida de verdad contra el backend: si el token vencio o la cuenta
-  // se borro, se corta antes de renderizar nada del dashboard.
+  // Se valida contra el backend, no alcanza con que exista la cookie: un token
+  // vencido o de una cuenta borrada tiene que contar como visitante anonimo.
+  // `null` no corta el render — el shell se muestra igual y cada seccion
+  // decide si necesita cuenta.
   const usuario = await getUsuarioActual();
-  if (!usuario) redirect("/login");
 
   return (
     <SidebarProvider>
-      <TopNav />
+      <TopNav autenticado={Boolean(usuario)} />
       <Sidebar
-        usuario={{
-          nombre: nombreVisible(usuario),
-          detalle: usuario.legajo ? `Leg. ${usuario.legajo}` : usuario.email,
-          iniciales: iniciales(usuario),
-        }}
+        usuario={
+          usuario
+            ? {
+                nombre: nombreVisible(usuario),
+                detalle: usuario.legajo
+                  ? `Leg. ${usuario.legajo}`
+                  : usuario.email,
+                iniciales: iniciales(usuario),
+              }
+            : null
+        }
       />
       <DashboardMain>{children}</DashboardMain>
     </SidebarProvider>

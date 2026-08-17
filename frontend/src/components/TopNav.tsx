@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 
@@ -44,7 +45,7 @@ function UtnLogo() {
   );
 }
 
-export function TopNav() {
+export function TopNav({ autenticado = true }: { autenticado?: boolean }) {
   const { collapsed } = useSidebar();
   return (
     <nav className="fixed top-0 z-50 flex h-16 w-full items-center gap-4 border-b border-[var(--shell-border)] bg-[var(--shell-panel-blur)] px-6 backdrop-blur-xl">
@@ -95,13 +96,25 @@ export function TopNav() {
           <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full border-2 border-[var(--shell-panel)] bg-[#1CA4DF]" />
         </button>
 
-        <button
-          type="button"
-          className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#1CA4DF]/25 bg-[#1CA4DF]/10 font-headline text-xs font-extrabold text-[var(--shell-accent-fg)] transition-colors hover:bg-[#1CA4DF]/15"
-          aria-label="Cuenta"
-        >
-          JR
-        </button>
+        {autenticado ? (
+          <button
+            type="button"
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#1CA4DF]/25 bg-[#1CA4DF]/10 font-headline text-xs font-extrabold text-[var(--shell-accent-fg)] transition-colors hover:bg-[#1CA4DF]/15"
+            aria-label="Cuenta"
+          >
+            JR
+          </button>
+        ) : (
+          // Sin sesion el avatar no representa a nadie: en su lugar va el
+          // acceso a entrar, que es la accion que le queda al visitante.
+          <Link
+            href="/login"
+            className="flex h-9 items-center gap-1.5 rounded-lg border border-[#1CA4DF]/25 bg-[#1CA4DF]/10 px-3 font-body text-sm font-semibold text-[var(--shell-accent-fg)] transition-colors hover:bg-[#1CA4DF]/15"
+          >
+            <span className="material-symbols-outlined text-[18px]">login</span>
+            Ingresar
+          </Link>
+        )}
       </div>
     </nav>
   );
