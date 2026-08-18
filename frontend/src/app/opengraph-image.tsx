@@ -27,8 +27,17 @@ const FONDO = "#09090b";
 const TEXTO = "#fafafa";
 const TENUE = "#a3a3a3";
 
-/** Ancho de la marca (con trazos) dentro de la tarjeta. */
-const MARCA_ANCHO = 420;
+/**
+ * Ancho de la marca (con trazos) dentro de la tarjeta.
+ *
+ * La composicion va centrada y contenida: WhatsApp no muestra la tarjeta
+ * grande, recorta la imagen a un CUADRADO para su miniatura. Con el contenido
+ * pegado a la izquierda, ese recorte central agarraba fondo vacio y medio
+ * renglon de texto. Todo lo importante entra ahora en los 630x630 del centro.
+ */
+const MARCA_ANCHO = 300;
+/** Lo que sobrevive al recorte cuadrado de WhatsApp. */
+const ANCHO_SEGURO = 600;
 
 export default async function Image() {
   const simbolo = readFileSync(
@@ -55,9 +64,10 @@ export default async function Image() {
           height: "100%",
           display: "flex",
           flexDirection: "column",
+          alignItems: "center",
           justifyContent: "center",
           background: FONDO,
-          padding: "0 88px",
+          padding: 56,
         }}
       >
         <div
@@ -66,7 +76,7 @@ export default async function Image() {
             position: "relative",
             width: MARCA_ANCHO,
             height: (MARCA_ANCHO * 96) / 128,
-            marginLeft: -40,
+            marginLeft: -28,
           }}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -93,12 +103,14 @@ export default async function Image() {
         <div
           style={{
             display: "flex",
-            fontSize: 62,
+            fontSize: 48,
             fontWeight: 700,
             color: TEXTO,
-            lineHeight: 1.1,
-            letterSpacing: -1.5,
-            marginTop: 8,
+            lineHeight: 1.15,
+            letterSpacing: -1.2,
+            marginTop: 16,
+            maxWidth: ANCHO_SEGURO,
+            textAlign: "center",
           }}
         >
           Todo lo de la facultad, en un solo lugar.
@@ -107,9 +119,9 @@ export default async function Image() {
         <div
           style={{
             display: "flex",
-            fontSize: 28,
+            fontSize: 24,
             color: TENUE,
-            marginTop: 24,
+            marginTop: 20,
           }}
         >
           UTNHub · ISI · UTN FRRO
