@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
 import { ConvergenciaFuentes } from "@/components/frontpage/ConvergenciaFuentes";
+import { FotosFacultad } from "@/components/frontpage/FotosFacultad";
 import { SeccionesIndex } from "@/components/frontpage/SeccionesIndex";
 import { NovedadCard } from "@/features/novedades/NovedadCard";
 import { listarNovedades } from "@/lib/api";
@@ -98,6 +99,11 @@ export default async function Portada() {
       {/* ── Secciones ────────────────────────────────────────────────── */}
       <div className="mt-24 md:mt-32">
         <SeccionesIndex />
+      </div>
+
+      {/* ── Fotos ────────────────────────────────────────────────────── */}
+      <div className="mt-24 md:mt-32">
+        <FotosFacultad />
       </div>
 
       {/* ── Novedades ────────────────────────────────────────────────── */}
