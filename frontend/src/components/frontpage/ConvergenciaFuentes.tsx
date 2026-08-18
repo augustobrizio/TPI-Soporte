@@ -6,35 +6,41 @@ import {
   CELESTE,
   DESTINO,
   FUENTES,
-  NODO_X,
   R,
   VB_ALTO,
   VB_ANCHO,
+  centroDe,
+  corrimientoTotal,
   curvaDe,
-  yDe,
+  derivaDe,
+  type Corrimiento,
   type Punto,
 } from "@/lib/convergencia";
 
 /**
  * La metáfora de UTNHub en una imagen: la información está desparramada en
- * cuentas de Instagram, en el sitio de la facultad y en Drive, y acá converge
- * en un lugar.
+ * cuentas de Instagram, en el sitio de la facultad, en SysAcad y en Drive, y
+ * acá converge en un lugar.
  *
- * Los trazos se pueden empujar con el cursor: cada curva dobla hacia el mouse
- * con una caída por distancia. Los extremos NO se mueven — quedan clavados al
- * nodo de origen y al de llegada — así que se puede jugar sin que el grafo se
- * desarme.
+ * Se puede jugar de dos maneras:
+ *
+ * - **Arrastrar las fuentes.** Cada nodo se agarra y se suelta donde sea; su
+ *   curva lo sigue, porque nace del borde del círculo mirando al hub. El
+ *   arrastre queda acotado al viewBox, así no se pierde un nodo afuera del
+ *   dibujo.
+ * - **Empujar los trazos.** Las curvas doblan hacia el mouse con una caída por
+ *   distancia. Los extremos no se despegan de sus nodos.
  *
  * Detalles que no son obvios:
  *
- * - Las posiciones salen de un cálculo por índice, no escritas a mano. Sumar
- *   una fuente es agregar una línea a `FUENTES`: el alto del viewBox, el
- *   centro del grafo y todas las curvas se reacomodan solos.
  * - Los puntos que viajan usan `offset-path` con el MISMO string que dibuja la
  *   línea, así la trayectoria y el trazo no se pueden desincronizar ni
- *   mientras se dobla con el cursor.
- * - Sin cursor fino (celulares) o con `prefers-reduced-motion` no se engancha
- *   el listener: queda la composición quieta.
+ *   mientras se arrastra.
+ * - El delta del arrastre se convierte de píxeles a unidades del viewBox: sin
+ *   eso el nodo se movería más lento o más rápido que el puntero según el
+ *   tamaño en pantalla.
+ * - `prefers-reduced-motion` apaga el seguimiento del cursor, pero NO el
+ *   arrastre: mover algo a propósito no es movimiento no solicitado.
  */
 
 const CSS = `
@@ -58,6 +64,12 @@ const CSS = `
 /* El nodo central late apenas, para que se lea como el punto de llegada. */
 .cv-destino { transform-box: fill-box; transform-origin: center; animation: cv-latido 3.4s ease-in-out infinite; }
 @keyframes cv-latido { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.04); } }
+
+/* Agarrable: sin esto no hay ninguna pista de que el nodo se puede mover.
+   touch-action none evita que el navegador se quede con el gesto y scrollee
+   la pagina en vez de arrastrar. */
+.cv-nodo { cursor: grab; touch-action: none; }
+.cv-nodo:active { cursor: grabbing; }
 
 /* Los nombres se ocultan en pantallas chicas: el SVG escala completo, asi que
    a 340px de ancho quedarian en ~8px, ilegibles y sucios. */
@@ -120,12 +132,135 @@ function useCursorEnSvg(ref: React.RefObject<SVGSVGElement | null>) {
   return cursor;
 }
 
+/**
+ * Reloj para la deriva.
+ *
+ * Se apaga cuando no corresponde animar: con `prefers-reduced-motion`, con la
+ * pestaña en segundo plano, o con el dibujo fuera de la pantalla. Un rAF
+ * eterno recalculando curvas mientras el usuario lee otra sección es gastar
+ * batería a cambio de nada que nadie está viendo.
+ */
+function useRelojDeriva(ref: React.RefObject<SVGSVGElement | null>) {
+  const [t, setT] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    const svg = ref.current;
+    if (!svg) return;
+
+    let frame = 0;
+    let visibleEnPantalla = true;
+
+    const correspondeAnimar = () =>
+      visibleEnPantalla && document.visibilityState === "visible";
+
+    const paso = (ahora: number) => {
+      setT(ahora);
+      frame = requestAnimationFrame(paso);
+    };
+    const arrancar = () => {
+      if (!frame && correspondeAnimar()) frame = requestAnimationFrame(paso);
+    };
+    const parar = () => {
+      if (frame) cancelAnimationFrame(frame);
+      frame = 0;
+    };
+
+    const observador = new IntersectionObserver(
+      ([entrada]) => {
+        visibleEnPantalla = entrada.isIntersecting;
+        if (correspondeAnimar()) arrancar();
+        else parar();
+      },
+      { threshold: 0 },
+    );
+    observador.observe(svg);
+
+    const alCambiarVisibilidad = () =>
+      correspondeAnimar() ? arrancar() : parar();
+    document.addEventListener("visibilitychange", alCambiarVisibilidad);
+
+    arrancar();
+    return () => {
+      parar();
+      observador.disconnect();
+      document.removeEventListener("visibilitychange", alCambiarVisibilidad);
+    };
+  }, [ref]);
+
+  return t;
+}
+
 export function ConvergenciaFuentes({ className }: { className?: string }) {
   const svgRef = useRef<SVGSVGElement>(null);
   const cursor = useCursorEnSvg(svgRef);
+  const t = useRelojDeriva(svgRef);
 
-  const curvas = FUENTES.map((_, i) => curvaDe(i, cursor));
+  const [corrimientos, setCorrimientos] = useState<Record<string, Corrimiento>>(
+    {},
+  );
+  const [arrastrandoId, setArrastrandoId] = useState<string | null>(null);
+  const arrastre = useRef<{
+    id: string;
+    x0: number;
+    y0: number;
+    base: Corrimiento;
+  } | null>(null);
+
+  // El nodo que se está arrastrando no deriva: tiene que ir pegado al puntero
+  // y no temblar debajo del dedo.
+  const corrimientoDe = (id: string, i: number) =>
+    corrimientoTotal(
+      corrimientos[id],
+      t === null || id === arrastrandoId ? null : derivaDe(i, t),
+    );
+
+  const curvas = FUENTES.map((f, i) => curvaDe(i, cursor, corrimientoDe(f.id, i)));
   const N = FUENTES.length;
+
+  const empezarArrastre =
+    (id: string) => (e: React.PointerEvent<SVGGElement>) => {
+      e.preventDefault();
+      // La captura hace que los movimientos sigan llegando a este nodo aunque
+      // el puntero se salga del círculo: sin esto el arrastre se corta apenas
+      // el mouse va más rápido que el render.
+      e.currentTarget.setPointerCapture(e.pointerId);
+      setArrastrandoId(id);
+      arrastre.current = {
+        id,
+        x0: e.clientX,
+        y0: e.clientY,
+        // Base sin deriva: si guardara la posición derivada, al soltar y
+        // volver a agarrar el nodo pegaría un salto del tamaño del vaivén.
+        base: corrimientos[id] ?? { dx: 0, dy: 0 },
+      };
+    };
+
+  const moverArrastre = (e: React.PointerEvent<SVGGElement>) => {
+    const a = arrastre.current;
+    const svg = svgRef.current;
+    if (!a || !svg) return;
+    const caja = svg.getBoundingClientRect();
+    if (caja.width === 0 || caja.height === 0) return;
+
+    // Píxeles de pantalla → unidades del viewBox.
+    const kx = VB_ANCHO / caja.width;
+    const ky = VB_ALTO / caja.height;
+    setCorrimientos((previo) => ({
+      ...previo,
+      [a.id]: {
+        dx: a.base.dx + (e.clientX - a.x0) * kx,
+        dy: a.base.dy + (e.clientY - a.y0) * ky,
+      },
+    }));
+  };
+
+  const terminarArrastre = (e: React.PointerEvent<SVGGElement>) => {
+    if (arrastre.current) e.currentTarget.releasePointerCapture(e.pointerId);
+    arrastre.current = null;
+    setArrastrandoId(null);
+  };
 
   return (
     <div className={className}>
@@ -135,14 +270,17 @@ export function ConvergenciaFuentes({ className }: { className?: string }) {
         viewBox={`0 0 ${VB_ANCHO} ${VB_ALTO}`}
         className="h-auto w-full"
         role="img"
-        aria-label="Las publicaciones de los centros de estudiantes, el sitio de la facultad y el material en Drive convergen en UTNHub"
+        aria-label="Las publicaciones de los centros de estudiantes, el sitio de la facultad, SysAcad y el material en Drive convergen en UTNHub"
       >
         <defs>
-          {FUENTES.map((f, i) => (
-            <clipPath key={f.id} id={`cv-clip-${f.id}`}>
-              <circle cx={NODO_X} cy={yDe(i)} r={R} />
-            </clipPath>
-          ))}
+          {FUENTES.map((f, i) => {
+            const c = centroDe(i, corrimientoDe(f.id, i));
+            return (
+              <clipPath key={f.id} id={`cv-clip-${f.id}`}>
+                <circle cx={c.x} cy={c.y} r={R} />
+              </clipPath>
+            );
+          })}
         </defs>
 
         {/* Líneas primero: quedan por debajo de los nodos */}
@@ -171,14 +309,21 @@ export function ConvergenciaFuentes({ className }: { className?: string }) {
         ))}
 
         {FUENTES.map((f, i) => {
-          const y = yDe(i);
+          const c = centroDe(i, corrimientoDe(f.id, i));
           return (
-            <g key={f.id}>
+            <g
+              key={f.id}
+              className="cv-nodo"
+              onPointerDown={empezarArrastre(f.id)}
+              onPointerMove={moverArrastre}
+              onPointerUp={terminarArrastre}
+              onPointerCancel={terminarArrastre}
+            >
               {/* Nombre a la izquierda, alineado a derecha contra el logo: sin
                   esto son circulitos que no se sabe que son. */}
               <text
-                x={NODO_X - R - 14}
-                y={y}
+                x={c.x - R - 14}
+                y={c.y}
                 textAnchor="end"
                 dominantBaseline="middle"
                 className="cv-label font-body"
@@ -188,22 +333,22 @@ export function ConvergenciaFuentes({ className }: { className?: string }) {
                 {f.nombre}
               </text>
 
-              {f.fondo && <circle cx={NODO_X} cy={y} r={R} fill={f.fondo} />}
+              {f.fondo && <circle cx={c.x} cy={c.y} r={R} fill={f.fondo} />}
               {f.contain ? (
                 // Sin recorte: la marca entra completa, con aire alrededor.
                 <image
                   href={f.logo}
-                  x={NODO_X - R * 0.55}
-                  y={y - R * 0.55}
-                  width={R * 1.1}
-                  height={R * 1.1}
+                  x={c.x - R * 0.62}
+                  y={c.y - R * 0.62}
+                  width={R * 1.24}
+                  height={R * 1.24}
                   preserveAspectRatio="xMidYMid meet"
                 />
               ) : (
                 <image
                   href={f.logo}
-                  x={NODO_X - R}
-                  y={y - R}
+                  x={c.x - R}
+                  y={c.y - R}
                   width={R * 2}
                   height={R * 2}
                   clipPath={`url(#cv-clip-${f.id})`}
@@ -212,8 +357,8 @@ export function ConvergenciaFuentes({ className }: { className?: string }) {
                 />
               )}
               <circle
-                cx={NODO_X}
-                cy={y}
+                cx={c.x}
+                cy={c.y}
                 r={R}
                 fill="none"
                 stroke="var(--shell-border)"

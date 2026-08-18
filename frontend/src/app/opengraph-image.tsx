@@ -30,14 +30,17 @@ const TENUE = "#a3a3a3";
 /**
  * Ancho de la marca (con trazos) dentro de la tarjeta.
  *
- * La composicion va centrada y contenida: WhatsApp no muestra la tarjeta
- * grande, recorta la imagen a un CUADRADO para su miniatura. Con el contenido
- * pegado a la izquierda, ese recorte central agarraba fondo vacio y medio
- * renglon de texto. Todo lo importante entra ahora en los 630x630 del centro.
+ * La tarjeta es casi pura marca, y eso es a proposito. WhatsApp no muestra la
+ * imagen grande: la reduce a una miniatura de ~100px al lado del titulo. Ahi
+ * cualquier texto dentro de la imagen queda ilegible —se ve "pixelado"— y
+ * ademas es redundante, porque WhatsApp YA muestra el titulo y la descripcion
+ * como texto propio. Un logo grande sobrevive a esa reduccion; una frase no.
  */
-const MARCA_ANCHO = 300;
-/** Lo que sobrevive al recorte cuadrado de WhatsApp. */
-const ANCHO_SEGURO = 600;
+// El alto tiene que cerrar: 630 - 2*48 de padding = 534 disponibles, y el
+// bloque de texto se lleva ~120. La marca es 96/128 de su ancho, asi que 480
+// da 360 de alto y el total queda en 480. Con 620 se pasaba y satori, que no
+// recorta ni scrollea, encimaba los renglones.
+const MARCA_ANCHO = 480;
 
 export default async function Image() {
   const simbolo = readFileSync(
@@ -67,7 +70,7 @@ export default async function Image() {
           alignItems: "center",
           justifyContent: "center",
           background: FONDO,
-          padding: 56,
+          padding: 48,
         }}
       >
         <div
@@ -103,29 +106,28 @@ export default async function Image() {
         <div
           style={{
             display: "flex",
-            fontSize: 48,
+            fontSize: 76,
             fontWeight: 700,
             color: TEXTO,
-            lineHeight: 1.15,
-            letterSpacing: -1.2,
-            marginTop: 16,
-            maxWidth: ANCHO_SEGURO,
-            textAlign: "center",
+            letterSpacing: -2,
+            marginTop: 4,
           }}
         >
-          Todo lo de la facultad, en un solo lugar.
+          UTNHub
         </div>
 
         <div
           style={{
             display: "flex",
-            fontSize: 24,
+            fontSize: 28,
             color: TENUE,
-            marginTop: 20,
+            marginTop: 12,
+            letterSpacing: 2,
           }}
         >
-          UTNHub · ISI · UTN FRRO
+          ISI · UTN FRRO
         </div>
+
       </div>
     ),
     size,
