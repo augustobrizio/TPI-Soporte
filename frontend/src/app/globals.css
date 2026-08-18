@@ -492,3 +492,42 @@
 .sin-scrollbar::-webkit-scrollbar {
   display: none;                  /* Chrome, Safari */
 }
+
+/* ── Aparición al scrollear ───────────────────────────────────────────────
+   Animaciones de scroll NATIVAS (animation-timeline: view()): el progreso lo
+   calcula el navegador contra la posición del elemento, sin JS y sobre el hilo
+   del compositor.
+
+   El estado inicial (invisible, corrido) va DENTRO del @supports a propósito:
+   declarado afuera, un navegador sin soporte dejaría todo en opacity 0 para
+   siempre. Sin soporte, simplemente se ve fijo. */
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .aparece {
+      opacity: 0;
+      animation: aparece linear both;
+      animation-timeline: view();
+      /* Cierra bastante antes del centro: si terminara en el medio, el bloque
+         cruzaría casi toda la pantalla todavía entrando. */
+      animation-range: entry 4% cover 30%;
+    }
+
+    @keyframes aparece {
+      from { opacity: 0; transform: translateY(26px); }
+      to   { opacity: 1; transform: none; }
+    }
+
+    /* Foto de fondo: se corre más lento que la página. El scale de más evita
+       que el corrimiento descubra los bordes del marco. */
+    .fondo-paralaje {
+      animation: fondo-paralaje linear both;
+      animation-timeline: view();
+      animation-range: cover;
+    }
+
+    @keyframes fondo-paralaje {
+      from { transform: translateY(-8%) scale(1.16); }
+      to   { transform: translateY(8%) scale(1.16); }
+    }
+  }
+}

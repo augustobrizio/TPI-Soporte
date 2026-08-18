@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
 import { ConvergenciaFuentes } from "@/components/frontpage/ConvergenciaFuentes";
-import { FotosFacultad } from "@/components/frontpage/FotosFacultad";
+import { FondoFoto } from "@/components/frontpage/FondoFoto";
 import { SeccionesIndex } from "@/components/frontpage/SeccionesIndex";
 import { NovedadCard } from "@/features/novedades/NovedadCard";
 import { listarNovedades } from "@/lib/api";
@@ -96,19 +96,23 @@ export default async function Portada() {
         <ConvergenciaFuentes className="order-first lg:order-none" />
       </section>
 
-      {/* ── Secciones ────────────────────────────────────────────────── */}
-      <div className="mt-24 md:mt-32">
-        <SeccionesIndex />
-      </div>
-
-      {/* ── Fotos ────────────────────────────────────────────────────── */}
-      <div className="mt-24 md:mt-32">
-        <FotosFacultad />
-      </div>
+      {/* ── Secciones, sobre el frente de la facultad ────────────────── */}
+      <FondoFoto
+        src="/novedades/placeholder/utn-frro-generica.jpg"
+        alt="Frente de la Facultad Regional Rosario, con la fachada azul y el isotipo de la UTN"
+        className="mt-24 py-16 md:mt-32 md:py-24"
+      >
+        <div className="aparece">
+          <SeccionesIndex />
+        </div>
+      </FondoFoto>
 
       {/* ── Novedades ────────────────────────────────────────────────── */}
       {novedades.length > 0 && (
-        <section className="mt-24 md:mt-32" aria-labelledby="novedades-titulo">
+        <section
+          className="aparece mt-24 md:mt-32"
+          aria-labelledby="novedades-titulo"
+        >
           <div className="mb-8 flex items-baseline justify-between gap-4">
             <h2
               id="novedades-titulo"
@@ -135,7 +139,13 @@ export default async function Portada() {
 
       {/* ── Cierre ───────────────────────────────────────────────────── */}
       {!usuario && (
-        <section className="mt-24 rounded-xl border border-[var(--shell-border)] p-8 md:mt-32 md:p-12">
+        <FondoFoto
+          src="/novedades/placeholder/utrnfrro.jpg"
+          alt="Entrada de la Facultad Regional Rosario en Zeballos 1341"
+          intensidad={0.22}
+          aSangre={false}
+          className="aparece mt-24 rounded-xl border border-[var(--shell-border)] p-8 md:mt-32 md:p-12"
+        >
           <h2 className="font-headline text-2xl font-bold tracking-tight text-[var(--shell-fg)]">
             Creá tu cuenta
           </h2>
@@ -151,7 +161,7 @@ export default async function Portada() {
             Empezar
             <ArrowRight className="h-[18px] w-[18px]" strokeWidth={2} />
           </Link>
-        </section>
+        </FondoFoto>
       )}
     </div>
   );
