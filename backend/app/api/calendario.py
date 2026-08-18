@@ -7,6 +7,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
+from app.api.deps import UsuarioActual
 from app.db.session import get_db
 from app.schemas.calendario import (
     EventoCalendarioCreate,
@@ -29,9 +30,11 @@ router = APIRouter(prefix="/calendario", tags=["calendario"])
 def crear_evento(
     payload: EventoCalendarioCreate,
     db: Annotated[Session, Depends(get_db)],
+    usuario: UsuarioActual,
 ) -> EventoCalendarioOut:
     evento = calendario_service.crear_evento_usuario(
         db,
+        usuario_id=usuario.id,
         titulo=payload.titulo,
         descripcion=payload.descripcion,
         fecha_inicio=payload.fecha_inicio,
@@ -52,10 +55,14 @@ def actualizar_evento(
     evento_id: int,
     payload: EventoCalendarioUpdate,
     db: Annotated[Session, Depends(get_db)],
+    usuario: UsuarioActual,
 ) -> EventoCalendarioOut:
     try:
         evento = calendario_service.actualizar_evento_usuario(
-            db, evento_id, payload.model_dump(exclude_unset=True)
+            db,
+            evento_id,
+            payload.model_dump(exclude_unset=True),
+            usuario_id=usuario.id,
         )
         db.commit()
         db.refresh(evento)
@@ -74,8 +81,11 @@ def actualizar_evento(
 def eliminar_evento(
     evento_id: int,
     db: Annotated[Session, Depends(get_db)],
+    usuario: UsuarioActual,
 ) -> None:
-    ok = calendario_service.eliminar_evento_usuario(db, evento_id)
+    ok = calendario_service.eliminar_evento_usuario(
+        db, evento_id, usuario_id=usuario.id
+    )
     if not ok:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -87,18 +97,20 @@ def eliminar_evento(
 @router.get("", response_model=list[EventoCalendarioOut])
 def listar_eventos(
     db: Annotated[Session, Depends(get_db)],
+    usuario: UsuarioActual,
     desde: date | None = Query(None, description="Fecha inicial inclusive"),
     hasta: date | None = Query(None, description="Fecha final inclusive"),
     tipo: TipoEventoLiteral | None = Query(None),
     carrera: str | None = Query("ISI", description="ISI o null para todas"),
 ) -> list[EventoCalendarioOut]:
-    """Lista eventos del calendario con filtros."""
+    """Lista eventos del calendario (compartidos + personales del usuario)."""
     eventos = calendario_service.listar_eventos(
         db,
         desde=desde,
         hasta=hasta,
         tipo=tipo,
         carrera=carrera,
+        usuario_id=usuario.id,
     )
     return [EventoCalendarioOut.model_validate(e) for e in eventos]
 
@@ -106,14 +118,16 @@ def listar_eventos(
 @router.get("/proximos", response_model=list[EventoCalendarioOut])
 def proximos_eventos(
     db: Annotated[Session, Depends(get_db)],
+    usuario: UsuarioActual,
     limite: int = Query(5, ge=1, le=50),
     carrera: str | None = Query("ISI"),
 ) -> list[EventoCalendarioOut]:
-    """Eventos futuros mas cercanos."""
+    """Eventos futuros mas cercanos (compartidos + personales del usuario)."""
     eventos = calendario_service.proximos_eventos(
         db,
         limite=limite,
         carrera=carrera,
+        usuario_id=usuario.id,
     )
     return [EventoCalendarioOut.model_validate(e) for e in eventos]
 
@@ -121,10 +135,13 @@ def proximos_eventos(
 @router.get("/hoy", response_model=list[EventoCalendarioOut])
 def eventos_hoy(
     db: Annotated[Session, Depends(get_db)],
+    usuario: UsuarioActual,
     carrera: str | None = Query("ISI"),
 ) -> list[EventoCalendarioOut]:
-    """Eventos de hoy."""
-    eventos = calendario_service.eventos_hoy(db, carrera=carrera)
+    """Eventos de hoy (compartidos + personales del usuario)."""
+    eventos = calendario_service.eventos_hoy(
+        db, carrera=carrera, usuario_id=usuario.id
+    )
     return [EventoCalendarioOut.model_validate(e) for e in eventos]
 
 
@@ -132,10 +149,17 @@ def eventos_hoy(
 def get_evento(
     evento_id: int,
     db: Annotated[Session, Depends(get_db)],
+    usuario: UsuarioActual,
 ) -> EventoCalendarioOut:
-    """Detalle de un evento por ID."""
+    """Detalle de un evento por ID (propio o compartido)."""
     evento = calendario_service.get_evento(db, evento_id)
-    if evento is None:
+    # 404 también si el evento es personal de OTRO usuario (no filtramos su
+    # existencia).
+    if (
+        evento is None
+        or evento.usuario_id is not None
+        and evento.usuario_id != usuario.id
+    ):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Evento {evento_id} no encontrado.",

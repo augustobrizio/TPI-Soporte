@@ -9,7 +9,7 @@ from __future__ import annotations
 import enum
 from datetime import datetime
 
-from sqlalchemy import DateTime, Integer, Text, UniqueConstraint, func
+from sqlalchemy import DateTime, ForeignKey, Integer, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -45,6 +45,12 @@ class EventoCalendario(Base):
     # "sistema" (scrapeado de FRRO) o "usuario" (creado por el alumno).
     origen: Mapped[str] = mapped_column(
         Text, nullable=False, server_default="sistema", index=True
+    )
+    # Dueño del evento. NULL = evento compartido (scrapeado de FRRO, visible para
+    # todos). Con valor = evento personal del alumno, visible SÓLO para él. Sin
+    # esto, los eventos personales (TPs, exámenes) se filtraban entre usuarios.
+    usuario_id: Mapped[int | None] = mapped_column(
+        ForeignKey("usuario.id", ondelete="CASCADE"), nullable=True, index=True
     )
     created_at: Mapped[datetime | None] = mapped_column(
         DateTime, server_default=func.now()

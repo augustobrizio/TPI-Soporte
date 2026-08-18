@@ -18,11 +18,27 @@ def listar_eventos(
     hasta: datetime | None = None,
     tipo: str | None = None,
     carrera: str | None = None,
+    usuario_id: int | None = None,
     limite: int | None = None,
 ) -> Sequence[EventoCalendario]:
-    """Lista eventos ordenados por fecha, con filtros opcionales."""
+    """Lista eventos ordenados por fecha, con filtros opcionales.
+
+    Aislamiento: se devuelven los eventos compartidos (``usuario_id`` NULL) y,
+    si ``usuario_id`` viene dado, además los personales de ESE usuario. Nunca
+    los personales de otros.
+    """
     stmt = select(EventoCalendario)
     condiciones = []
+    # Filtro de propiedad: compartidos siempre; personales sólo del usuario.
+    if usuario_id is not None:
+        condiciones.append(
+            or_(
+                EventoCalendario.usuario_id.is_(None),
+                EventoCalendario.usuario_id == usuario_id,
+            )
+        )
+    else:
+        condiciones.append(EventoCalendario.usuario_id.is_(None))
     if desde is not None:
         condiciones.append(
             func.coalesce(EventoCalendario.fecha_fin, EventoCalendario.fecha_inicio)
@@ -48,12 +64,14 @@ def listar_eventos(
 
 
 def listar_eventos_del_dia(
-    db: Session, *, dia: date, carrera: str | None = None
+    db: Session, *, dia: date, carrera: str | None = None, usuario_id: int | None = None
 ) -> Sequence[EventoCalendario]:
     """Eventos cuya fecha de inicio cae dentro del dia indicado."""
     desde = datetime.combine(dia, time.min)
     hasta = datetime.combine(dia, time.max)
-    return listar_eventos(db, desde=desde, hasta=hasta, carrera=carrera)
+    return listar_eventos(
+        db, desde=desde, hasta=hasta, carrera=carrera, usuario_id=usuario_id
+    )
 
 
 def get_evento(db: Session, evento_id: int) -> EventoCalendario | None:
@@ -64,6 +82,7 @@ def get_evento(db: Session, evento_id: int) -> EventoCalendario | None:
 def crear_evento_usuario(
     db: Session,
     *,
+    usuario_id: int,
     titulo: str,
     descripcion: str | None,
     fecha_inicio: datetime,
@@ -71,7 +90,7 @@ def crear_evento_usuario(
     tipo: str,
     carrera: str | None = "ISI",
 ) -> EventoCalendario:
-    """Crea un evento de origen 'usuario'."""
+    """Crea un evento personal, de origen 'usuario', con su dueño."""
     evento = EventoCalendario(
         titulo=titulo,
         descripcion=descripcion,
@@ -82,6 +101,7 @@ def crear_evento_usuario(
         fuente_url=None,
         content_hash=f"user-{uuid.uuid4().hex}",
         origen="usuario",
+        usuario_id=usuario_id,
     )
     db.add(evento)
     db.flush()

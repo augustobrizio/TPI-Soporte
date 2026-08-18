@@ -4,6 +4,7 @@ import os
 import sys
 from datetime import datetime, timedelta
 from pathlib import Path
+from types import SimpleNamespace
 
 import fitz
 from fastapi import FastAPI
@@ -16,6 +17,7 @@ os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.api import calendario as calendario_api  # noqa: E402
+from app.api.deps import get_current_user  # noqa: E402
 from app.db.models.calendario import EventoCalendario  # noqa: E402
 from app.db.session import get_db  # noqa: E402
 from app.repositories import calendario_repo  # noqa: E402
@@ -165,6 +167,8 @@ def test_proximos_endpoint_limita_y_ordena() -> None:
         yield db
 
     app.dependency_overrides[get_db] = override_db
+    # El endpoint ahora requiere usuario autenticado; simulamos uno.
+    app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(id=1)
     client = TestClient(app)
 
     res = client.get("/calendario/proximos?limite=5&carrera=ISI")

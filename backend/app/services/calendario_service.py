@@ -32,8 +32,9 @@ def listar_eventos(
     hasta: date | None = None,
     tipo: str | None = None,
     carrera: str | None = None,
+    usuario_id: int | None = None,
 ):
-    """Lista eventos con filtros simples para la API."""
+    """Lista eventos con filtros simples para la API (compartidos + del usuario)."""
     desde_dt = datetime.combine(desde, time.min) if desde else None
     hasta_dt = datetime.combine(hasta, time.max) if hasta else None
     return calendario_repo.listar_eventos(
@@ -42,25 +43,36 @@ def listar_eventos(
         hasta=hasta_dt,
         tipo=tipo,
         carrera=carrera,
+        usuario_id=usuario_id,
     )
 
 
-def proximos_eventos(db: Session, *, limite: int = 5, carrera: str | None = "ISI"):
+def proximos_eventos(
+    db: Session,
+    *,
+    limite: int = 5,
+    carrera: str | None = "ISI",
+    usuario_id: int | None = None,
+):
     """Eventos desde ahora en adelante, ordenados por cercania."""
     return calendario_repo.listar_eventos(
         db,
         desde=datetime.now(),
         carrera=carrera,
+        usuario_id=usuario_id,
         limite=limite,
     )
 
 
-def eventos_hoy(db: Session, *, carrera: str | None = "ISI"):
+def eventos_hoy(
+    db: Session, *, carrera: str | None = "ISI", usuario_id: int | None = None
+):
     """Eventos del dia actual."""
     return calendario_repo.listar_eventos_del_dia(
         db,
         dia=date.today(),
         carrera=carrera,
+        usuario_id=usuario_id,
     )
 
 
@@ -77,15 +89,17 @@ def get_evento(db: Session, evento_id: int):
 def crear_evento_usuario(
     db: Session,
     *,
+    usuario_id: int,
     titulo: str,
     descripcion: str | None,
     fecha_inicio: datetime,
     fecha_fin: datetime | None,
     tipo: str,
 ):
-    """Crea un evento propio del alumno."""
+    """Crea un evento propio del alumno, con su dueño."""
     return calendario_repo.crear_evento_usuario(
         db,
+        usuario_id=usuario_id,
         titulo=titulo,
         descripcion=descripcion,
         fecha_inicio=fecha_inicio,
@@ -94,12 +108,16 @@ def crear_evento_usuario(
     )
 
 
-def actualizar_evento_usuario(db: Session, evento_id: int, cambios: dict):
-    """Actualiza un evento del alumno. Lanza ValueError si no existe o no es editable."""
+def actualizar_evento_usuario(
+    db: Session, evento_id: int, cambios: dict, *, usuario_id: int
+):
+    """Actualiza un evento del alumno. ValueError si no existe o no es suyo."""
     evento = calendario_repo.get_evento(db, evento_id)
     if evento is None:
         raise ValueError("no_encontrado")
-    if evento.origen != "usuario":
+    # Sólo el dueño puede editar su evento personal (nunca los compartidos ni
+    # los de otro usuario).
+    if evento.origen != "usuario" or evento.usuario_id != usuario_id:
         raise ValueError("no_editable")
     for campo, valor in cambios.items():
         if valor is not None:
@@ -108,10 +126,10 @@ def actualizar_evento_usuario(db: Session, evento_id: int, cambios: dict):
     return evento
 
 
-def eliminar_evento_usuario(db: Session, evento_id: int) -> bool:
-    """Elimina un evento del alumno. Devuelve False si no existe o no es propio."""
+def eliminar_evento_usuario(db: Session, evento_id: int, *, usuario_id: int) -> bool:
+    """Elimina un evento del alumno. False si no existe o no es suyo."""
     evento = calendario_repo.get_evento(db, evento_id)
-    if evento is None or evento.origen != "usuario":
+    if evento is None or evento.origen != "usuario" or evento.usuario_id != usuario_id:
         return False
     calendario_repo.eliminar_evento(db, evento)
     return True
