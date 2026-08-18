@@ -150,10 +150,21 @@ function useRelojDeriva(ref: React.RefObject<SVGSVGElement | null>) {
     if (!svg) return;
 
     let frame = 0;
-    let visibleEnPantalla = true;
+
+    // La visibilidad se calcula en el momento y no se guarda en una bandera.
+    // El IntersectionObserver, cuando la pagina carga en una pestana de fondo,
+    // reporta "no visible" y esa bandera quedaba pegada: al volver a la
+    // pestana el reloj no arrancaba nunca. El observer queda solo como
+    // disparador para re-evaluar al scrollear.
+    const enPantalla = () => {
+      const svg = ref.current;
+      if (!svg) return false;
+      const caja = svg.getBoundingClientRect();
+      return caja.bottom > 0 && caja.top < window.innerHeight;
+    };
 
     const correspondeAnimar = () =>
-      visibleEnPantalla && document.visibilityState === "visible";
+      enPantalla() && document.visibilityState === "visible";
 
     const paso = (ahora: number) => {
       setT(ahora);
@@ -167,25 +178,17 @@ function useRelojDeriva(ref: React.RefObject<SVGSVGElement | null>) {
       frame = 0;
     };
 
-    const observador = new IntersectionObserver(
-      ([entrada]) => {
-        visibleEnPantalla = entrada.isIntersecting;
-        if (correspondeAnimar()) arrancar();
-        else parar();
-      },
-      { threshold: 0 },
-    );
-    observador.observe(svg);
+    const reevaluar = () => (correspondeAnimar() ? arrancar() : parar());
 
-    const alCambiarVisibilidad = () =>
-      correspondeAnimar() ? arrancar() : parar();
-    document.addEventListener("visibilitychange", alCambiarVisibilidad);
+    const observador = new IntersectionObserver(reevaluar, { threshold: 0 });
+    observador.observe(svg);
+    document.addEventListener("visibilitychange", reevaluar);
 
     arrancar();
     return () => {
       parar();
       observador.disconnect();
-      document.removeEventListener("visibilitychange", alCambiarVisibilidad);
+      document.removeEventListener("visibilitychange", reevaluar);
     };
   }, [ref]);
 
