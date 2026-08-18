@@ -84,7 +84,7 @@ export function RegisterForm() {
           id="nombre"
           etiqueta="Nombre"
           autoComplete="given-name"
-          placeholder="Bruno"
+          placeholder="Juan"
           value={nombre}
           onChange={(e) => setNombre(e.target.value)}
           disabled={cargando}
@@ -93,7 +93,7 @@ export function RegisterForm() {
           id="apellido"
           etiqueta="Apellido"
           autoComplete="family-name"
-          placeholder="Vitali"
+          placeholder="Pérez"
           value={apellido}
           onChange={(e) => setApellido(e.target.value)}
           disabled={cargando}
@@ -132,7 +132,7 @@ export function RegisterForm() {
             type="button"
             onClick={() => setVerPassword((v) => !v)}
             aria-label={verPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-            className="rounded-md p-2 text-[var(--shell-fg-dim)] transition-colors hover:bg-[var(--shell-hover)] hover:text-[var(--shell-fg-muted)]"
+            className="rounded-md p-2 text-zinc-500 transition-colors hover:bg-white/[0.06] hover:text-zinc-300"
           >
             <span className="material-symbols-outlined text-[18px]">
               {verPassword ? "visibility_off" : "visibility"}

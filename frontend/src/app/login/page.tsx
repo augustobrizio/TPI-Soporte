@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 export default function LoginPage() {
   return (
     <AuthShell
-      titulo="Ingresá a UTNHub"
+      titulo="UTNHub"
       subtitulo="Tu cursada, el calendario y las novedades en un solo lugar."
       pie={
         <>
