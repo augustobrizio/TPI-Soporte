@@ -25,6 +25,12 @@ export function ProfesorDetalle({
   const acento = acentoProfesor(detalle.id);
   const nombre = detalle.nombre ?? "Sin nombre";
 
+  // El padrón trae asociaciones (materia, profesor) duplicadas (misma materia
+  // sin cargo/año que las diferencie). Cada materia se muestra una sola vez.
+  const materiasUnicas = Array.from(
+    new Map(detalle.materias.map((m) => [m.materia_codigo, m])).values(),
+  );
+
   return (
     <MisResenasProvider loggedIn={loggedIn}>
     <div className="p-8 max-w-5xl mx-auto">
@@ -61,8 +67,8 @@ export function ProfesorDetalle({
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <StatChip
               icono="menu_book"
-              valor={detalle.materias.length}
-              etiqueta={detalle.materias.length === 1 ? "materia" : "materias"}
+              valor={materiasUnicas.length}
+              etiqueta={materiasUnicas.length === 1 ? "materia" : "materias"}
             />
             <StatChip
               icono="schedule"
@@ -75,17 +81,13 @@ export function ProfesorDetalle({
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Materias que dicta */}
-        <Seccion titulo="Materias que dicta" icono="menu_book" cantidad={detalle.materias.length}>
-          {detalle.materias.length === 0 ? (
+        <Seccion titulo="Materias que dicta" icono="menu_book" cantidad={materiasUnicas.length}>
+          {materiasUnicas.length === 0 ? (
             <Vacio texto="No hay materias asociadas a este profesor." />
           ) : (
             <ul className="space-y-2">
-              {detalle.materias.map((m) => (
-                <MateriaItem
-                  key={`${m.materia_codigo}-${m.cargo ?? ""}-${m.anio ?? ""}`}
-                  materia={m}
-                  profesorId={detalle.id}
-                />
+              {materiasUnicas.map((m) => (
+                <MateriaItem key={m.materia_codigo} materia={m} profesorId={detalle.id} />
               ))}
             </ul>
           )}

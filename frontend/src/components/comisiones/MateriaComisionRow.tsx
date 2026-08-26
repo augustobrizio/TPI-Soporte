@@ -16,36 +16,36 @@ export function MateriaComisionRow({ cursada }: { cursada: CursadaConProfesor })
   return (
     <li className="rounded-xl bg-surface-container-low px-3.5 py-3">
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-        <p className="text-sm text-on-surface leading-snug">{materia}</p>
-        {cursada.horarios.length > 0 ? (
-          <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
-            {cursada.horarios.map((h, i) => (
-              <span key={i} className="text-[11px] text-outline inline-flex items-center gap-1">
-                <span className="text-on-surface-variant">{h.dia ?? "—"}</span>
-                <span className="font-mono text-primary">
-                  {rangoHorario(h.hora_inicio, h.hora_fin)}
-                </span>
-                {h.aula && <span>· {h.aula}</span>}
-              </span>
-            ))}
-          </div>
-        ) : (
-          <p className="text-[11px] text-outline italic mt-1">sin horario</p>
-        )}
-        {cursada.nota != null && (
-          <NotaCatedra
-            nota={cursada.nota}
-            clasificacion={cursada.clasificacion}
-            cantidad={cursada.cantidad_respuestas}
-          />
-        )}
-        </div>
-
+        <p className="min-w-0 flex-1 text-sm font-medium leading-snug text-on-surface">{materia}</p>
         <ProfesorTag cursada={cursada} />
       </div>
+
+      {cursada.horarios.length > 0 ? (
+        <div className="mt-2 flex flex-wrap gap-x-3 gap-y-0.5">
+          {cursada.horarios.map((h, i) => (
+            <span key={i} className="inline-flex items-center gap-1 text-[11px] text-outline">
+              <span className="text-on-surface-variant">{h.dia ?? "—"}</span>
+              <span className="font-mono text-primary">
+                {rangoHorario(h.hora_inicio, h.hora_fin)}
+              </span>
+              {h.aula && <span>· {h.aula}</span>}
+            </span>
+          ))}
+        </div>
+      ) : (
+        <p className="mt-2 text-[11px] italic text-outline">sin horario</p>
+      )}
+
+      {cursada.nota != null && (
+        <NotaCatedra
+          nota={cursada.nota}
+          clasificacion={cursada.clasificacion}
+          cantidad={cursada.cantidad_respuestas}
+        />
+      )}
+
       {cursada.profesor && (
-        <div className="mt-2 border-t border-outline-variant/10 pt-2">
+        <div className="mt-2.5 border-t border-outline-variant/10 pt-2.5">
           <CalificarCatedra
             materiaCodigo={cursada.materia_codigo}
             profesorId={cursada.profesor.id}
@@ -78,14 +78,14 @@ function ProfesorTag({ cursada }: { cursada: CursadaConProfesor }) {
     );
   }
 
-  // Sin vínculo resuelto → fallback al apellido crudo.
+  // Sin vínculo resuelto → fallback al apellido crudo, como chip sutil.
   return (
     <span
-      className="flex items-center gap-1.5 shrink-0 text-xs text-outline italic px-1.5 py-1"
+      className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-surface-container-high/50 px-2 py-1 text-xs text-on-surface-variant"
       title="Docente sin vincular al padrón de profesores"
     >
-      <span className="material-symbols-outlined text-[16px]">person</span>
-      {cursada.docente ?? "sin docente"}
+      <span className="material-symbols-outlined text-[15px] text-outline">person</span>
+      <span className="max-w-[130px] truncate">{cursada.docente ?? "sin docente"}</span>
     </span>
   );
 }
