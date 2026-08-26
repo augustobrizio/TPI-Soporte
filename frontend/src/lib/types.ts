@@ -319,6 +319,10 @@ export interface CursadaConProfesor {
   docente: string | null;
   /** Profesor real resuelto; null si ambiguo/sin match (se cae al docente). */
   profesor: ProfesorMini | null;
+  /** Reseña (profesor×materia) desde UTNTAC. null si no hay reseña. */
+  nota: number | null;
+  clasificacion: string | null;
+  cantidad_respuestas: number | null;
   horarios: HorarioOut[];
 }
 
@@ -326,6 +330,11 @@ export interface ComisionConProfesores {
   id: number;
   nombre: string | null;
   anio: number | null;
+  /** Promedio de las notas de las cátedras con reseña. null si ninguna la tiene. */
+  score: number | null;
+  /** Cobertura: cátedras con reseña / total de cátedras. */
+  score_con_review: number;
+  score_total: number;
   cursadas: CursadaConProfesor[];
 }
 

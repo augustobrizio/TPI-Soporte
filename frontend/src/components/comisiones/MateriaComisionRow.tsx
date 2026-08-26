@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { CursadaConProfesor } from "@/lib/types";
 import { acentoProfesor, inicialesProfesor } from "@/lib/profesorAvatar";
 import { rangoHorario } from "@/lib/horario";
+import { NotaCatedra } from "./Score";
 
 /**
  * Una materia dentro de una comisión: nombre + horario + profesor.
@@ -29,6 +30,13 @@ export function MateriaComisionRow({ cursada }: { cursada: CursadaConProfesor })
           </div>
         ) : (
           <p className="text-[11px] text-outline italic mt-1">sin horario</p>
+        )}
+        {cursada.nota != null && (
+          <NotaCatedra
+            nota={cursada.nota}
+            clasificacion={cursada.clasificacion}
+            cantidad={cursada.cantidad_respuestas}
+          />
         )}
       </div>
 

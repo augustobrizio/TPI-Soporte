@@ -4,7 +4,7 @@ import type { ComisionConProfesores } from "@/lib/types";
 import { esComisionElectiva } from "@/lib/comision";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { ElectivaBadge } from "./ElectivaBadge";
-import { ScoreMock } from "./ScoreMock";
+import { ComisionScore } from "./Score";
 import { ComisionModal } from "./ComisionModal";
 
 /**
@@ -45,7 +45,11 @@ export function ComisionCard({ comision }: { comision: ComisionConProfesores }) 
 
           <hr className="rule-fade mt-3 mb-2.5" />
           <div className="flex items-center justify-between">
-            <ScoreMock comisionId={comision.id} />
+            <ComisionScore
+              score={comision.score}
+              conReview={comision.score_con_review}
+              total={comision.score_total}
+            />
             <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-on-surface-variant transition-colors group-hover:text-primary">
               Ver detalle
               <span className="material-symbols-outlined text-[15px] transition-transform group-hover:translate-x-0.5">
