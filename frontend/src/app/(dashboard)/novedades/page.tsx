@@ -1,6 +1,7 @@
 import { FiltroFuentes } from "@/features/novedades/FiltroFuentes";
 import { NovedadCard } from "@/features/novedades/NovedadCard";
-import { listarCentros, listarNovedades } from "@/lib/api";
+import { NovedadDeepLink } from "@/features/novedades/NovedadDeepLink";
+import { getNovedad, listarCentros, listarNovedades } from "@/lib/api";
 import type { CentroOut, NovedadOut } from "@/lib/types";
 
 // Cuantas novedades entran en la portada (numero generico por ahora). Tambien
@@ -10,9 +11,11 @@ const PORTADA_LIMITE = 12;
 export default async function NovedadesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ centro?: string }>;
+  // `?novedad=<id>` es el deep link del buscador global y de la campana:
+  // abre esa novedad con el detalle desplegado.
+  searchParams: Promise<{ centro?: string; novedad?: string }>;
 }) {
-  const { centro } = await searchParams;
+  const { centro, novedad: novedadParam } = await searchParams;
   let novedades: NovedadOut[] = [];
   let centros: CentroOut[] = [];
   let error = false;
@@ -25,8 +28,28 @@ export default async function NovedadesPage({
     error = true;
   }
 
+  // La portada trae sólo las últimas doce: la novedad del link puede ser más
+  // vieja y no estar ahí, así que se pide aparte en vez de buscarla en la
+  // lista. Si el id no existe o el backend no responde, la página se muestra
+  // igual sin el modal — un link roto no puede tumbar la portada.
+  const id = Number(novedadParam);
+  let novedadDelLink: NovedadOut | null = null;
+  if (novedadParam && Number.isInteger(id)) {
+    try {
+      novedadDelLink = await getNovedad(id);
+    } catch {
+      novedadDelLink = null;
+    }
+  }
+  const hrefPortada = centro
+    ? `/novedades?centro=${encodeURIComponent(centro)}`
+    : "/novedades";
+
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-[var(--shell-canvas)]">
+      {novedadDelLink && (
+        <NovedadDeepLink novedad={novedadDelLink} hrefAlCerrar={hrefPortada} />
+      )}
       {/* Hero con identidad UTN: wash celeste + isotipo difuminado + membrete */}
       <header className="relative overflow-hidden border-b border-[var(--shell-border)]">
         <div aria-hidden className="pointer-events-none absolute inset-0">

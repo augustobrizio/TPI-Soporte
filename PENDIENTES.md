@@ -32,7 +32,7 @@
 5. **Deuda técnica / housekeeping**
 
 ### 🟠 Repaso de UX y datos del alumno (agregado 2026-08-26)
-6. **Shell: barra superior y navegación** — buscador, notificaciones y avatar sin conectar — Frente 7
+6. ~~**Shell: barra superior y navegación**~~ — ✅ **hecho** (Frente 7): buscador global con `⌘K`, campana con notificaciones reales y avatar con menú de cuenta.
 7. ~~**Login con Google**~~ — ✅ **hecho** (Frente 8). Único paso manual pendiente: crear el cliente OAuth en Google Cloud y pegar las credenciales en `backend/.env`.
 8. **Modo claro** — los tokens ya están; faltan los hardcodeos — Frente 9
 9. ~~**Importación de SYSACAD**~~ — ✅ **hecho** (Frente 10): marca la comisión al importar y deja corregir el mapeo a mano.
@@ -147,7 +147,7 @@ por archivo sobre `f43c415` + el árbol de trabajo actual.
 
 | Punto del repaso | Dónde quedó |
 |---|---|
-| Terminar la barra de arriba (buscador, perfil, barra lateral colapsada) | **Frente 7** |
+| ~~Terminar la barra de arriba (buscador, perfil, barra lateral colapsada)~~ ✅ | **Frente 7** |
 | Loguearse con Google | **Frente 8** |
 | Revisar el modo claro | **Frente 9** |
 | Las materias que estás cursando no se ponen solas en Horarios | **Frente 10 (10.A)** ✅ |
@@ -159,25 +159,26 @@ por archivo sobre `f43c415` + el árbol de trabajo actual.
 
 ---
 
-## Frente 7 — Shell: barra superior y navegación  🟠
+## ~~Frente 7 — Shell: barra superior y navegación~~  ✅  *(hecho — 2026-08-26)*
 **Origen:** repaso de UX (2026-08-26).
-**Estado:** `components/TopNav.tsx` tiene tres controles que hoy son cascarón:
+**Estado:** **cerrado.** Los tres controles de `components/TopNav.tsx` que eran cascarón ahora funcionan, y la barra lateral colapsada tuvo su repaso. Criterio de aceptación cumplido: no queda ningún control decorativo en la barra superior.
 
-- **Buscador** — `<input>` sin `value`, sin `onChange` y sin handler de teclado; el `<kbd>⌘K</kbd>` es decorativo. Del lado del backend **no hay ningún endpoint de búsqueda**: `grep -rn "buscar\|search\|q:" backend/app/api/` no devuelve nada. No hay a qué pegarle.
-- **Campana de notificaciones** — botón sin `onClick`, y el puntito de "hay algo nuevo" está pintado fijo en el markup: siempre avisa, nunca de nada.
-- **Avatar** — las iniciales son el literal `"JR"`. El layout ya resuelve el usuario real (`getUsuarioActual()`) pero a `TopNav` sólo le pasa `autenticado: boolean`; las iniciales de verdad ya se calculan en `lib/auth.ts` (`iniciales()`) y se usan en la Sidebar. Además no abre ningún menú: perfil y cerrar sesión viven sólo en la barra lateral.
+| ID | Tarea | Cómo quedó |
+|----|-------|------------|
+| T7.1 | Avatar real + menú de cuenta | ✅ El layout le pasa el usuario (objeto, no `autenticado: boolean`) a las dos barras. Iniciales reales vía `iniciales()`, o la foto de Google si la cuenta entró por ahí (con caída a iniciales si la URL se rompe). `MenuCuenta.tsx` abre un dropdown con Perfil / Cerrar sesión. |
+| T7.2 | Buscador global (front) | ✅ `components/buscador/BuscadorGlobal.tsx`: command palette con `⌘K`/`Ctrl+K`, debounce de 180 ms con `AbortController`, resultados agrupados por tipo, navegación con flechas y Enter. Disparador ancho en escritorio y de lupa abajo de `md`. |
+| T7.3 | Endpoint de búsqueda | ✅ `GET /buscar?q=` **público** (`api/busqueda.py` → `services/busqueda_service.py` → los cuatro repos). Match sin acentos reusando `core.texto.normalizar_texto`, límite por tipo, y un escalón aproximado con rapidfuzz para la variación de género y número ("matematica" encuentra "Matemático"). |
+| T7.4 | Notificaciones: definir o sacar | ✅ **Definidas**: novedades nuevas + mesas y finales de los próximos 7 días. `GET /notificaciones` y `POST /notificaciones/visto`, con `usuario.notificaciones_vistas_at` (migración `a5e1c74b90f3`, aplicada en Neon). |
+| T7.5 | Repaso de la barra colapsada | ✅ El bloque del logo de la barra superior reproduce la columna de la sidebar (256/64px, mismo padding): antes había 4px de corrimiento expandida y 10px colapsada. Los tooltips del modo compacto ahora aparecen también con el foco de teclado. |
 
-La barra lateral colapsable **sí funciona**: persiste la preferencia en `localStorage` (`SidebarContext`), muestra tooltips en modo compacto y el drawer de mobile se cierra al navegar. Lo que queda ahí es repaso fino, no implementación.
+### Decisiones que quedaron tomadas
 
-| ID | Tarea | Área | Alcance | Esf. |
-|----|-------|------|---------|------|
-| T7.1 | Avatar real + menú de cuenta | Front | Pasarle a `TopNav` el usuario (no un booleano) y usar `iniciales()`. Dropdown con Perfil / Cerrar sesión reusando `LogoutButton`. | S |
-| T7.2 | Buscador global (front) | Front | Command palette con `⌘K`/`Ctrl+K`, resultados agrupados por tipo (materia, profesor, comisión, novedad), navegación con flechas y Enter. | M |
-| T7.3 | Endpoint de búsqueda | Back | `GET /buscar?q=` que consulte materias, profesores, comisiones y novedades **vía services** (no queries sueltas desde el endpoint). Límite por tipo y match sin acentos. | M |
-| T7.4 | Notificaciones: definir o sacar | Front+Back | Decidir qué notifica (novedades nuevas desde la última visita, mesas de los próximos días). Si no entra en el TP, sacar la campana: mejor que no esté a que mienta. | M |
-| T7.5 | Repaso de la barra colapsada | Front | Alineación del logo con el header de la sidebar, foco de teclado en los tooltips (`aria-label` ya está) y comportamiento del ancho al colapsar. | S |
+- **El buscador es público.** No pasa por `/api/backend/*` —ese proxy corta con 401 sin cookie— sino por un route handler propio, `app/api/buscar/route.ts`. Materias, profesores, comisiones y novedades ya se navegan sin cuenta; con token, el buscador habría quedado decorativo justo para el visitante nuevo.
+- **Deep links.** El palette necesitaba poder navegar a un resultado y sólo profesores tenía URL propia. Se agregaron: `/materias?tipo=&codigo=`, `/comisiones?comision=<id>` y `/novedades?novedad=<id>`. El `tipo` de la materia viaja en el resultado de búsqueda porque el grafo se abre por tipo y una electiva no existe en el de troncales. Las comisiones se identifican por id de fila y no por nombre: "1K01" existe una vez por año académico.
+- **Qué cuenta como "nuevo".** Para una novedad es haber aparecido después de la última visita al panel, y "aparecer" es la **más temprana** entre `fecha_publicacion` y `created_at`. Con la fecha de publicación sola, los avisos de eventos futuros (la ingesta los fecha con la fecha del evento) contaban como nuevos para siempre y la campana no se apagaba nunca; con `created_at` solo, un backfill de posts viejos inundaba el panel. Para una mesa es haber **entrado en la ventana** de 7 días después de la última visita.
+- **Primitivas nuevas.** `components/ui/dropdown-menu.tsx` y `components/ui/popover.tsx`, Radix headless + tokens `--shell-*`, siguiendo lo que ya decía la guía de estilo. Suman `@radix-ui/react-dropdown-menu` y `@radix-ui/react-popover` al `package.json`.
 
-**Criterio de aceptación:** ningún control de la barra superior es decorativo — o funciona, o no está.
+**Tests:** 33 nuevos (`tests/test_busqueda.py`, `tests/test_notificaciones.py`). Suite completa: 161 ✅.
 
 ---
 
@@ -382,7 +383,7 @@ Frente 12 (comisiones/profes) ── T12.1 y T12.2 primero: hoy hay endpoints
                                  abiertos que reescriben tablas
 Frente 10 (import SYSACAD)  ── independiente; destraba Horarios y la Agenda del panel
 Frente 9  (modo claro)      ── independiente; se reparte por pantalla entre varios
-Frente 7  (shell/topbar)    ── T7.1 es chica; T7.2 necesita T7.3 (endpoint de búsqueda)
+Frente 7  (shell/topbar)    ── ✅ hecho (2026-08-26)
 Frente 13 (inicio/dashboard)── 13.B se puede hacer ya; 13.A necesita D4
 Frente 8  (Google OAuth)    ── necesita D5 + credenciales de Google Cloud (T8.1)
 Frente 11 (calendario ICS)  ── T11.1–T11.3 independientes; T11.4 después del Frente 8

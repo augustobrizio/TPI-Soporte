@@ -121,3 +121,17 @@ def get_cursada_usuario(
         UsuarioMateria.materia_codigo == materia_codigo,
     )
     return db.execute(stmt).scalar_one_or_none()
+
+
+def listar_livianas(db: Session) -> list[Comision]:
+    """Comisiones sin eager-loads: sólo ``id``, ``nombre`` y ``anio``.
+
+    Para el buscador global, que matchea contra el nombre y nada más. Las
+    otras dos funciones de listado precargan cursadas, materias, horarios y
+    profesores — traer todo eso para descartarlo enseguida son varios
+    round-trips a Neon por cada tecla que se aprieta en el command palette.
+    """
+    stmt = select(Comision).order_by(
+        Comision.anio.desc().nullslast(), Comision.nombre
+    )
+    return list(db.execute(stmt).scalars().all())

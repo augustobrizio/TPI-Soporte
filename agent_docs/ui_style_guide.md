@@ -11,7 +11,7 @@ futuro; esa discusión sigue abierta.
 |---|---|---|
 | Dónde se usa | Grafo de correlativas, Materias, Calendario, Horarios | Sidebar, TopNav, Novedades |
 | Paleta | Navy/MD3 (`surface`, `on-surface`, `primary`, etc. en `tailwind.config.ts`) | Canvas neutro (blanco/negro según modo), acento celeste institucional (`#1CA4DF`) |
-| Dark/Light | Dark-only, `color-scheme: dark` fijo en `globals.css` | Ambos modos, toggle en el TopNav (`next-themes`) |
+| Dark/Light | **Los dos modos** desde 2026-08 (`:root` claro / `.dark` oscuro en `globals.css`), pero varios componentes todavía tienen el color dark hardcodeado | Ambos modos, toggle en el TopNav (`next-themes`) |
 | Bordes | "No-Line Rule" (comentario en `globals.css`): nada de `border 1px solid gris`, se usa tonal layering / glow | Hairline borders explícitos vía `border-[var(--shell-border)]` |
 | Nombre en el código | Comentario "Kinetic Blueprint" en `tailwind.config.ts` y `globals.css` | Sin nombre propio en el código; identificado acá por el prefijo de sus variables CSS |
 
@@ -79,20 +79,37 @@ compartidas por ambos sistemas.
 ### Iconos
 
 Material Symbols Outlined (`<span className="material-symbols-outlined">nombre_del_icono</span>`),
-cargado globalmente en `app/layout.tsx`. No se usa ninguna librería de
-iconos de React (lucide, heroicons, etc.).
+cargado globalmente en `app/layout.tsx`.
+
+**Ojo: hoy conviven dos.** El shell (`TopNav`, `Sidebar`, `MenuCuenta`,
+`CampanaNotificaciones`, `BuscadorGlobal`) usa **`lucide-react`**; el resto usa
+Material Symbols. No es una decisión tomada, es deuda: la regla práctica al
+tocar un archivo es seguir la que ya usa ese archivo, no mezclar las dos en un
+mismo componente. Unificarlas es un cambio de diseño propio, no algo para
+hacer de paso.
 
 ### Componentes base (`components/ui/`)
 
 Primitivas estilo shadcn/ui, usadas por las páginas que siguen el sistema
 `--shell-*`: `Card`/`CardContent`/`CardFooter` (`card.tsx`), `Badge`
 (`badge.tsx`, variantes `celeste`/`neutral`/`outline`), `Dialog`
-(`dialog.tsx`, wrapper de `@radix-ui/react-dialog`). Todas usan
+(`dialog.tsx`, wrapper de `@radix-ui/react-dialog`), `DropdownMenu`
+(`dropdown-menu.tsx`) y `Popover` (`popover.tsx`). Todas usan
 `React.forwardRef` + `cn()` (`lib/utils.ts`, clsx + tailwind-merge) para
-aceptar `className` adicional desde el caller. Un primitivo nuevo (dropdown,
-tooltip, sheet) sigue el mismo patrón: Radix headless + wrapper con los
+aceptar `className` adicional desde el caller. Un primitivo nuevo (tooltip,
+sheet) sigue el mismo patrón: Radix headless + wrapper con los
 tokens `--shell-*`, sin librería de componentes con estilos propios
 (Chakra, MUI, etc.).
+
+`DropdownMenu` y `Popover` no son intercambiables: el menú es para **acciones**
+(navegación con flechas entre items, semántica `menu`) y el popover para
+**contenido arbitrario**. Usar el menú para una lista de texto le promete a un
+lector de pantalla items navegables que no existen.
+
+Un caso que **no** usa el `DialogContent` compartido es el command palette
+(`components/buscador/BuscadorGlobal.tsx`): el wrapper centra el panel en la
+pantalla y le pone una ✕ en la esquina, que ahí caería sobre el campo de texto.
+Se arma sobre las primitivas de Radix con los mismos tokens.
 
 ### Dark/Light mode
 
@@ -100,9 +117,18 @@ tokens `--shell-*`, sin librería de componentes con estilos propios
 provider en `components/ThemeProvider.tsx` envolviendo todo en
 `app/layout.tsx`. El toggle vive en `TopNav.tsx` (`useTheme()`).
 
-**El toggle no afecta a las páginas de Kinetic Blueprint** — su
-`color-scheme: dark` en `globals.css` es fijo, independiente de la clase
-`.dark`/`.light` del `<html>`.
+**Actualizado 2026-08-26.** Kinetic Blueprint dejó de ser dark-only:
+`globals.css` define la escala completa en claro (`:root`, con
+`color-scheme: light`) y en oscuro (`.dark`), incluidos `--surface`,
+`--on-surface`, `--outline`, las categorías del calendario, los glows y las
+sombras de card. El toggle **sí** afecta a esas páginas.
+
+Lo que sigue roto en claro son los **colores hardcodeados** que quedaron de
+la época dark-only — sobre todo en Horarios, Calendario, el grafo y
+`AuthCard`. Está relevado con conteo por archivo en el **Frente 9** de
+[`PENDIENTES.md`](../PENDIENTES.md). Al tocar cualquiera de esos
+componentes, usar los tokens (tabla de equivalencias más arriba) en vez de
+agregar otro hex.
 
 ## Layout / composición (sistema `--shell-*`)
 

@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import type { ComisionConProfesores } from "@/lib/types";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { ComisionScore } from "./Score";
@@ -9,15 +11,27 @@ import { ComisionModal } from "./ComisionModal";
  * Tarjeta compacta de una comisión. Es el trigger de un modal (Dialog) que
  * muestra el detalle completo (materias + profesor + horario). El hover deja
  * claro que es clickeable (lift + borde primario + "Ver detalle →").
+ *
+ * El Dialog es controlado —y no el de Radix sin estado— porque el buscador
+ * global llega con `/comisiones?comision=<id>` y tiene que poder abrir esta
+ * tarjeta sin que nadie la clickee.
  */
-export function ComisionCard({ comision }: { comision: ComisionConProfesores }) {
+export function ComisionCard({
+  comision,
+  abiertaInicial = false,
+}: {
+  comision: ComisionConProfesores;
+  /** El deep link apuntaba a esta comisión: arranca con el detalle abierto. */
+  abiertaInicial?: boolean;
+}) {
+  const [abierta, setAbierta] = useState(abiertaInicial);
   const nMaterias = new Set(comision.cursadas.map((c) => c.materia_codigo)).size;
   const nProfes = new Set(
     comision.cursadas.filter((c) => c.profesor).map((c) => c.materia_codigo),
   ).size;
 
   return (
-    <Dialog>
+    <Dialog open={abierta} onOpenChange={setAbierta}>
       <DialogTrigger asChild>
         <button
           type="button"

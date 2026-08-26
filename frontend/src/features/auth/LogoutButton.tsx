@@ -1,13 +1,12 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useCerrarSesion } from "./useCerrarSesion";
 
 /**
- * Cierre de sesion manual (RNF-05).
+ * Item de "cerrar sesion" de la barra lateral.
  *
- * Va por POST: un GET puede dispararlo un `<img src>` de otro sitio y
- * desloguear al usuario sin que lo pida.
+ * La logica (POST a `/api/auth/logout` y redireccion) vive en
+ * `useCerrarSesion`, compartida con el menu de cuenta de la barra superior.
  */
 export function LogoutButton({
   collapsed,
@@ -17,20 +16,7 @@ export function LogoutButton({
   /** Tooltip a mostrar cuando la sidebar esta colapsada. */
   tooltip?: React.ReactNode;
 }) {
-  const router = useRouter();
-  const [saliendo, setSaliendo] = useState(false);
-
-  async function salir() {
-    setSaliendo(true);
-    try {
-      await fetch("/api/auth/logout", { method: "POST" });
-    } catch {
-      // Si la request falla igual se manda a /login: el middleware va a
-      // rebotarlo de vuelta si la cookie sigue viva, y el usuario reintenta.
-    }
-    router.push("/login");
-    router.refresh();
-  }
+  const { salir, saliendo } = useCerrarSesion();
 
   return (
     <button

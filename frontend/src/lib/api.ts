@@ -198,6 +198,15 @@ export function listarCentros(): Promise<CentroOut[]> {
   return request<CentroOut[]>("/novedades/centros", { revalidate: 180 });
 }
 
+/**
+ * Una novedad puntual. La usa el deep link `/novedades?novedad=<id>` del
+ * buscador y de la campana: la portada trae sólo las últimas doce, así que
+ * una novedad más vieja no está en esa lista y hay que pedirla aparte.
+ */
+export function getNovedad(id: number): Promise<NovedadOut> {
+  return request<NovedadOut>(`/novedades/${id}`, { revalidate: 180 });
+}
+
 // Las mutaciones se enrutan via /api/backend (proxy Next.js) para evitar CORS en browser.
 const MUTATION_BASE = "/api/backend";
 
@@ -561,6 +570,7 @@ export const api = {
   getEventosHoyCalendario,
   listarNovedades,
   listarCentros,
+  getNovedad,
   registrarEstado,
   eliminarEstado,
   resetearTodosRegistros,

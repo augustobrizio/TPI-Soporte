@@ -10,7 +10,7 @@
  */
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { ApiError, borrarResena, guardarResena } from "@/lib/api";
 import { useMisResenas } from "./MisResenasProvider";
@@ -43,9 +43,19 @@ function banda(nivel: number, activo: boolean): string {
 export function CalificarCatedra({
   materiaCodigo,
   profesorId,
+  onAbiertoChange,
 }: {
   materiaCodigo: string;
   profesorId: number;
+  /**
+   * Avisa cuando el widget se abre o se cierra.
+   *
+   * Lo necesita el listado del perfil: colapsado el widget es un botón chico
+   * que va a la derecha de la fila, y abierto es un panel que tiene que
+   * ocupar el ancho completo. Sin este aviso, el que dibuja la fila no puede
+   * saber cuál de las dos formas está mostrando.
+   */
+  onAbiertoChange?: (abierto: boolean) => void;
 }) {
   const { loggedIn, getResena, aplicar, quitar } = useMisResenas();
   const existente = getResena(materiaCodigo, profesorId);
@@ -56,6 +66,13 @@ export function CalificarCatedra({
   const [comentario, setComentario] = useState("");
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Un solo lugar para avisar: hay cuatro caminos que cierran el widget
+  // (guardar, borrar, cancelar y abrir otro) y engancharse a cada uno era
+  // garantía de olvidarse de alguno.
+  useEffect(() => {
+    onAbiertoChange?.(abierto);
+  }, [abierto, onAbiertoChange]);
 
   if (!loggedIn) {
     return (

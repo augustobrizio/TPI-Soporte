@@ -25,9 +25,12 @@ function anioDeComision(c: ComisionConProfesores): number | null {
 export function ComisionesView({
   comisiones,
   loggedIn = false,
+  comisionAbierta = null,
 }: {
   comisiones: ComisionConProfesores[];
   loggedIn?: boolean;
+  /** Id de la comisión a abrir de entrada (deep link del buscador global). */
+  comisionAbierta?: number | null;
 }) {
   const anios = useMemo(() => {
     const s = new Set<number>();
@@ -88,7 +91,9 @@ export function ComisionesView({
         />
       ) : (
         <div className="space-y-8">
-          {normales.length > 0 && <SeccionAnios grupos={normales} />}
+          {normales.length > 0 && (
+            <SeccionAnios grupos={normales} comisionAbierta={comisionAbierta} />
+          )}
 
           {electivas.length > 0 && (
             <section>
@@ -106,7 +111,7 @@ export function ComisionesView({
                 <h2 className="font-headline text-2xl font-extrabold text-on-surface">Electivas</h2>
                 <span className="text-sm text-outline font-body">{nElectivas}</span>
               </div>
-              <SeccionAnios grupos={electivas} />
+              <SeccionAnios grupos={electivas} comisionAbierta={comisionAbierta} />
             </section>
           )}
         </div>
@@ -136,8 +141,10 @@ function agruparPorAnio(
 /** Renderiza las comisiones agrupadas por año (subtítulo por año + grilla). */
 function SeccionAnios({
   grupos,
+  comisionAbierta,
 }: {
   grupos: [number | null, ComisionConProfesores[]][];
+  comisionAbierta: number | null;
 }) {
   return (
     <div className="space-y-8">
@@ -151,7 +158,11 @@ function SeccionAnios({
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {coms.map((c) => (
-              <ComisionCard key={c.id} comision={c} />
+              <ComisionCard
+                key={c.id}
+                comision={c}
+                abiertaInicial={c.id === comisionAbierta}
+              />
             ))}
           </div>
         </section>

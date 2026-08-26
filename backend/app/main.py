@@ -6,9 +6,11 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import (
     auth,
+    busqueda,
     calendario,
     comisiones,
     materias,
+    notificaciones,
     novedades,
     profesores,
     resenas,
@@ -53,6 +55,8 @@ app.include_router(calendario.router)
 app.include_router(novedades.router)
 app.include_router(comisiones.router)
 app.include_router(resenas.router)
+app.include_router(busqueda.router)
+app.include_router(notificaciones.router)
 
 
 @app.get("/health")

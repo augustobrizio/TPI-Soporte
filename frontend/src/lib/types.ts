@@ -402,3 +402,66 @@ export interface NovedadOut {
   created_at: string | null;
   fuentes: FuenteOut[];
 }
+
+// ---------------------------------------------------------------------------
+// Buscador global - refleja `app/schemas/busqueda.py`
+// ---------------------------------------------------------------------------
+
+export type TipoResultado = "materia" | "profesor" | "comision" | "novedad";
+
+/**
+ * Un resultado del buscador. El backend **no manda la URL**: no conoce el
+ * ruteo del frontend. El link lo arma `hrefDeResultado()` en el propio
+ * command palette, que es donde vive ese conocimiento.
+ */
+export interface ItemBusqueda {
+  tipo: TipoResultado;
+  /** Código de materia, id de profesor/novedad o nombre de comisión. */
+  id: string;
+  titulo: string;
+  detalle: string | null;
+  /**
+   * Sólo para materias. El grafo se abre por tipo, así que sin esto el link
+   * a una electiva caería en el grafo de troncales, donde no existe.
+   */
+  tipo_materia: TipoMateria | null;
+}
+
+export interface RespuestaBusqueda {
+  query: string;
+  total: number;
+  materias: ItemBusqueda[];
+  profesores: ItemBusqueda[];
+  comisiones: ItemBusqueda[];
+  novedades: ItemBusqueda[];
+}
+
+// ---------------------------------------------------------------------------
+// Notificaciones - refleja `app/schemas/notificacion.py`
+// ---------------------------------------------------------------------------
+
+export interface NovedadNotificacion {
+  id: number;
+  titulo: string;
+  fecha: string | null;
+  /** Publicada después de la última vez que se abrió el panel. */
+  nueva: boolean;
+}
+
+export interface MesaNotificacion {
+  id: number;
+  titulo: string;
+  fecha_inicio: string;
+  tipo: TipoEventoCalendario;
+  /** 0 = hoy. El panel lo escribe como "hoy", no como "en 0 días". */
+  dias_restantes: number;
+  nueva: boolean;
+}
+
+export interface NotificacionesOut {
+  /** Lo que enciende el puntito. Si es 0, la campana no avisa nada. */
+  nuevas: number;
+  novedades: NovedadNotificacion[];
+  mesas: MesaNotificacion[];
+  vistas_at: string | null;
+}

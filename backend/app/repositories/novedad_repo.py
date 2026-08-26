@@ -234,3 +234,27 @@ def crear_ingesta_log(
     db.add(log)
     db.flush()
     return log
+
+
+def listar_recientes(db: Session, *, limite: int = 300) -> Sequence[Novedad]:
+    """Novedades publicadas más recientes, sin eager-loads.
+
+    La usan el buscador global y el panel de notificaciones: los dos necesitan
+    título, descripción y fecha, y ninguno pinta las fuentes ni los centros —
+    que es lo que precarga ``listar`` y lo que la vuelve cara.
+
+    Ventana acotada a propósito. El buscador filtra en Python (hace falta para
+    ignorar acentos, ver ``busqueda_service``), así que la cantidad de filas
+    que se traen es el costo real de cada búsqueda. Si algún día hay miles de
+    novedades esto tiene que pasar a full-text search de Postgres; con las
+    decenas que maneja hoy la ingesta, escanear las últimas 300 es más barato
+    que mantener un índice.
+    """
+    orden = func.coalesce(Novedad.fecha_publicacion, Novedad.created_at)
+    stmt = (
+        select(Novedad)
+        .where(Novedad.estado == "publicada")
+        .order_by(orden.desc().nullslast(), Novedad.id.desc())
+        .limit(limite)
+    )
+    return db.execute(stmt).scalars().all()

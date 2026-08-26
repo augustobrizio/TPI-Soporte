@@ -89,11 +89,6 @@ export default async function PerfilPage() {
         ))}
       </div>
 
-      {/* Calificá a tus profesores (historial → reseñas, feature 004) */}
-      <div className="mb-6">
-        <MisCatedrasCalificar />
-      </div>
-
       {/* Nota de proximamente */}
       <div className="card-3d bg-surface-container/40 border border-dashed border-outline-variant/20 rounded-2xl px-6 py-5 flex items-center gap-4">
         <span className="material-symbols-outlined text-[24px] text-outline shrink-0">
@@ -109,6 +104,13 @@ export default async function PerfilPage() {
           portada; ahora la portada es publica y esto es lo tuyo. */}
       <div className="mt-10 border-t border-[var(--shell-border)] pt-2">
         <PanelPersonal />
+      </div>
+
+      {/* Calificar va ultimo: es lo secundario de esta pantalla —no son datos
+          tuyos, es una contribucion al resto— y arriba de todo empujaba el
+          progreso y la agenda fuera de la vista. */}
+      <div className="mt-10">
+        <MisCatedrasCalificar />
       </div>
     </div>
   );
