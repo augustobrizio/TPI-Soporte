@@ -22,17 +22,29 @@ def get_by_email(db: Session, email: str) -> Usuario | None:
     return db.execute(stmt).scalars().first()
 
 
+def get_by_google_sub(db: Session, google_sub: str) -> Usuario | None:
+    """Busca por el ``sub`` de la cuenta de Google que tenga vinculada."""
+    stmt = select(Usuario).where(Usuario.google_sub == google_sub)
+    return db.execute(stmt).scalars().first()
+
+
 def crear(
     db: Session,
     *,
     email: str,
-    password_hash: str,
+    password_hash: str | None,
     nombre: str | None = None,
     apellido: str | None = None,
     legajo: str | None = None,
     rol: str | None = None,
+    google_sub: str | None = None,
+    avatar_url: str | None = None,
 ) -> Usuario:
-    """Inserta un usuario. No hace commit: lo decide el service."""
+    """Inserta un usuario. No hace commit: lo decide el service.
+
+    ``password_hash`` puede ser None: las cuentas creadas con Google no tienen
+    contraseña local (``verify_password`` ya contempla el hash nulo).
+    """
     usuario = Usuario(
         email=email,
         password=password_hash,
@@ -40,6 +52,8 @@ def crear(
         apellido=apellido,
         legajo=legajo,
         rol=rol,
+        google_sub=google_sub,
+        avatar_url=avatar_url,
     )
     db.add(usuario)
     db.flush()

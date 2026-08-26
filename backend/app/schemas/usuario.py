@@ -57,6 +57,34 @@ class LoginIn(BaseModel):
     password: str = Field(max_length=PASSWORD_MAX)
 
 
+class GoogleAutorizacionOut(BaseModel):
+    """URL de Google a la que hay que mandar al usuario para que autorice."""
+
+    url: str
+
+
+class GoogleConfigOut(BaseModel):
+    """Si el login con Google está disponible en este servidor.
+
+    No expone el client id ni el secret: al frontend solo le sirve saber si
+    tiene que renderizar el botón.
+    """
+
+    habilitado: bool
+
+
+class GoogleCallbackIn(BaseModel):
+    """Code de un solo uso que Google devolvió al ``redirect_uri``."""
+
+    code: str = Field(min_length=1, max_length=2048)
+    # Debe ser byte a byte el mismo que se usó al pedir la autorización; Google
+    # lo compara. Lo manda el frontend porque es él quien lo construyó.
+    redirect_uri: str = Field(min_length=1, max_length=2048)
+    # PKCE (RFC 7636): el original del `code_challenge` que se mandó al pedir la
+    # autorización. El rango 43-128 lo fija el RFC.
+    code_verifier: str = Field(min_length=43, max_length=128)
+
+
 class UsuarioOut(BaseModel):
     """Vista pública de un usuario. Nunca incluye ``password``."""
 
@@ -66,6 +94,7 @@ class UsuarioOut(BaseModel):
     apellido: str | None = None
     legajo: str | None = None
     rol: str | None = None
+    avatar_url: str | None = None
     created_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)

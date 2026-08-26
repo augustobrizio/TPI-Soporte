@@ -34,6 +34,27 @@ class Settings(BaseSettings):
     # default: cubre una jornada sin obligar a re-loguearse a mitad de cursada.
     jwt_expire_minutes: int = Field(default=720, alias="JWT_EXPIRE_MINUTES")
 
+    # --- Login con Google (OAuth 2.0 / OpenID Connect, RF-01) ---
+    # Credenciales del cliente OAuth tipo "Aplicacion web" de Google Cloud
+    # Console. Si falta cualquiera de las dos, el login con Google queda
+    # apagado: el boton no se renderiza y el endpoint responde 503. El resto
+    # de la autenticacion (email + password) sigue funcionando igual, asi que
+    # el proyecto arranca sin configurar nada de Google.
+    google_client_id: str | None = Field(default=None, alias="GOOGLE_CLIENT_ID")
+    google_client_secret: str | None = Field(
+        default=None, alias="GOOGLE_CLIENT_SECRET"
+    )
+    # Dominios de email aceptados al entrar con Google, separados por coma.
+    # **Vacio por default: entra cualquier cuenta de Google.** El mecanismo
+    # existe porque RNF-04 habla de restringir a @frro.utn.edu.ar, pero se
+    # decidio no aplicarlo: muchos alumnos usan su cuenta personal, y dejar
+    # afuera a quien no tenga la institucional a mano es peor que el riesgo
+    # que evita. Si alguna vez se quiere activar, alcanza con setear la
+    # variable — el chequeo ya esta implementado y testeado.
+    google_dominios_permitidos: str = Field(
+        default="", alias="GOOGLE_DOMINIOS_PERMITIDOS"
+    )
+
     # Clasificador IA de novedades (OpenAI). gpt-4o-mini: barato y suficiente.
     openai_api_key: str | None = Field(default=None, alias="OPENAI_API_KEY")
     novedades_llm_model: str = Field(
@@ -102,6 +123,20 @@ class Settings(BaseSettings):
                 "y cargalo como secreto del servicio."
             )
         return self
+
+    @property
+    def google_dominios_permitidos_list(self) -> list[str]:
+        """Dominios normalizados (minuscula, sin ``@``). Vacio = sin restriccion."""
+        return [
+            d.strip().lstrip("@").lower()
+            for d in self.google_dominios_permitidos.split(",")
+            if d.strip()
+        ]
+
+    @property
+    def google_oauth_configurado(self) -> bool:
+        """Hay client id y secret cargados, o sea que el flow puede correr."""
+        return bool(self.google_client_id and self.google_client_secret)
 
     @property
     def cors_origins_list(self) -> list[str]:

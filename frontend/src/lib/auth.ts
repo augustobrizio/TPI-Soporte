@@ -21,6 +21,8 @@ export interface UsuarioSesion {
   apellido: string | null;
   legajo: string | null;
   rol: string | null;
+  /** Foto de perfil de Google, si la cuenta entro por ahi. */
+  avatar_url: string | null;
 }
 
 /** Token crudo de la cookie, o null. Solo para Server Components / handlers. */

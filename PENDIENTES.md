@@ -25,7 +25,7 @@
 - **Modelos de DB de auth y chat ya creados** (`usuario`, `conversacion`, `mensaje`) — falta la lógica
 
 ### 🔴 Pendiente (el grueso del trabajo)
-1. ~~**Autenticación & sesión**~~ — **hecho** salvo Google (Frente 8) y expiración por inactividad. Ver Frente 1.
+1. ~~**Autenticación & sesión**~~ — **hecho**, Google incluido (Frente 8 ✅). Queda solo la expiración por inactividad. Ver Frente 1.
 2. **Chatbot: RAG + Agente + Chat** — greenfield *(feature de Bruno)*
 3. **Tests de reglas de negocio** — obligatorio por la materia
 4. ~~**Integración multi-usuario en el frontend**~~ — **hecho**. Ver Frente 4.
@@ -33,7 +33,7 @@
 
 ### 🟠 Repaso de UX y datos del alumno (agregado 2026-08-26)
 6. **Shell: barra superior y navegación** — buscador, notificaciones y avatar sin conectar — Frente 7
-7. ~~**Login con Google**~~ — **implementado**; solo falta crear el cliente OAuth en Google Cloud y pegar las credenciales — Frente 8
+7. ~~**Login con Google**~~ — ✅ **hecho** (Frente 8). Único paso manual pendiente: crear el cliente OAuth en Google Cloud y pegar las credenciales en `backend/.env`.
 8. **Modo claro** — los tokens ya están; faltan los hardcodeos — Frente 9
 9. **Importación de SYSACAD** — no marca la comisión ni deja corregir el mapeo — Frente 10
 10. **Calendario ↔ Google** — greenfield — Frente 11
@@ -58,14 +58,14 @@
 ## Frente 1 — Autenticación & Sesión  🟡  *(casi cerrado — revisado 2026-08-26)*
 **Requerimientos:** RF-01, RNF-02, RNF-04, RNF-05, RNF-06
 **Estado:** **implementado y andando.** `api/auth.py` (registro, login, `/auth/me`), `services/auth_service.py` y `core/security.py` (bcrypt con pre-hash SHA-256 + JWT), rate limit de login, router registrado en `main.py`. En el front: login y registro reales, cookie **httpOnly** escrita por los route handlers de Next (`app/api/auth/*`), `middleware.ts` y `getUsuarioActual()` validando contra el backend en cada Server Component.
-**Lo que queda:** Google OAuth (se movió al **Frente 8**), la expiración **por inactividad** de RNF-05 y aplicar `requerir_admin` a los endpoints que reescriben datos (ver **Frente 12**, T12.1).
+**Lo que queda:** ~~Google OAuth~~ (hecho en el **Frente 8** ✅), la expiración **por inactividad** de RNF-05 y aplicar `requerir_admin` a los endpoints que reescriben datos (ver **Frente 12**, T12.1).
 **Depende de:** D1, D5.
 
 | ID | Tarea | Área | Alcance | Esf. |
 |----|-------|------|---------|------|
 | ~~T1.1~~ ✅ | Login + hashing | Back | Crear `api/auth.py` + `services/auth_service.py`. Hash de password con `passlib`/`bcrypt` (RNF-02). Emitir JWT (o sesión). Registrar router en `main.py`. | M |
 | T1.2 ⚠️ | `get_current_user` + roles | Back | `get_current_user` ✅ y aplicado en calendario, comisiones, materias, reseñas y usuario_materia. **Falta el control por rol:** `deps.requerir_admin` está escrito pero no se usa en ningún endpoint (ver T12.1). | S |
-| ~~T1.3~~ → | Google OAuth | Back | **Movido al Frente 8**, que lo desarrolla en detalle. | — |
+| ~~T1.3~~ ✅ | Google OAuth | Back | Hecho en el **Frente 8**. | — |
 | T1.4 ⚠️ | Expiración + logout | Back | Logout manual ✅ (`app/api/auth/logout/route.ts`, POST). **Falta la expiración por inactividad:** hoy el JWT tiene un `exp` fijo (`JWT_EXPIRE_MINUTES`, 12 h) que no se renueva con el uso. | S |
 | ~~T1.5~~ ✅ | Pantalla de login real | Front | Reemplazar el placeholder `login/page.tsx`. Form o botón OAuth, guardar token, redirigir al dashboard. | M |
 | ~~T1.6~~ ✅ | Guard de rutas + contexto de sesión | Front | Resuelto por Server Components (`getUsuarioActual()`) + `middleware.ts` + `RequiereCuenta`, no por un provider de cliente. `features/auth/AuthProvider.tsx` y `useAuth.ts` quedaron sin usar → ver T5.5. | M |
@@ -181,7 +181,7 @@ La barra lateral colapsable **sí funciona**: persiste la preferencia en `localS
 
 ---
 
-## Frente 8 — Login con Google  🟢  *(implementado 2026-08-26 — falta cargar credenciales)*
+## ~~Frente 8 — Login con Google~~  ✅  *(hecho — 2026-08-26)*
 **Requerimientos:** RNF-04 (Google OAuth 2.0 restringido a `@frro.utn.edu.ar`), RNF-06.
 **Estado:** **código completo y probado (31 tests).** Authorization code flow con `state` + PKCE (S256): el backend concentra todo lo de OAuth (`services/google_oauth.py`, endpoints `GET /auth/google/config`, `GET /auth/google/autorizar`, `POST /auth/google`) y el frontend hace de relay y escribe la cookie httpOnly (`app/api/auth/google/{start,callback}`). Migración `f2c9a7d1e480` (`google_sub` único + `avatar_url`) **ya aplicada en Neon**.
 
