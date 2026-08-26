@@ -21,6 +21,11 @@ class Profesor(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     nombre: Mapped[str | None] = mapped_column(Text, nullable=True)
     email: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Nombre canonico (minusculas, sin acentos ni puntuacion) — lo calcula
+    # ``services/profesor_matching.clave_nombre``. Unico: la DB rechaza el mismo
+    # nombre dos veces aunque cambie el email, que era por donde se colaban los
+    # duplicados del padron.
+    nombre_key: Mapped[str] = mapped_column(Text, nullable=False, unique=True, index=True)
 
     cargos: Mapped[list["MateriaProfesor"]] = relationship(
         back_populates="profesor", cascade="all, delete-orphan"

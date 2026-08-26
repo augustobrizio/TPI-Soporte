@@ -47,9 +47,9 @@ def _setup(db: Session) -> None:
             Materia(codigo="M1", nombre="Analisis"),
             Materia(codigo="M2", nombre="Fisica"),
             Materia(codigo="M3", nombre="Quimica"),
-            Profesor(id=1, nombre="ASCOLANI, Federico"),
-            Profesor(id=2, nombre="PEREZ, Juan"),
-            Profesor(id=3, nombre="PEREZ, Ana"),
+            Profesor(id=1, nombre="ASCOLANI, Federico", nombre_key="ascolani|federico"),
+            Profesor(id=2, nombre="PEREZ, Juan", nombre_key="perez|juan"),
+            Profesor(id=3, nombre="PEREZ, Ana", nombre_key="perez|ana"),
             # Catedras: quien dicta cada materia
             MateriaProfesor(materia_codigo="M1", profesor_id=1),  # Ascolani -> M1
             MateriaProfesor(materia_codigo="M2", profesor_id=2),  # Perez Juan -> M2

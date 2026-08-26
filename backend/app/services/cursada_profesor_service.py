@@ -14,7 +14,6 @@ Idempotente y **NO destructivo**: solo completa ``profesor_id`` cuando esta
 """
 from __future__ import annotations
 
-import unicodedata
 from dataclasses import dataclass
 
 from sqlalchemy import select
@@ -22,25 +21,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models.academico import Cursada
 from app.db.models.profesor import MateriaProfesor, Profesor
-
-
-def _normalizar(texto: str) -> str:
-    """Minusculas, sin acentos, espacios colapsados."""
-    sin_acentos = "".join(
-        c for c in unicodedata.normalize("NFD", texto) if unicodedata.category(c) != "Mn"
-    )
-    return " ".join(sin_acentos.lower().split())
-
-
-def _apellido(nombre_o_docente: str) -> str:
-    """Apellido normalizado.
-
-    'Ascolani' -> 'ascolani'; 'BADOGLIO, Mariano Javier' -> 'badoglio'.
-    El apellido es lo previo a la coma; sin coma, la primera palabra.
-    """
-    cabeza = nombre_o_docente.split(",")[0]
-    tokens = _normalizar(cabeza).split()
-    return tokens[0] if tokens else ""
+from app.services.profesor_matching import apellido_principal as _apellido
 
 
 @dataclass

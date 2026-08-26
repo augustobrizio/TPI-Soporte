@@ -17,23 +17,36 @@ from app.db.models.profesor import HorarioConsulta, MateriaProfesor, Profesor
 # ---------------------------------------------------------------------------
 # Profesor
 # ---------------------------------------------------------------------------
-def get_or_create_profesor(
-    db: Session, *, nombre: str, email: str | None
-) -> Profesor:
-    """Devuelve el profesor (nombre, email) o lo crea.
+def get_por_nombre_key(db: Session, nombre_key: str) -> Profesor | None:
+    """Profesor por su nombre canonico, o ``None``.
 
-    Se apoya en el unique index ``uq_profesor_nombre_email`` (NULLS NOT DISTINCT)
-    para garantizar idempotencia.
+    La ``nombre_key`` la calcula ``services/profesor_matching.clave_nombre``:
+    quien decide si dos grafias son la misma persona es el service, no este repo.
     """
-    email_cond = Profesor.email.is_(None) if email is None else Profesor.email == email
-    stmt = select(Profesor).where(and_(Profesor.nombre == nombre, email_cond))
-    prof = db.execute(stmt).scalar_one_or_none()
-    if prof is not None:
-        return prof
-    prof = Profesor(nombre=nombre, email=email)
+    stmt = select(Profesor).where(Profesor.nombre_key == nombre_key)
+    return db.execute(stmt).scalar_one_or_none()
+
+
+def crear_profesor(
+    db: Session, *, nombre: str, nombre_key: str, email: str | None
+) -> Profesor:
+    """Inserta un profesor nuevo. El unique de ``nombre_key`` garantiza idempotencia."""
+    prof = Profesor(nombre=nombre, nombre_key=nombre_key, email=email)
     db.add(prof)
     db.flush()
     return prof
+
+
+def actualizar_nombre(
+    db: Session, profesor_id: int, *, nombre: str, nombre_key: str
+) -> None:
+    """Reemplaza el nombre de un profesor y su clave canonica."""
+    prof = db.get(Profesor, profesor_id)
+    if prof is None:
+        return
+    prof.nombre = nombre
+    prof.nombre_key = nombre_key
+    db.flush()
 
 
 def list_profesores(db: Session) -> Sequence[Profesor]:
