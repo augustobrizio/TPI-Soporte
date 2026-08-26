@@ -11,6 +11,7 @@ from app.api import (
     materias,
     novedades,
     profesores,
+    resenas,
     usuario_materia,
 )
 from app.config import get_settings
@@ -51,6 +52,7 @@ app.include_router(usuario_materia.router)
 app.include_router(calendario.router)
 app.include_router(novedades.router)
 app.include_router(comisiones.router)
+app.include_router(resenas.router)
 
 
 @app.get("/health")

@@ -55,6 +55,50 @@ def nota_catedra(review: ReviewCatedra | None) -> float | None:
 
 
 @dataclass(frozen=True, slots=True)
+class VotosCatedra:
+    """Votos combinados de una cátedra: UTNTAC + reseñas de alumnos (feature 004)."""
+
+    super_recomiendo: int
+    recomiendo: int
+    normal: int
+    evitaria: int
+    super_evitaria: int
+    cantidad: int  # respuestas totales: UTNTAC reportadas + nº de reseñas de alumnos
+
+    @property
+    def nota(self) -> float | None:
+        return nota_desde_votos(
+            self.super_recomiendo,
+            self.recomiendo,
+            self.normal,
+            self.evitaria,
+            self.super_evitaria,
+        )
+
+
+def votos_combinados(
+    review: ReviewCatedra | None,
+    tally_alumnos: dict[int, int] | None,
+) -> VotosCatedra:
+    """Suma los votos de UTNTAC con los de alumnos (por nivel 1–5).
+
+    ``tally_alumnos`` es ``{nivel: cantidad}`` (5 = súper recomiendo … 1 = súper
+    evitaría), consistente con la escala de UTNTAC. Cualquiera de las dos fuentes
+    puede faltar.
+    """
+    t = tally_alumnos or {}
+    n_alumnos = sum(t.values())
+    return VotosCatedra(
+        super_recomiendo=(review.super_recomiendo if review else 0) + t.get(5, 0),
+        recomiendo=(review.recomiendo if review else 0) + t.get(4, 0),
+        normal=(review.normal if review else 0) + t.get(3, 0),
+        evitaria=(review.evitaria if review else 0) + t.get(2, 0),
+        super_evitaria=(review.super_evitaria if review else 0) + t.get(1, 0),
+        cantidad=(review.cantidad_respuestas if review else 0) + n_alumnos,
+    )
+
+
+@dataclass(frozen=True, slots=True)
 class ScoreComision:
     """Score de una comisión: promedio de las notas de sus cátedras con reseña."""
 

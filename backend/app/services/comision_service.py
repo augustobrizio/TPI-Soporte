@@ -13,7 +13,7 @@ from app.db.models.academico import (
     Materia,
     UsuarioMateria,
 )
-from app.repositories import comision_repo, materia_repo, review_repo
+from app.repositories import comision_repo, materia_repo, resena_repo, review_repo
 from app.services import review_service
 from app.schemas.comision import (
     AsignacionOut,
@@ -39,7 +39,8 @@ def comisiones_con_profesores(
     o sin match); la UI cae entonces al ``docente`` (apellido crudo).
     """
     comisiones = comision_repo.listar_comisiones_con_profesor(db, anio=anio)
-    reviews = review_repo.reviews_por_par(db)  # {(materia_codigo, profesor_id): ReviewCatedra}
+    reviews = review_repo.reviews_por_par(db)  # {(materia_codigo, profesor_id): ReviewCatedra} (UTNTAC)
+    tallies = resena_repo.tallies_por_par(db)  # {(materia_codigo, profesor_id): {nivel: n}} (alumnos)
     salida: list[ComisionOut] = []
     for com in comisiones:
         cursadas_out: list[CursadaOut] = []
@@ -63,12 +64,16 @@ def comisiones_con_profesores(
                 continue
             vistos.add(clave)
 
-            review = (
-                reviews.get((cur.materia_codigo, cur.profesor.id))
-                if cur.profesor is not None
-                else None
-            )
-            nota = review_service.nota_catedra(review)
+            # Nota combinada: votos de UTNTAC + reseñas de alumnos (feature 004).
+            review = None
+            votos = None
+            if cur.profesor is not None:
+                par = (cur.materia_codigo, cur.profesor.id)
+                review = reviews.get(par)
+                tally = tallies.get(par)
+                if review is not None or tally:
+                    votos = review_service.votos_combinados(review, tally)
+            nota = votos.nota if votos is not None else None
             notas_comision.append(nota)
 
             cursadas_out.append(
@@ -86,9 +91,7 @@ def comisiones_con_profesores(
                     ),
                     nota=nota,
                     clasificacion=review.clasificacion if review is not None else None,
-                    cantidad_respuestas=(
-                        review.cantidad_respuestas if review is not None else None
-                    ),
+                    cantidad_respuestas=votos.cantidad if votos is not None else None,
                     horarios=[
                         HorarioOut(
                             dia=h.dia,

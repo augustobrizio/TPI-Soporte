@@ -38,6 +38,14 @@ class MateriaInexistente(DomainError):
         super().__init__(f"La materia '{codigo}' no existe en el plan.")
 
 
+class ProfesorInexistente(DomainError):
+    """Se intento operar sobre un profesor que no esta en el padron."""
+
+    def __init__(self, profesor_id: int):
+        self.profesor_id = profesor_id
+        super().__init__(f"El profesor con id {profesor_id} no existe.")
+
+
 class CorrelativasNoCumplidas(DomainError):
     """El usuario no cumple las correlativas para una operacion."""
 

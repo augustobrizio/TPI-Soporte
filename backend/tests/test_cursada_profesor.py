@@ -22,6 +22,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from app.api import comisiones as comisiones_api  # noqa: E402
 from app.db.models.academico import Comision, Cursada, Horario, Materia  # noqa: E402
 from app.db.models.profesor import MateriaProfesor, Profesor  # noqa: E402
+from app.db.models.resena_alumno import ResenaAlumno  # noqa: E402
 from app.db.models.review import ReviewCatedra  # noqa: E402
 from app.db.session import get_db  # noqa: E402
 from app.services import cursada_profesor_service as svc  # noqa: E402
@@ -34,7 +35,7 @@ def _session() -> Session:
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
     )
-    for model in (Materia, Profesor, Comision, MateriaProfesor, Cursada, Horario, ReviewCatedra):
+    for model in (Materia, Profesor, Comision, MateriaProfesor, Cursada, Horario, ReviewCatedra, ResenaAlumno):
         model.__table__.create(engine)
     maker = sessionmaker(bind=engine, class_=Session, expire_on_commit=False)
     return maker()
