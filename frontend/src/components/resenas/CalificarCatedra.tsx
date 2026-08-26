@@ -174,8 +174,12 @@ export function CalificarCatedra({
           disabled={nivel == null || guardando}
           className="inline-flex items-center gap-1 rounded-md bg-primary px-2.5 py-1 text-[11px] font-bold text-on-primary transition-opacity hover:opacity-90 disabled:opacity-40"
         >
-          <span className="material-symbols-outlined text-[14px]">check</span>
-          Guardar
+          <span
+            className={`material-symbols-outlined text-[14px] ${guardando ? "animate-spin" : ""}`}
+          >
+            {guardando ? "progress_activity" : "check"}
+          </span>
+          {guardando ? "Guardando…" : "Guardar"}
         </button>
         <button
           type="button"
