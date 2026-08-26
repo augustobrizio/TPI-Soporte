@@ -35,7 +35,7 @@
 6. **Shell: barra superior y navegación** — buscador, notificaciones y avatar sin conectar — Frente 7
 7. ~~**Login con Google**~~ — ✅ **hecho** (Frente 8). Único paso manual pendiente: crear el cliente OAuth en Google Cloud y pegar las credenciales en `backend/.env`.
 8. **Modo claro** — los tokens ya están; faltan los hardcodeos — Frente 9
-9. **Importación de SYSACAD** — no marca la comisión ni deja corregir el mapeo — Frente 10
+9. ~~**Importación de SYSACAD**~~ — ✅ **hecho** (Frente 10): marca la comisión al importar y deja corregir el mapeo a mano.
 10. **Calendario ↔ Google** — greenfield — Frente 11
 11. **Comisiones y profesores** — implementado; quedan puntas sueltas (una de seguridad) — Frente 12
 12. **Inicio / dashboard / panel personal** — ruteo por sesión + mocks a reemplazar — Frente 13
@@ -350,7 +350,7 @@ Lo pedido: sin sesión → "Inicio" con la portada; con sesión → desaparece "
 | Widget | Estado |
 |---|---|
 | `ProgresoHero` | **Real** — `getGrafo()`: aprobadas, %, carga horaria, créditos de electivas, promedio. |
-| `AgendaHoy` | **Real** — clases de hoy desde la comisión elegida + eventos del calendario. Queda vacío si el alumno nunca eligió comisión → **ver Frente 10.A**. |
+| `AgendaHoy` | **Real** — clases de hoy desde la comisión elegida + eventos del calendario. Queda vacío sólo si el alumno nunca eligió comisión; el import de SYSACAD ya la elige solo (Frente 10.A ✅). |
 | `NovedadesAlertas` | **Mock** — `NOVEDADES_MOCK` hardcodeado ("Paro docente del 09/05"), con `/novedades` real al lado. |
 | `ChatSnippet` | **Vacío por diseño** — recibe `null` fijo; depende del Frente 2. |
 | `AccionesRapidas` / `AtajosToolbox` | Links estáticos; funcionan. |
