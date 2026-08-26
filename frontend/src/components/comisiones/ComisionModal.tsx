@@ -79,8 +79,8 @@ export function ComisionModal({ comision }: { comision: ComisionConProfesores })
         </div>
       </header>
 
-      {/* Materias, agrupadas por cuatrimestre */}
-      <div className="flex-1 space-y-6 overflow-y-auto px-6 py-5">
+      {/* Materias, agrupadas por cuatrimestre (único contenedor scrolleable) */}
+      <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-6 py-5">
         {comision.cursadas.length > 0 ? (
           grupos.map(([cuat, cursadas]) => (
             <section key={cuat ?? "sin"}>

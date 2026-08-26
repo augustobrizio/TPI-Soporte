@@ -1,9 +1,7 @@
 "use client";
 
 import type { ComisionConProfesores } from "@/lib/types";
-import { esComisionElectiva } from "@/lib/comision";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
-import { ElectivaBadge } from "./ElectivaBadge";
 import { ComisionScore } from "./Score";
 import { ComisionModal } from "./ComisionModal";
 
@@ -17,7 +15,6 @@ export function ComisionCard({ comision }: { comision: ComisionConProfesores }) 
   const nProfes = new Set(
     comision.cursadas.filter((c) => c.profesor).map((c) => c.materia_codigo),
   ).size;
-  const electiva = esComisionElectiva(comision.nombre);
 
   return (
     <Dialog>
@@ -31,12 +28,9 @@ export function ComisionCard({ comision }: { comision: ComisionConProfesores }) 
               <span className="material-symbols-outlined text-[22px]">groups</span>
             </div>
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <h3 className="truncate font-headline text-base font-extrabold leading-tight text-on-surface">
-                  {comision.nombre ?? "Comisión"}
-                </h3>
-                {electiva && <ElectivaBadge />}
-              </div>
+              <h3 className="truncate font-headline text-base font-extrabold leading-tight text-on-surface">
+                {comision.nombre ?? "Comisión"}
+              </h3>
               <p className="mt-0.5 truncate text-[11px] text-outline">
                 {nMaterias} {nMaterias === 1 ? "materia" : "materias"} · {nProfes} con profesor
               </p>
@@ -60,7 +54,7 @@ export function ComisionCard({ comision }: { comision: ComisionConProfesores }) 
         </button>
       </DialogTrigger>
 
-      <DialogContent className="max-w-3xl border-outline-variant/15 bg-surface-container p-0">
+      <DialogContent className="max-w-3xl overflow-hidden border-outline-variant/15 bg-surface-container p-0">
         <ComisionModal comision={comision} />
       </DialogContent>
     </Dialog>

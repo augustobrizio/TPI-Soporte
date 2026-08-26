@@ -8,6 +8,7 @@
 
 import { useMemo, useState } from "react";
 import type { ComisionConProfesores } from "@/lib/types";
+import { esComisionElectiva } from "@/lib/comision";
 import { MisResenasProvider } from "@/components/resenas/MisResenasProvider";
 import { ComisionCard } from "./ComisionCard";
 
@@ -39,28 +40,23 @@ export function ComisionesView({
 
   const [anioSel, setAnioSel] = useState<number | null>(null); // null = todos
 
-  const grupos = useMemo(() => {
+  // Normales arriba, electivas en su propia sección (con título, no badge).
+  const { normales, electivas } = useMemo(() => {
     const filtradas =
       anioSel == null ? comisiones : comisiones.filter((c) => anioDeComision(c) === anioSel);
-    const map = new Map<number | null, ComisionConProfesores[]>();
-    for (const c of filtradas) {
-      const k = anioDeComision(c);
-      if (!map.has(k)) map.set(k, []);
-      map.get(k)!.push(c);
-    }
-    return [...map.entries()].sort((a, b) => {
-      if (a[0] == null) return 1;
-      if (b[0] == null) return -1;
-      return a[0] - b[0];
-    });
+    return {
+      normales: agruparPorAnio(filtradas.filter((c) => !esComisionElectiva(c.nombre))),
+      electivas: agruparPorAnio(filtradas.filter((c) => esComisionElectiva(c.nombre))),
+    };
   }, [comisiones, anioSel]);
 
+  const nElectivas = electivas.reduce((n, [, cs]) => n + cs.length, 0);
   const vacio = comisiones.length === 0;
 
   return (
     <MisResenasProvider loggedIn={loggedIn}>
     <div className="p-8 max-w-7xl mx-auto">
-      <header className="glow-band glow-tertiary bg-surface-container border border-outline-variant/10 rounded-3xl p-6 md:p-7 mb-6 space-y-2">
+      <header className="mb-8 space-y-2">
         <h1 className="text-4xl font-extrabold tracking-tight font-headline text-on-surface">
           Comisiones
         </h1>
@@ -92,25 +88,75 @@ export function ComisionesView({
         />
       ) : (
         <div className="space-y-8">
-          {grupos.map(([anio, coms]) => (
-            <section key={anio ?? "sin"}>
-              <h2 className="sec-title chip-tertiary text-sm font-headline font-bold text-on-surface-variant uppercase tracking-wider mb-3">
-                {anio != null ? `${anio}° año` : "Sin año"}
-                <span className="ml-2 text-outline font-body font-normal normal-case tracking-normal">
-                  {coms.length}
+          {normales.length > 0 && <SeccionAnios grupos={normales} />}
+
+          {electivas.length > 0 && (
+            <section>
+              <div
+                className={`mb-4 flex items-center gap-2.5 ${
+                  normales.length > 0 ? "border-t border-outline-variant/10 pt-8" : ""
+                }`}
+              >
+                <span
+                  className="material-symbols-outlined text-[22px] text-secondary"
+                  style={{ fontVariationSettings: "'FILL' 1" }}
+                >
+                  auto_awesome
                 </span>
-              </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {coms.map((c) => (
-                  <ComisionCard key={c.id} comision={c} />
-                ))}
+                <h2 className="font-headline text-2xl font-extrabold text-on-surface">Electivas</h2>
+                <span className="text-sm text-outline font-body">{nElectivas}</span>
               </div>
+              <SeccionAnios grupos={electivas} />
             </section>
-          ))}
+          )}
         </div>
       )}
     </div>
     </MisResenasProvider>
+  );
+}
+
+/** Agrupa una lista de comisiones por año de carrera, ordenadas. */
+function agruparPorAnio(
+  list: ComisionConProfesores[],
+): [number | null, ComisionConProfesores[]][] {
+  const map = new Map<number | null, ComisionConProfesores[]>();
+  for (const c of list) {
+    const k = anioDeComision(c);
+    if (!map.has(k)) map.set(k, []);
+    map.get(k)!.push(c);
+  }
+  return [...map.entries()].sort((a, b) => {
+    if (a[0] == null) return 1;
+    if (b[0] == null) return -1;
+    return a[0] - b[0];
+  });
+}
+
+/** Renderiza las comisiones agrupadas por año (subtítulo por año + grilla). */
+function SeccionAnios({
+  grupos,
+}: {
+  grupos: [number | null, ComisionConProfesores[]][];
+}) {
+  return (
+    <div className="space-y-8">
+      {grupos.map(([anio, coms]) => (
+        <section key={anio ?? "sin"}>
+          <h3 className="sec-title chip-tertiary text-sm font-headline font-bold text-on-surface-variant uppercase tracking-wider mb-3">
+            {anio != null ? `${anio}° año` : "Sin año"}
+            <span className="ml-2 text-outline font-body font-normal normal-case tracking-normal">
+              {coms.length}
+            </span>
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {coms.map((c) => (
+              <ComisionCard key={c.id} comision={c} />
+            ))}
+          </div>
+        </section>
+      ))}
+    </div>
   );
 }
 
