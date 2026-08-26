@@ -111,6 +111,17 @@
 
 ---
 
+## Frente 6 — Reseñas de alumnos: moderación  🟢  *(a futuro, no bloqueante)*
+**Contexto:** las **reseñas de alumnos (feature 004)** ya están implementadas — un alumno logueado califica una cátedra (nivel 1–5 + comentario opcional) desde el modal de comisión, el detalle de profesor y el perfil; su voto se combina con las reviews de UTNTAC en el score de la cátedra/comisión (`resena_alumno`, endpoints `/mi/resenas`, `review_service.votos_combinados`). Lo que falta es **moderar el texto** de los comentarios para que no se suba cualquier cosa (contenido inapropiado).
+
+| ID | Tarea | Área | Alcance | Esf. |
+|----|-------|------|---------|------|
+| T6.1 | Moderación de comentarios | Back+Front | Evitar contenido inapropiado en el comentario libre de `resena_alumno` (hoy se guarda tal cual, máx 1000 chars): p.ej. filtro de palabras / validación, botón de **reportar** + **ocultar** el comentario sin borrar el voto numérico, o moderación asistida por IA. Es la US4 (P3) de la spec `004-resenas-alumnos`. | M |
+
+**Criterio de aceptación:** un comentario reportado se puede ocultar del público sin perder la calificación; el contenido claramente inapropiado no queda visible.
+
+---
+
 ## Orden sugerido y dependencias
 
 ```
