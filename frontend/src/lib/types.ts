@@ -119,6 +119,13 @@ export interface ItemImportMapeado {
   condicion: CondicionMateria;
   nota: number | null;
   anio_cursada: number | null;
+  /**
+   * Comision detectada en el estado ("Cursa en 4K02" -> "4K02"), solo para
+   * condicion "cursando". Al confirmar, el backend la usa para dejar elegida
+   * la cursada y que la materia aparezca en la grilla de Horarios. Ponerla en
+   * null desactiva esa seleccion automatica para esa fila.
+   */
+  comision_nombre: string | null;
   importar: boolean;
 }
 
@@ -140,6 +147,8 @@ export interface ResultadoImportSysacad {
   importadas: number;
   omitidas: number;
   eliminadas: number;
+  /** Materias "cursando" a las que ademas se les dejo elegida la comision. */
+  comisiones_asignadas: number;
   errores: string[];
 }
 

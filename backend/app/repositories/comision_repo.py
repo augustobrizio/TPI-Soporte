@@ -1,7 +1,7 @@
 """Repository para comisiones, cursadas y horarios."""
 from __future__ import annotations
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, contains_eager, joinedload, selectinload
 
 from app.db.models.academico import Comision, Cursada, Horario, UsuarioMateria
@@ -76,6 +76,35 @@ def cursadas_para_materias(
             selectinload(Cursada.horarios),
         )
         .order_by(Comision.nombre)
+    )
+    return list(db.execute(stmt).scalars().all())
+
+
+def cursadas_por_nombre_comision(
+    db: Session,
+    *,
+    materia_codigo: str,
+    comision_nombre: str,
+) -> list[Cursada]:
+    """Cursadas de una materia en la comision con ese nombre ('4K02').
+
+    Ordenadas por año descendente y cuatrimestre ascendente: quien llame se
+    queda con la primera que le sirva (la mas reciente). El nombre se compara
+    normalizado —``upper()`` + sin espacios— porque llega de texto pegado por
+    el alumno, no de un desplegable.
+    """
+    objetivo = comision_nombre.strip().upper()
+    if not objetivo:
+        return []
+    stmt = (
+        select(Cursada)
+        .join(Cursada.comision)
+        .where(
+            Cursada.materia_codigo == materia_codigo,
+            func.upper(func.trim(Comision.nombre)) == objetivo,
+        )
+        .options(contains_eager(Cursada.comision))
+        .order_by(Comision.anio.desc(), Cursada.cuatrimestre)
     )
     return list(db.execute(stmt).scalars().all())
 
