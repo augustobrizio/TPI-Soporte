@@ -138,3 +138,25 @@ def add_materia_profesor(
     )
     db.add(mp)
     return mp
+
+
+def profesores_por_materias(
+    db: Session, codigos: list[str]
+) -> dict[str, list[Profesor]]:
+    """Profesores vinculados a cada materia (deduplicados por profesor)."""
+    if not codigos:
+        return {}
+    stmt = (
+        select(MateriaProfesor.materia_codigo, Profesor)
+        .join(Profesor, Profesor.id == MateriaProfesor.profesor_id)
+        .where(MateriaProfesor.materia_codigo.in_(codigos))
+    )
+    out: dict[str, list[Profesor]] = {}
+    vistos: set[tuple[str, int]] = set()
+    for materia_codigo, prof in db.execute(stmt).all():
+        clave = (materia_codigo, prof.id)
+        if clave in vistos:
+            continue
+        vistos.add(clave)
+        out.setdefault(materia_codigo, []).append(prof)
+    return out

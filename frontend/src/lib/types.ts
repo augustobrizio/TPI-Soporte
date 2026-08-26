@@ -339,6 +339,27 @@ export interface ComisionConProfesores {
 }
 
 // ---------------------------------------------------------------------------
+// Reseñas de alumnos — refleja `app/schemas/resena.py` (feature 004)
+// ---------------------------------------------------------------------------
+
+/** Reseña propia del alumno sobre una cátedra (profesor × materia). */
+export interface ResenaAlumno {
+  id: number;
+  materia_codigo: string;
+  profesor_id: number;
+  /** 1 = súper evitaría … 5 = súper recomiendo (misma escala que UTNTAC). */
+  nivel: number;
+  comentario: string | null;
+}
+
+/** Una materia que el alumno cursó/cursa + los profesores a calificar. */
+export interface CatedraParaCalificar {
+  materia_codigo: string;
+  materia_nombre: string | null;
+  profesores: ProfesorMini[];
+}
+
+// ---------------------------------------------------------------------------
 // Novedades - refleja `app/schemas/novedad.py`
 // ---------------------------------------------------------------------------
 

@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { CursadaConProfesor } from "@/lib/types";
 import { acentoProfesor, inicialesProfesor } from "@/lib/profesorAvatar";
 import { rangoHorario } from "@/lib/horario";
+import { CalificarCatedra } from "@/components/resenas/CalificarCatedra";
 import { NotaCatedra } from "./Score";
 
 /**
@@ -13,8 +14,9 @@ export function MateriaComisionRow({ cursada }: { cursada: CursadaConProfesor })
   const materia = cursada.materia_nombre ?? cursada.materia_codigo;
 
   return (
-    <li className="flex items-start justify-between gap-3 rounded-xl bg-surface-container-low px-3.5 py-3">
-      <div className="min-w-0 flex-1">
+    <li className="rounded-xl bg-surface-container-low px-3.5 py-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
         <p className="text-sm text-on-surface leading-snug">{materia}</p>
         {cursada.horarios.length > 0 ? (
           <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
@@ -38,9 +40,18 @@ export function MateriaComisionRow({ cursada }: { cursada: CursadaConProfesor })
             cantidad={cursada.cantidad_respuestas}
           />
         )}
-      </div>
+        </div>
 
-      <ProfesorTag cursada={cursada} />
+        <ProfesorTag cursada={cursada} />
+      </div>
+      {cursada.profesor && (
+        <div className="mt-2 border-t border-outline-variant/10 pt-2">
+          <CalificarCatedra
+            materiaCodigo={cursada.materia_codigo}
+            profesorId={cursada.profesor.id}
+          />
+        </div>
+      )}
     </li>
   );
 }

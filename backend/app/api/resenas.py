@@ -13,7 +13,12 @@ from sqlalchemy.orm import Session
 from app.api.deps import UsuarioActual
 from app.core.exceptions import MateriaInexistente, ProfesorInexistente
 from app.db.session import get_db
-from app.schemas.resena import ResenaAlumnoIn, ResenaAlumnoOut
+from app.schemas.resena import (
+    CatedraParaCalificarOut,
+    ProfesorMiniResena,
+    ResenaAlumnoIn,
+    ResenaAlumnoOut,
+)
 from app.services import resena_service
 
 router = APIRouter(prefix="/mi/resenas", tags=["resenas"])
@@ -26,6 +31,24 @@ def listar_mis_resenas(
 ) -> list[ResenaAlumnoOut]:
     """Reseñas que el alumno ya cargó (para prellenar la UI)."""
     return resena_service.listar_mias(db, usuario.id)
+
+
+@router.get("/catedras", response_model=list[CatedraParaCalificarOut])
+def listar_catedras_para_calificar(
+    usuario: UsuarioActual,
+    db: Annotated[Session, Depends(get_db)],
+) -> list[CatedraParaCalificarOut]:
+    """Cátedras que el alumno cursó/cursa (con sus profesores), para calificarlas
+    desde su historial."""
+    cats = resena_service.catedras_para_calificar(db, usuario.id)
+    return [
+        CatedraParaCalificarOut(
+            materia_codigo=c.materia_codigo,
+            materia_nombre=c.materia_nombre,
+            profesores=[ProfesorMiniResena(id=p.id, nombre=p.nombre) for p in c.profesores],
+        )
+        for c in cats
+    ]
 
 
 @router.put("", response_model=ResenaAlumnoOut)

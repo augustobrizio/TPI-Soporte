@@ -6,18 +6,27 @@ import type {
 } from "@/lib/types";
 import { acentoProfesor, inicialesProfesor } from "@/lib/profesorAvatar";
 import { formatHora } from "@/lib/horario";
+import { MisResenasProvider } from "@/components/resenas/MisResenasProvider";
+import { CalificarCatedra } from "@/components/resenas/CalificarCatedra";
 
 const ANIO_ORD: Record<number, string> = { 1: "1ro", 2: "2do", 3: "3er", 4: "4to", 5: "5to" };
 
 /**
- * Detalle de un profesor: datos de contacto, materias que dicta (solo
- * informativas, sin enlace) y horarios de consulta.
+ * Detalle de un profesor: datos de contacto, materias que dicta (con opción de
+ * calificar la cátedra) y horarios de consulta.
  */
-export function ProfesorDetalle({ detalle }: { detalle: ProfesorDetalleOut }) {
+export function ProfesorDetalle({
+  detalle,
+  loggedIn = false,
+}: {
+  detalle: ProfesorDetalleOut;
+  loggedIn?: boolean;
+}) {
   const acento = acentoProfesor(detalle.id);
   const nombre = detalle.nombre ?? "Sin nombre";
 
   return (
+    <MisResenasProvider loggedIn={loggedIn}>
     <div className="p-8 max-w-5xl mx-auto">
       <Link
         href="/profesores"
@@ -60,7 +69,11 @@ export function ProfesorDetalle({ detalle }: { detalle: ProfesorDetalleOut }) {
           ) : (
             <ul className="space-y-2">
               {detalle.materias.map((m) => (
-                <MateriaItem key={`${m.materia_codigo}-${m.cargo ?? ""}-${m.anio ?? ""}`} materia={m} />
+                <MateriaItem
+                  key={`${m.materia_codigo}-${m.cargo ?? ""}-${m.anio ?? ""}`}
+                  materia={m}
+                  profesorId={detalle.id}
+                />
               ))}
             </ul>
           )}
@@ -84,6 +97,7 @@ export function ProfesorDetalle({ detalle }: { detalle: ProfesorDetalleOut }) {
         </Seccion>
       </div>
     </div>
+    </MisResenasProvider>
   );
 }
 
@@ -110,7 +124,13 @@ function Seccion({
   );
 }
 
-function MateriaItem({ materia }: { materia: MateriaProfesorOut }) {
+function MateriaItem({
+  materia,
+  profesorId,
+}: {
+  materia: MateriaProfesorOut;
+  profesorId: number;
+}) {
   const nombre = materia.materia_nombre ?? materia.materia_codigo;
   const anioLabel =
     materia.anio != null ? (ANIO_ORD[materia.anio] ?? `${materia.anio}°`) + " año" : null;
@@ -127,6 +147,9 @@ function MateriaItem({ materia }: { materia: MateriaProfesorOut }) {
         )}
         {anioLabel && <span>· {anioLabel}</span>}
         <span className="ml-auto font-mono text-outline/70">{materia.materia_codigo}</span>
+      </div>
+      <div className="mt-2 border-t border-outline-variant/10 pt-2">
+        <CalificarCatedra materiaCodigo={materia.materia_codigo} profesorId={profesorId} />
       </div>
     </li>
   );

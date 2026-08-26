@@ -26,3 +26,18 @@ class ResenaAlumnoOut(BaseModel):
     comentario: str | None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class ProfesorMiniResena(BaseModel):
+    id: int
+    nombre: str | None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CatedraParaCalificarOut(BaseModel):
+    """Una materia que el alumno cursó (o cursa) + los profesores a calificar."""
+
+    materia_codigo: str
+    materia_nombre: str | None
+    profesores: list[ProfesorMiniResena]

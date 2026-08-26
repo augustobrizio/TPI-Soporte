@@ -1,4 +1,5 @@
 import { RequiereCuenta } from "@/components/RequiereCuenta";
+import { MisCatedrasCalificar } from "@/components/resenas/MisCatedrasCalificar";
 import { PanelPersonal } from "@/features/panel/PanelPersonal";
 import { getUsuarioActual, iniciales, nombreVisible } from "@/lib/auth";
 
@@ -86,6 +87,11 @@ export default async function PerfilPage() {
             </p>
           </div>
         ))}
+      </div>
+
+      {/* Calificá a tus profesores (historial → reseñas, feature 004) */}
+      <div className="mb-6">
+        <MisCatedrasCalificar />
       </div>
 
       {/* Nota de proximamente */}

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ApiError, getProfesorDetalle } from "@/lib/api";
+import { getUsuarioActual } from "@/lib/auth";
 import type { ProfesorDetalleOut } from "@/lib/types";
 import { ProfesorDetalle } from "@/components/profesores/ProfesorDetalle";
 
@@ -62,5 +63,6 @@ export default async function ProfesorDetallePage({ params }: PageProps) {
     );
   }
 
-  return <ProfesorDetalle detalle={detalle!} />;
+  const usuario = await getUsuarioActual();
+  return <ProfesorDetalle detalle={detalle!} loggedIn={usuario != null} />;
 }

@@ -1,4 +1,5 @@
 import { ApiError, listarComisionesConProfesores } from "@/lib/api";
+import { getUsuarioActual } from "@/lib/auth";
 import type { ComisionConProfesores } from "@/lib/types";
 import { ComisionesView } from "@/components/comisiones/ComisionesView";
 
@@ -43,5 +44,6 @@ export default async function ComisionesPage() {
     );
   }
 
-  return <ComisionesView comisiones={comisiones} />;
+  const usuario = await getUsuarioActual();
+  return <ComisionesView comisiones={comisiones} loggedIn={usuario != null} />;
 }

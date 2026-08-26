@@ -8,6 +8,7 @@
 
 import { useMemo, useState } from "react";
 import type { ComisionConProfesores } from "@/lib/types";
+import { MisResenasProvider } from "@/components/resenas/MisResenasProvider";
 import { ComisionCard } from "./ComisionCard";
 
 /**
@@ -20,7 +21,13 @@ function anioDeComision(c: ComisionConProfesores): number | null {
   return m ? parseInt(m[0], 10) : null;
 }
 
-export function ComisionesView({ comisiones }: { comisiones: ComisionConProfesores[] }) {
+export function ComisionesView({
+  comisiones,
+  loggedIn = false,
+}: {
+  comisiones: ComisionConProfesores[];
+  loggedIn?: boolean;
+}) {
   const anios = useMemo(() => {
     const s = new Set<number>();
     for (const c of comisiones) {
@@ -51,6 +58,7 @@ export function ComisionesView({ comisiones }: { comisiones: ComisionConProfesor
   const vacio = comisiones.length === 0;
 
   return (
+    <MisResenasProvider loggedIn={loggedIn}>
     <div className="p-8 max-w-7xl mx-auto">
       <header className="glow-band glow-tertiary bg-surface-container border border-outline-variant/10 rounded-3xl p-6 md:p-7 mb-6 space-y-2">
         <h1 className="text-4xl font-extrabold tracking-tight font-headline text-on-surface">
@@ -102,6 +110,7 @@ export function ComisionesView({ comisiones }: { comisiones: ComisionConProfesor
         </div>
       )}
     </div>
+    </MisResenasProvider>
   );
 }
 

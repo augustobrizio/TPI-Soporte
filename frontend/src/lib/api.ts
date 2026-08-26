@@ -6,6 +6,7 @@
  * momento sumamos client-side fetching pesado, vemos.
  */
 import type {
+  CatedraParaCalificar,
   CategoriaNovedad,
   CentroOut,
   ConfirmarImportIn,
@@ -22,6 +23,7 @@ import type {
   PreviewImportSysacad,
   ProfesorDetalleOut,
   ProfesorListItem,
+  ResenaAlumno,
   ResultadoImportSysacad,
   ResultadoSincCalendario,
   ResultadoSincCatedras,
@@ -236,6 +238,70 @@ export async function resetearTodosRegistros(): Promise<{ eliminados: number }> 
     throw new ApiError(res.status, null);
   }
   return res.json() as Promise<{ eliminados: number }>;
+}
+
+// --- Reseñas de alumnos (feature 004) --------------------------------------
+
+/** Mis reseñas (para prellenar la UI). Sin sesión devuelve lista vacía. */
+export async function listarMisResenas(): Promise<ResenaAlumno[]> {
+  const res = await fetch(`${MUTATION_BASE}/mi/resenas`, {
+    headers: { Accept: "application/json" },
+  });
+  if (res.status === 401) return [];
+  if (!res.ok) {
+    throw new ApiError(res.status, null);
+  }
+  return res.json() as Promise<ResenaAlumno[]>;
+}
+
+/** Crea o actualiza mi reseña sobre una cátedra (una por materia+profesor). */
+export async function guardarResena(payload: {
+  materia_codigo: string;
+  profesor_id: number;
+  nivel: number;
+  comentario?: string | null;
+}): Promise<ResenaAlumno> {
+  const res = await fetch(`${MUTATION_BASE}/mi/resenas`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    let body: unknown = null;
+    try { body = await res.json(); } catch { /* ignorar */ }
+    throw new ApiError(res.status, body);
+  }
+  return res.json() as Promise<ResenaAlumno>;
+}
+
+/** Cátedras que cursé/curso (con sus profesores), para calificar desde el perfil. */
+export async function listarCatedrasParaCalificar(): Promise<CatedraParaCalificar[]> {
+  const res = await fetch(`${MUTATION_BASE}/mi/resenas/catedras`, {
+    headers: { Accept: "application/json" },
+  });
+  if (res.status === 401) return [];
+  if (!res.ok) {
+    throw new ApiError(res.status, null);
+  }
+  return res.json() as Promise<CatedraParaCalificar[]>;
+}
+
+/** Borra mi reseña sobre una cátedra. */
+export async function borrarResena(
+  materia_codigo: string,
+  profesor_id: number,
+): Promise<void> {
+  const qs = new URLSearchParams({
+    materia_codigo,
+    profesor_id: String(profesor_id),
+  });
+  const res = await fetch(`${MUTATION_BASE}/mi/resenas?${qs.toString()}`, {
+    method: "DELETE",
+    headers: { Accept: "application/json" },
+  });
+  if (!res.ok && res.status !== 404) {
+    throw new ApiError(res.status, null);
+  }
 }
 
 /**
