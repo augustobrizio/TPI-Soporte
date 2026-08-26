@@ -13,27 +13,30 @@ export function ProfesorCard({ profesor }: { profesor: ProfesorListItem }) {
   return (
     <Link
       href={`/profesores/${profesor.id}`}
-      className="card-3d cal-card group flex flex-col gap-4 rounded-2xl bg-surface-container/60 border border-outline-variant/10 p-5 hover:border-outline-variant/25"
+      className="card-3d group flex flex-col gap-3.5 rounded-2xl border border-outline-variant/10 bg-surface-container/50 p-4 transition-colors hover:border-primary/30 hover:bg-surface-container/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
     >
       <div className="flex items-start gap-3">
         <div
-          className={`w-11 h-11 rounded-xl border flex items-center justify-center shrink-0 font-headline font-black text-sm ${acento.wrapper}`}
+          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border font-headline text-sm font-black ${acento.wrapper}`}
         >
           {inicialesProfesor(profesor.nombre)}
         </div>
         <div className="min-w-0 flex-1">
-          <h3 className="text-sm font-headline font-bold text-on-surface leading-snug line-clamp-2 group-hover:text-primary transition-colors">
+          <h3 className="line-clamp-2 font-headline text-sm font-bold leading-snug text-on-surface transition-colors group-hover:text-primary">
             {nombre}
           </h3>
           {profesor.email ? (
-            <p className="text-xs text-on-surface-variant truncate mt-0.5">{profesor.email}</p>
+            <p className="mt-0.5 truncate text-xs text-on-surface-variant">{profesor.email}</p>
           ) : (
-            <p className="text-xs text-outline/70 italic mt-0.5">Sin email</p>
+            <p className="mt-0.5 text-xs italic text-outline/70">Sin email</p>
           )}
         </div>
+        <span className="material-symbols-outlined shrink-0 text-[18px] text-outline/50 transition-all group-hover:translate-x-0.5 group-hover:text-primary">
+          arrow_forward
+        </span>
       </div>
 
-      <div className="flex items-center gap-2 mt-auto">
+      <div className="mt-auto flex items-center gap-3.5 border-t border-outline-variant/10 pt-3 text-[11px] text-outline">
         <Contador icono="menu_book" valor={profesor.cantidad_materias} etiqueta="materias" />
         <Contador icono="schedule" valor={profesor.cantidad_horarios} etiqueta="consulta" />
       </div>
@@ -51,10 +54,10 @@ function Contador({
   etiqueta: string;
 }) {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-lg bg-surface-container-high/60 px-2.5 py-1 text-[11px] text-on-surface-variant">
-      <span className="material-symbols-outlined text-[15px] text-outline">{icono}</span>
-      <span className="font-semibold text-on-surface">{valor}</span>
-      <span className="text-outline">{etiqueta}</span>
+    <span className="inline-flex items-center gap-1.5">
+      <span className="material-symbols-outlined text-[15px] text-outline/70">{icono}</span>
+      <span className="font-semibold text-on-surface-variant tabular-nums">{valor}</span>
+      <span>{etiqueta}</span>
     </span>
   );
 }

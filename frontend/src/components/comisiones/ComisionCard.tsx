@@ -21,7 +21,7 @@ export function ComisionCard({ comision }: { comision: ComisionConProfesores }) 
       <DialogTrigger asChild>
         <button
           type="button"
-          className="card-3d cal-card group w-full cursor-pointer rounded-2xl border border-outline-variant/10 bg-surface-container/60 p-4 text-left transition-colors hover:border-primary/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+          className="card-3d group w-full cursor-pointer rounded-2xl border border-outline-variant/10 bg-surface-container/50 p-4 text-left transition-colors hover:border-primary/30 hover:bg-surface-container/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
         >
           <div className="flex items-start gap-3">
             <div className="icon-chip chip-primary flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-primary">

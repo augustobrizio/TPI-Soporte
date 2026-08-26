@@ -58,6 +58,18 @@ export function ProfesorDetalle({
           ) : (
             <p className="text-sm text-outline/70 italic mt-1.5">Sin email de contacto</p>
           )}
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <StatChip
+              icono="menu_book"
+              valor={detalle.materias.length}
+              etiqueta={detalle.materias.length === 1 ? "materia" : "materias"}
+            />
+            <StatChip
+              icono="schedule"
+              valor={detalle.horarios_consulta.length}
+              etiqueta={detalle.horarios_consulta.length === 1 ? "horario de consulta" : "horarios de consulta"}
+            />
+          </div>
         </div>
       </header>
 
@@ -136,18 +148,17 @@ function MateriaItem({
     materia.anio != null ? (ANIO_ORD[materia.anio] ?? `${materia.anio}°`) + " año" : null;
   return (
     <li className="rounded-xl bg-surface-container-low px-3.5 py-2.5">
-      <p className="text-sm text-on-surface leading-snug">{nombre}</p>
-      <div className="flex items-center gap-2 mt-1 text-[11px] text-outline">
-        {materia.cargo ? (
-          <span className="uppercase tracking-wide font-semibold text-on-surface-variant">
-            {materia.cargo}
-          </span>
-        ) : (
-          <span className="italic">sin cargo</span>
-        )}
-        {anioLabel && <span>· {anioLabel}</span>}
-        <span className="ml-auto font-mono text-outline/70">{materia.materia_codigo}</span>
-      </div>
+      <p className="text-sm font-medium text-on-surface leading-snug">{nombre}</p>
+      {(materia.cargo || anioLabel) && (
+        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-outline">
+          {materia.cargo && (
+            <span className="font-semibold uppercase tracking-wide text-on-surface-variant">
+              {materia.cargo}
+            </span>
+          )}
+          {anioLabel && <span>{anioLabel}</span>}
+        </div>
+      )}
       <div className="mt-2 border-t border-outline-variant/10 pt-2">
         <CalificarCatedra materiaCodigo={materia.materia_codigo} profesorId={profesorId} />
       </div>
@@ -159,28 +170,61 @@ function HorarioItem({ horario }: { horario: HorarioConsultaOut }) {
   const inicio = formatHora(horario.hora_inicio);
   const fin = formatHora(horario.hora_fin);
   const rango = inicio && fin ? `${inicio}–${fin}` : inicio ?? fin ?? "sin horario";
+  const aulaEsLink = horario.aula ? /^https?:\/\//i.test(horario.aula) : false;
   return (
     <li className="rounded-xl bg-surface-container-low px-3.5 py-2.5">
       <div className="flex items-center gap-2">
         <span className="text-sm font-semibold text-on-surface">{horario.dia ?? "Sin día"}</span>
-        <span className="text-sm text-primary font-mono">{rango}</span>
+        <span className="font-mono text-sm text-primary">{rango}</span>
       </div>
-      <div className="flex items-center gap-2 mt-1 text-[11px] text-outline">
+      <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-outline">
         {horario.modalidad && (
           <span className="inline-flex items-center gap-1">
-            <span className="material-symbols-outlined text-[13px]">videocam</span>
+            <span className="material-symbols-outlined text-[13px]">
+              {aulaEsLink ? "videocam" : "location_on"}
+            </span>
             {horario.modalidad}
           </span>
         )}
-        {horario.aula && (
-          <span className="inline-flex items-center gap-1">
-            <span className="material-symbols-outlined text-[13px]">meeting_room</span>
-            {horario.aula}
-          </span>
+        {aulaEsLink ? (
+          <a
+            href={horario.aula!}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 font-semibold text-primary hover:underline"
+          >
+            Unirse
+            <span className="material-symbols-outlined text-[12px]">open_in_new</span>
+          </a>
+        ) : (
+          horario.aula && (
+            <span className="inline-flex items-center gap-1">
+              <span className="material-symbols-outlined text-[13px]">meeting_room</span>
+              {horario.aula}
+            </span>
+          )
         )}
         {!horario.modalidad && !horario.aula && <span className="italic">sin modalidad ni aula</span>}
       </div>
     </li>
+  );
+}
+
+function StatChip({
+  icono,
+  valor,
+  etiqueta,
+}: {
+  icono: string;
+  valor: number;
+  etiqueta: string;
+}) {
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-lg bg-surface-container-high/60 px-2.5 py-1 text-xs text-on-surface-variant">
+      <span className="material-symbols-outlined text-[15px] text-outline">{icono}</span>
+      <span className="font-semibold text-on-surface tabular-nums">{valor}</span>
+      {etiqueta}
+    </span>
   );
 }
 
