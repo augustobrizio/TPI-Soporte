@@ -814,7 +814,7 @@ wheels = [
 
 [[package]]
 name = "instagrapi"
-version = "2.18.1"
+version = "2.18.18"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pillow" },
@@ -824,9 +824,9 @@ dependencies = [
     { name = "pysocks" },
     { name = "requests" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/04/89/7c66c17805ff287fc6d3da5a7cfda77bcddfe90ed6e6f9156a62297ffedb/instagrapi-2.18.1.tar.gz", hash = "sha256:6a57ab3ae9fe161f719ae595d9744cc58d074c11926d4c3a0ecb63a00b34aadc", size = 210656, upload-time = "2026-07-01T23:26:27.499Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/e7/6a/6d76b1502c91efd257468e0c6a48e0302b385a03a0d6eae3fa4f4f56ecfc/instagrapi-2.18.18.tar.gz", hash = "sha256:148cbb62ac20bbc4bddb15b3df8c8d75fa08a8090b0afc36c6c815df44991788", size = 225683, upload-time = "2026-08-26T10:55:23.431Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/67/b0/59356eb58f730c75500978de06c1bf20bf10078f9889348dda0d0fabfe33/instagrapi-2.18.1-py3-none-any.whl", hash = "sha256:34504e4ab877c93292bbfd2cd393aa172b602608656670b59eaff71acc7bda54", size = 228082, upload-time = "2026-07-01T23:26:25.705Z" },
+    { url = "https://files.pythonhosted.org/packages/db/9e/b696f8c49ace6f707a3d5467a9c99bc3452cf9b0a706a3616c2654541fde/instagrapi-2.18.18-py3-none-any.whl", hash = "sha256:79799653310d10c73d50784f62db3f838e54f643422b54bc85b26dc2fc82cf6e", size = 243962, upload-time = "2026-08-26T10:55:21.72Z" },
 ]
 
 [[package]]
@@ -2633,7 +2633,7 @@ requires-dist = [
     { name = "email-validator", specifier = ">=2.2" },
     { name = "fastapi", specifier = ">=0.115" },
     { name = "httpx", specifier = ">=0.28" },
-    { name = "instagrapi", specifier = ">=2.1" },
+    { name = "instagrapi", specifier = ">=2.18.18" },
     { name = "langchain", specifier = ">=0.3" },
     { name = "langchain-community", specifier = ">=0.3" },
     { name = "langchain-openai", specifier = ">=0.3" },

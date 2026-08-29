@@ -134,3 +134,33 @@ de una cuenta de Instagram nueva).
   vez de imagen propia por fallos de S3 durante el debugging de esta
   infraestructura (ya resueltos) — el dedup por `external_id` no las va a
   reprocesar solas.
+
+## Autenticación de Instagram: qué funciona y qué no (ago 2026)
+
+La ingesta de Instagram estuvo caída ~7 semanas sin que nadie se enterara
+(ver "falla silenciosa" abajo). Al investigarlo se midió lo siguiente:
+
+| Camino | Resultado |
+|---|---|
+| Lectura anónima (instaloader, sin login) | ❌ `429` ya en el primer request, incluso desde IP residencial con 2 requests/hora. La lectura sin autenticar está muerta. |
+| Endpoint público `web_profile_info` | ❌ `429`. Es el fallback de `_user_id()` y nunca conviene llegar ahí. |
+| Login mobile de instagrapi (`client.login`) | ⚠️ `bad_password` aun con credenciales correctas — [problema conocido](https://github.com/subzeroid/instagrapi/issues/1498). instagrapi lo aclara en su propio fuente: *"can also happen when Instagram rejects the proxy/IP, device fingerprint, or login context, even if the password is correct"*. |
+| **Login web** (`/api/v1/web/accounts/login/ajax/`) | ✅ Funciona como camino programático. Da errores **precisos** (`UserInvalidCredentials` con `user: true/false`) y devuelve el `sessionid` en caso de éxito. |
+| `sessionid` de browser | ✅ Funciona, pero es un token estático que vence y requiere un humano. |
+
+Por eso `_autenticar()` implementa esta escalera: `INSTAGRAM_SESSIONID` →
+**login web** (renovable, sin humano) → login mobile de instagrapi (último
+recurso). El login web es lo que permite obtener un sessionid fresco
+programáticamente, sin sacar cookies del browser a mano.
+
+### Falla silenciosa (corregido)
+
+`fetch_recientes()` devolvía `[]` cuando fallaban *todos* los handles, y el
+service lo leía como "no había nada nuevo" → `estado=ok` en `ingesta_log`.
+Un fallo total era indistinguible de una corrida sana. Ahora, si fallan
+todos, se propaga la excepción → `estado=error`, y el handler de Lambda
+loguea `INGESTA_FALLIDA` y devuelve `{"ok": false}`.
+
+Además `_login()` valida la sesión con `account_info()` antes de reusarla:
+sin eso, una sesión muerta en S3 ganaba para siempre sobre un sessionid
+fresco y la ingesta no se recuperaba nunca.

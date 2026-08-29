@@ -29,7 +29,13 @@ def handler(event, context):
                 f.items_descartados,
                 f.estado,
             )
-        return {"ok": True, "fuentes": [f.fuente for f in resultado.fuentes]}
+        # El service atrapa los fallos de fuente, asi que sin esto la Lambda
+        # reportaria exito con la ingesta caida. No relanzamos: EventBridge
+        # invoca async y reintentaria contra una fuente ya rate-limiteada.
+        fallidas = [f.fuente for f in resultado.fuentes if f.estado == "error"]
+        if fallidas:
+            logger.error("INGESTA_FALLIDA fuentes=%s", ",".join(fallidas))
+        return {"ok": not fallidas, "fuentes": [f.fuente for f in resultado.fuentes]}
     except Exception:
         logger.exception("Ingesta Instagram falló")
         db.rollback()

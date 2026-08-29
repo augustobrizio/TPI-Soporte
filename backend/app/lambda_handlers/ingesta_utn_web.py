@@ -29,7 +29,12 @@ def handler(event, context):
                 f.items_descartados,
                 f.estado,
             )
-        return {"ok": True, "fuentes": [f.fuente for f in resultado.fuentes]}
+        # Idem ingesta_instagram: sin esto la Lambda reporta exito con la
+        # ingesta caida (el service atrapa los fallos de fuente).
+        fallidas = [f.fuente for f in resultado.fuentes if f.estado == "error"]
+        if fallidas:
+            logger.error("INGESTA_FALLIDA fuentes=%s", ",".join(fallidas))
+        return {"ok": not fallidas, "fuentes": [f.fuente for f in resultado.fuentes]}
     except Exception:
         logger.exception("Ingesta web falló")
         db.rollback()
