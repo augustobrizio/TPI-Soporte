@@ -12,9 +12,9 @@ Cada fuente tiene un perfil de riesgo/dependencias/horario distinto:
 
 | | `utnhub-ingesta-utn-web` | `utnhub-ingesta-instagram` |
 |---|---|---|
-| Dependencias | liviana (`httpx` + `bs4`) | pesada (`instagrapi`) |
+| Dependencias | liviana (`httpx` + `bs4`) | `curl_cffi` (binario de curl-impersonate) |
 | Riesgo | ninguno, scraping público | puede ser rate-limiteada/bloqueada por Meta |
-| Estado externo | ninguno | sesión de IG persistida |
+| Estado externo | ninguno | ninguno (ya no hay sesión que persistir) |
 | Trigger | EventBridge, `rate(7 days)` | EventBridge, `rate(6 hours)` |
 
 Si Instagram falla o queda bloqueada, no debe tumbar la ingesta del sitio
@@ -26,7 +26,7 @@ Lambda soporta desplegar código como `.zip` (con el runtime que administra
 AWS) o como imagen de contenedor (hasta 10GB, vía ECR). Se eligió **imagen
 de contenedor** porque:
 
-- Las dependencias reales (`instagrapi`, `psycopg2`, `langchain-openai`)
+- Las dependencias reales (`curl_cffi`, `psycopg2`, `langchain-openai`)
   superan cómodo el límite de 250MB descomprimido de un zip.
 - `psycopg2` tiene extensiones en C — compilarlo en Windows/Mac produce
   binarios incompatibles con el runtime real de Lambda (Amazon Linux). El
@@ -55,13 +55,10 @@ Dos usos, dos prefijos con permisos distintos:
   CDN de Instagram, expiran en horas/días). Público de solo lectura
   (`s3:GetObject` para `Principal: *`, acotado a este prefijo en la bucket
   policy — no al bucket entero).
-- **`secrets/*`** — sesión de Instagram persistida (`instagrapi` la dumpea
-  como JSON). **Privado**, sin policy pública. Necesario porque Lambda solo
-  tiene `/tmp` escribible y no persiste entre invocaciones frías — sin esto,
-  cada cold start forzaría un login nuevo (justo el escenario de
-  challenge/rate-limit que se quiere evitar). `instagram.py::_login()`
-  baja la sesión de S3 al arrancar si no hay una local, y la sube después
-  de un login nuevo.
+- **`secrets/*`** — **obsoleto**. Guardaba la sesión de `instagrapi`. Desde
+  que la ingesta lee Instagram sin credenciales (ver abajo) no hay sesión que
+  persistir y el prefijo quedó sin uso. Se conserva privado, sin policy
+  pública.
 
 Lógica en `backend/app/core/storage.py` (`subir`/`bajar`/`habilitado`).
 Best-effort: un fallo de S3 no debe tumbar la ingesta (cae a disco local en
@@ -126,32 +123,75 @@ de una cuenta de Instagram nueva).
 
 - **IaC**: todo lo de este doc se armó a mano (consola + CLI), a propósito,
   para aprender el terreno antes de codificarlo. Terraform queda pendiente.
-- **Proxy residencial para Instagram**: no se agregó — se decidió probar
-  primero sin proxy (la sesión persistida evita el login repetido desde IP
-  de datacenter, que es el paso más "detectable"). Si Meta empieza a
-  bloquear, retomar esa conversación.
+- **Proxy residencial para Instagram**: ya no hace falta. Se creía que el
+  bloqueo era por IP de datacenter y resultó ser por fingerprint TLS (abajo);
+  desde Lambda, con un handshake de browser, los endpoints públicos responden
+  200 sin proxy.
 - **Backfill de imágenes**: algunas novedades quedaron con placeholder en
   vez de imagen propia por fallos de S3 durante el debugging de esta
   infraestructura (ya resueltos) — el dedup por `external_id` no las va a
   reprocesar solas.
 
-## Autenticación de Instagram: qué funciona y qué no (ago 2026)
+## Acceso a Instagram: el bloqueo era el fingerprint TLS (ago 2026)
 
-La ingesta de Instagram estuvo caída ~7 semanas sin que nadie se enterara
-(ver "falla silenciosa" abajo). Al investigarlo se midió lo siguiente:
+La ingesta de Instagram estuvo caída ~7 semanas sin que nadie se enterara (ver
+"falla silenciosa" abajo). El primer diagnóstico concluyó que no había salida:
+la lectura anónima daba `429` **incluso desde una IP residencial**, el login
+mobile daba `bad_password` con la contraseña correcta y el login web moría en
+`AuthPlatformAntiScriptingException` → checkpoint.
 
-| Camino | Resultado |
-|---|---|
-| Lectura anónima (instaloader, sin login) | ❌ `429` ya en el primer request, incluso desde IP residencial con 2 requests/hora. La lectura sin autenticar está muerta. |
-| Endpoint público `web_profile_info` | ❌ `429`. Es el fallback de `_user_id()` y nunca conviene llegar ahí. |
-| Login mobile de instagrapi (`client.login`) | ⚠️ `bad_password` aun con credenciales correctas — [problema conocido](https://github.com/subzeroid/instagrapi/issues/1498). instagrapi lo aclara en su propio fuente: *"can also happen when Instagram rejects the proxy/IP, device fingerprint, or login context, even if the password is correct"*. |
-| **Login web** (`/api/v1/web/accounts/login/ajax/`) | ✅ Funciona como camino programático. Da errores **precisos** (`UserInvalidCredentials` con `user: true/false`) y devuelve el `sessionid` en caso de éxito. |
-| `sessionid` de browser | ✅ Funciona, pero es un token estático que vence y requiere un humano. |
+Las observaciones eran correctas; la inferencia no. Instagram clasifica
+clientes por el **handshake TLS** (JA3/JA4 + perfil HTTP/2), no solo por la
+reputación de la IP. `requests`, `httpx` y `urllib3` tienen firmas fijas que el
+WAF reconoce y corta **antes de mirar de dónde viene el request** — por eso el
+`429` aparecía igual desde Rosario que desde `us-east-1`, y parecía un
+rate-limit inesquivable cuando era una clasificación binaria.
 
-Por eso `_autenticar()` implementa esta escalera: `INSTAGRAM_SESSIONID` →
-**login web** (renovable, sin humano) → login mobile de instagrapi (último
-recurso). El login web es lo que permite obtener un sessionid fresco
-programáticamente, sin sacar cookies del browser a mano.
+La solución es [`curl_cffi`](https://github.com/lexiforest/curl_cffi), un
+binding de `curl-impersonate` que replica el handshake de un browser real.
+
+Medido el 2026-08-30 con una Lambda de diagnóstico desplegada a propósito para
+separar la variable *IP* de la variable *fingerprint*:
+
+| Cliente | Origen | Resultado |
+|---|---|---|
+| `requests` / `httpx` / `curl` | IP residencial | `429` al primer request |
+| `requests` / `httpx` | Lambda `us-east-1` | `401` en los 4 handles |
+| `curl_cffi` (`impersonate="chrome"`) | IP residencial | `200`, 12 posts |
+| `curl_cffi` (`impersonate="chrome"`) | Lambda `us-east-1` | `200`, 12 posts, 4/4 handles |
+
+Y sobre estabilidad, desde Lambda: **24 requests consecutivos, 200 en todos**,
+sin warmup, sin cookies y con sesión nueva por ronda. Funciona con cualquier
+target moderno (`chrome`, `chrome131`, `safari`, `firefox`): lo que importa es
+no parecer una librería HTTP de Python.
+
+### Consecuencias de diseño
+
+- **No hay credenciales de Instagram.** Se eliminaron `instagrapi`, la escalera
+  de login, el fingerprint de device y la sesión persistida en S3. La fuente ya
+  no tiene estado externo ni nada que pueda vencerse.
+- Se usa `GET /api/v1/feed/user/<handle>/username/`, que es **por username**:
+  desaparece el lookup previo de `user_id`, que era justo el request que más
+  rate-limit comía. Además no rompe en cuentas business, donde
+  `web_profile_info` devuelve un `400` del propio backend de Instagram
+  (`ig_business_category_subvertical has been deleted`).
+- **Las stories siguen detrás del login** y son el único contenido que lo
+  exige: sin sesión el endpoint devuelve `200` con `{"reels":{}}`, vacío y sin
+  error. Se traen best-effort si hay `INSTAGRAM_SESSIONID` y su ausencia o
+  vencimiento **nunca** rompe la ingesta de posts.
+
+### Por qué la sesión anterior duraba días (post-mortem)
+
+Vale registrarlo porque explica el síntoma original. En la ventana de julio en
+que la ingesta sí funcionó, el guardado de la sesión en S3 **falló en todas las
+corridas** con `InvalidAccessKeyId` (el gotcha de credenciales temporales de
+más arriba, corregido después).
+
+Consecuencia: cada invocación construía un cliente nuevo con un **device
+fingerprint aleatorio distinto** y readoptaba el mismo `sessionid`. Instagram
+vio una sola cookie saltando entre ~20 "teléfonos Android" en 5 días y la
+invalidó. La sesión no venció sola: la mataron por comportamiento
+inconsistente.
 
 ### Falla silenciosa (corregido)
 
@@ -161,6 +201,40 @@ Un fallo total era indistinguible de una corrida sana. Ahora, si fallan
 todos, se propaga la excepción → `estado=error`, y el handler de Lambda
 loguea `INGESTA_FALLIDA` y devuelve `{"ok": false}`.
 
-Además `_login()` valida la sesión con `account_info()` antes de reusarla:
-sin eso, una sesión muerta en S3 ganaba para siempre sobre un sessionid
-fresco y la ingesta no se recuperaba nunca.
+El mismo criterio se sostiene en el diseño nuevo: si fallan todos los handles
+se propaga; si falla uno, se sigue con el resto.
+
+## Clasificador: qué llega al LLM
+
+Entre el fetch y la clasificación hay tres filtros, todos para que la llamada
+cara corra lo menos posible:
+
+1. **Dedup exacto** por `external_id` — lo ya visto no se reclasifica nunca.
+2. **Corte por antigüedad** (`NOVEDADES_ANTIGUEDAD_MAX_DIAS`, default 90). El
+   feed de un perfil devuelve sus 12 últimos posts **sin ventana temporal**: en
+   cuentas poco activas eso se remonta años, y cada item cuesta ~28.000 tokens
+   porque va con la imagen a visión. Sin este corte se gastaba una llamada de
+   visión en saludos navideños de 2024. Los items **sin** fecha pasan igual:
+   preferimos gastar la clasificación antes que esconder algo por no saber
+   cuándo se publicó.
+3. **Tope por corrida** (`NOVEDADES_MAX_ITEMS_POR_CORRIDA`, default 40).
+
+El prompt (`app/ai/prompts/novedades.py`) recibe la fecha de hoy y la de
+publicación. Sin eso el modelo no podía saber que "Inscripción al Ciclo Lectivo
+2024" estaba vencida y la publicaba con confianza 1.0.
+
+## Moderación manual
+
+`PATCH /novedades/{id}/moderar` (rol `admin`) corrige el estado en los dos
+sentidos: republicar lo que el clasificador descartó mal, o bajar lo que
+publicó de más.
+
+`novedad.estado_llm` guarda lo que decidió el modelo y **la moderación no lo
+pisa**; `novedad.moderado_manual` marca que intervino un humano. Así
+
+```sql
+WHERE moderado_manual AND estado <> estado_llm
+```
+
+devuelve la lista de errores del clasificador, que es el insumo con el que se
+refina el prompt.
