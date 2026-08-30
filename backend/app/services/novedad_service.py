@@ -55,13 +55,12 @@ CENTROS_CONOCIDOS: dict[str, dict] = {
 
 
 def construir_fuentes() -> list[FuenteNovedad]:
-    """Fuentes habilitadas según config (import local para no exigir instagrapi)."""
+    """Fuentes habilitadas según config (import local: deps pesadas aparte)."""
     settings = get_settings()
     fuentes: list[FuenteNovedad] = []
 
-    if settings.instagram_handles_list and (
-        settings.instagram_sessionid or settings.instagram_usuario
-    ):
+    # Instagram ya no pide credenciales: alcanza con los handles a mirar.
+    if settings.instagram_handles_list:
         from app.scrapers.novedades.instagram import InstagramFuente
 
         fuentes.append(InstagramFuente())

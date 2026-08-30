@@ -68,13 +68,9 @@ class Settings(BaseSettings):
         default=40, alias="NOVEDADES_MAX_ITEMS_POR_CORRIDA"
     )
 
-    # Instagram: sessionid de un browser (recomendado); usuario/password fallback.
+    # Instagram: los posts se leen sin credenciales. El sessionid es opcional
+    # y sirve solo para las stories, que siguen detrás del login.
     instagram_sessionid: str | None = Field(default=None, alias="INSTAGRAM_SESSIONID")
-    instagram_usuario: str | None = Field(default=None, alias="INSTAGRAM_USUARIO")
-    instagram_password: str | None = Field(default=None, alias="INSTAGRAM_PASSWORD")
-    instagram_session_path: str = Field(
-        default="/data/instagram_session.json", alias="INSTAGRAM_SESSION_PATH"
-    )
     instagram_handles: str = Field(default="", alias="INSTAGRAM_HANDLES")
     novedades_media_dir: str = Field(
         default="/data/novedades_media", alias="NOVEDADES_MEDIA_DIR"
