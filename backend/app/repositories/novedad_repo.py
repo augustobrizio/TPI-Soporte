@@ -77,6 +77,9 @@ def crear_novedad(
         imagen_url=imagen_url,
         imagen_path=imagen_path,
         estado=estado,
+        # Se congela lo que decidio el clasificador: la moderacion manual pisa
+        # 'estado' pero no esto, asi queda el registro del error del LLM.
+        estado_llm=estado,
         confianza=confianza,
         motivo_descarte=motivo_descarte,
         fecha_publicacion=fecha_publicacion,
@@ -195,12 +198,14 @@ def get(db: Session, novedad_id: int) -> Novedad | None:
 
 
 def actualizar_estado(
-    db: Session, novedad_id: int, estado: str
+    db: Session, novedad_id: int, estado: str, *, manual: bool = False
 ) -> Novedad | None:
     novedad = db.get(Novedad, novedad_id)
     if novedad is None:
         return None
     novedad.estado = estado
+    if manual:
+        novedad.moderado_manual = True
     db.flush()
     return novedad
 

@@ -67,6 +67,13 @@ class Settings(BaseSettings):
     novedades_max_items_por_corrida: int = Field(
         default=40, alias="NOVEDADES_MAX_ITEMS_POR_CORRIDA"
     )
+    # Antigüedad máxima de un item para que valga clasificarlo. El feed de un
+    # perfil trae sus 12 últimos posts, que en cuentas poco activas se remontan
+    # años: sin este corte gastábamos una llamada de visión (~28k tokens, el
+    # motivo de los 429 de TPM) en saludos navideños de 2024. 0 = sin límite.
+    novedades_antiguedad_max_dias: int = Field(
+        default=90, alias="NOVEDADES_ANTIGUEDAD_MAX_DIAS"
+    )
 
     # Instagram: los posts se leen sin credenciales. El sessionid es opcional
     # y sirve solo para las stories, que siguen detrás del login.

@@ -96,6 +96,9 @@ class NovedadOut(BaseModel):
     imagen_url: str | None = None
     categoria: str | None = None
     estado: str
+    #: Estado que decidio el clasificador, para poder auditar sus errores.
+    estado_llm: str | None = None
+    moderado_manual: bool = False
     confianza: float | None = None
     fecha_publicacion: datetime | None = None
     created_at: datetime | None = None
@@ -115,6 +118,9 @@ class ResultadoFuente(BaseModel):
     items_novedad: int = 0
     items_descartados: int = 0
     items_duplicados: int = 0
+    #: Items salteados por viejos, sin llegar al LLM (ver
+    #: ``NOVEDADES_ANTIGUEDAD_MAX_DIAS``).
+    items_viejos: int = 0
     estado: str = "ok"
     errores: list[str] = Field(default_factory=list)
 

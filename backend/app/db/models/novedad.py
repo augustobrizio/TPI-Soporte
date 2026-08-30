@@ -5,6 +5,7 @@ import enum
 from datetime import datetime
 
 from sqlalchemy import (
+    Boolean,
     DateTime,
     Float,
     ForeignKey,
@@ -12,6 +13,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -108,6 +110,15 @@ class Novedad(Base):
     )
     confianza: Mapped[float | None] = mapped_column(Float, nullable=True)
     motivo_descarte: Mapped[str | None] = mapped_column(Text, nullable=True)
+    #: Estado que decidió el clasificador. No lo pisa la moderación manual:
+    #: comparado con ``estado`` da la lista de errores del LLM, que es la
+    #: materia prima para refinar el prompt.
+    estado_llm: Mapped[str | None] = mapped_column(Text, nullable=True)
+    #: True si un humano corrigió el estado. Distingue "el LLM acertó" de
+    #: "lo arreglamos a mano".
+    moderado_manual: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=text("false")
+    )
     fecha_publicacion: Mapped[datetime | None] = mapped_column(
         DateTime, nullable=True
     )
