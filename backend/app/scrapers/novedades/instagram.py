@@ -97,7 +97,13 @@ class InstagramFuente:
     def _fetch_stories(self, sesion, handle: str, pk: Any) -> list[NovedadCruda]:
         """Stories: requieren sesión. Best-effort, nunca tumba la ingesta."""
         settings = get_settings()
-        if not (settings.instagram_sessionid and pk):
+        if not settings.instagram_sessionid:
+            logger.info(
+                "Stories de @%s omitidas: no hay INSTAGRAM_SESSIONID configurado",
+                handle,
+            )
+            return []
+        if not pk:
             return []
         try:
             datos = _pedir_json(
@@ -114,6 +120,12 @@ class InstagramFuente:
                 handle,
             )
             return []
+
+        # Sin sesión válida Instagram no da error: devuelve 200 con "reels"
+        # vacío. Si nunca aparece una story en ningún handle, lo más probable
+        # es que el sessionid este muerto, no que no haya stories.
+        if not crudas:
+            logger.info("Sin stories visibles en @%s", handle)
 
         items: list[NovedadCruda] = []
         for story in crudas:

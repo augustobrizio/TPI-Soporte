@@ -51,6 +51,12 @@ CENTROS_CONOCIDOS: dict[str, dict] = {
         "url_perfil": "https://www.instagram.com/sauutnrosario/",
         "logo_url": "/novedades/fuentes/sauutnrosario.jpg",
     },
+    "utnros.sistemas": {
+        "nombre": "Ing. en Sistemas FRRO",
+        "tipo": "instagram",
+        "url_perfil": "https://www.instagram.com/utnros.sistemas/",
+        "logo_url": "/novedades/fuentes/utnros.sistemas.jpg",
+    },
 }
 
 

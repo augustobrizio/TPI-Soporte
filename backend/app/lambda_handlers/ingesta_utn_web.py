@@ -15,6 +15,23 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 
+def _flush_trazas() -> None:
+    """Vacía las trazas de LangSmith antes de devolver el control.
+
+    LangChain manda las trazas en un thread de background, pero Lambda congela
+    el entorno de ejecución apenas retorna el handler: sin este flush las
+    trazas se pierden y el proyecto de LangSmith queda vacío. Ojo que
+    ``LANGCHAIN_CALLBACKS_BACKGROUND=false`` NO sirve — en langchain-core 1.x
+    esa variable ya no se lee (verificado: no aparece en el paquete).
+    """
+    try:
+        from langchain_core.tracers.langchain import wait_for_all_tracers
+
+        wait_for_all_tracers()
+    except Exception:  # noqa: BLE001 — la observabilidad nunca tumba la ingesta
+        logger.warning("No se pudieron flushear las trazas de LangSmith", exc_info=True)
+
+
 def handler(event, context):
     db = SessionLocal()
     try:
@@ -40,4 +57,5 @@ def handler(event, context):
         db.rollback()
         raise
     finally:
+        _flush_trazas()
         db.close()

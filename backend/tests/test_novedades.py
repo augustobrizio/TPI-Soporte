@@ -219,3 +219,50 @@ def test_listar_api_solo_publicadas_por_defecto() -> None:
     assert res.status_code == 200
     titulos = [n["titulo"] for n in res.json()]
     assert titulos == ["a"]
+
+
+def _texto_del_prompt(item, recientes=None):
+    msg = clasificador_novedades._build_message(item, recientes or [])
+    return next(p["text"] for p in msg["content"] if p["type"] == "text")
+
+
+def test_el_prompt_incluye_hoy_y_la_fecha_de_publicacion(monkeypatch):
+    """Sin estas fechas el modelo publicaba contenido vencido con confianza 1.0."""
+    from datetime import UTC
+
+    monkeypatch.setattr(
+        clasificador_novedades, "_hoy", lambda: datetime(2026, 8, 30, tzinfo=UTC)
+    )
+    item = NovedadCruda(
+        external_id="instagram_post:X",
+        fuente="instagram",
+        texto="Inscripcion al Cursado Ciclo Lectivo 2024",
+        fecha_publicacion=datetime(2024, 3, 1, tzinfo=UTC),
+    )
+    texto = _texto_del_prompt(item)
+    assert "Fecha de hoy: 2026-08-30" in texto
+    assert "Fecha de publicación: 2024-03-01" in texto
+    assert "hace 912 días" in texto
+
+
+def test_fecha_de_publicacion_naive_se_asume_utc(monkeypatch):
+    """utn_web produce datetimes naive; no debe romper el calculo de antiguedad."""
+    from datetime import UTC
+
+    monkeypatch.setattr(
+        clasificador_novedades, "_hoy", lambda: datetime(2026, 8, 30, tzinfo=UTC)
+    )
+    item = NovedadCruda(
+        external_id="utn_web:1", fuente="utn_web", fecha_publicacion=datetime(2026, 8, 20)
+    )
+    assert "hace 10 días" in _texto_del_prompt(item)
+
+
+def test_sin_fecha_de_publicacion_se_declara_desconocida(monkeypatch):
+    from datetime import UTC
+
+    monkeypatch.setattr(
+        clasificador_novedades, "_hoy", lambda: datetime(2026, 8, 30, tzinfo=UTC)
+    )
+    item = NovedadCruda(external_id="utn_web:2", fuente="utn_web")
+    assert "Fecha de publicación: desconocida" in _texto_del_prompt(item)
