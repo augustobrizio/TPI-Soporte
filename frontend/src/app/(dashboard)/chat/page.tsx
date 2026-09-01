@@ -1,5 +1,5 @@
-import { Placeholder } from "@/components/Placeholder";
+import { ChatWindow } from "@/features/chat/ChatWindow";
 
 export default function ChatPage() {
-  return <Placeholder titulo="Chatbot" icono="smart_toy" />;
+  return <ChatWindow />;
 }
