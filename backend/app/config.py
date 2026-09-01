@@ -47,6 +47,27 @@ class Settings(BaseSettings):
         default=40, alias="NOVEDADES_MAX_ITEMS_POR_CORRIDA"
     )
 
+    # --- RAG del chatbot (RF-... asistente) ---
+    # El RAG usa Google Gemini (tier gratis), independiente de la cuenta OpenAI
+    # del clasificador de novedades. Key gratis en https://aistudio.google.com.
+    google_api_key: str | None = Field(default=None, alias="GOOGLE_API_KEY")
+    # Embeddings: convierten texto en vectores para la búsqueda por significado.
+    # gemini-embedding-001 soporta dimensión de salida configurable; le pedimos
+    # 768 (ver EMBEDDING_DIM en app/db/models/rag.py). OJO: si cambiás el modelo
+    # o la dimensión, actualizá EMBEDDING_DIM y re-embebé todo el corpus.
+    rag_embedding_model: str = Field(
+        default="models/gemini-embedding-001", alias="RAG_EMBEDDING_MODEL"
+    )
+    # Modelo que redacta la respuesta final del chatbot (chat, tier gratis).
+    # flash-lite: más barato y con más capacidad libre en el free tier (el flash
+    # "grande" se satura y tira 503 en horario pico). Para sintetizar contexto
+    # RAG rinde de sobra. Upgrade opcional: RAG_LLM_MODEL=gemini-flash-latest.
+    rag_llm_model: str = Field(
+        default="gemini-flash-lite-latest", alias="RAG_LLM_MODEL"
+    )
+    # Cuántos fragmentos recupera el retriever por pregunta.
+    rag_top_k: int = Field(default=5, alias="RAG_TOP_K")
+
     # Instagram: sessionid de un browser (recomendado); usuario/password fallback.
     instagram_sessionid: str | None = Field(default=None, alias="INSTAGRAM_SESSIONID")
     instagram_usuario: str | None = Field(default=None, alias="INSTAGRAM_USUARIO")
