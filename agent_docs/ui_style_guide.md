@@ -9,11 +9,23 @@ futuro; esa discusión sigue abierta.
 
 | | **Kinetic Blueprint** | **Sistema de tokens `--shell-*`** |
 |---|---|---|
-| Dónde se usa | Grafo de correlativas, Materias, Calendario, Horarios | Sidebar, TopNav, Novedades |
+| Dónde se usa | Grafo de correlativas, Materias, Horarios | Sidebar, TopNav, Novedades, portada, **Calendario** |
 | Paleta | Navy/MD3 (`surface`, `on-surface`, `primary`, etc. en `tailwind.config.ts`) | Canvas neutro (blanco/negro según modo), acento celeste institucional (`#1CA4DF`) |
 | Dark/Light | **Los dos modos** desde 2026-08 (`:root` claro / `.dark` oscuro en `globals.css`), pero varios componentes todavía tienen el color dark hardcodeado | Ambos modos, toggle en el TopNav (`next-themes`) |
 | Bordes | "No-Line Rule" (comentario en `globals.css`): nada de `border 1px solid gris`, se usa tonal layering / glow | Hairline borders explícitos vía `border-[var(--shell-border)]` |
 | Nombre en el código | Comentario "Kinetic Blueprint" en `tailwind.config.ts` y `globals.css` | Sin nombre propio en el código; identificado acá por el prefijo de sus variables CSS |
+
+**El Calendario se migró a `--shell-*` (2026-09-01).** Era la página con más
+deuda de las dos listas: colores dark-only hardcodeados, Material Symbols y
+emojis como identidad de categoría. Hoy usa los tokens del shell, lucide y
+—esto es lo que cambió de fondo— **el color dejó de nombrar la categoría y pasó
+a nombrar el rol**: qué significa ese evento para la cursada del alumno. Ver
+`components/calendario/utils.ts` (`RolEvento`, `ROL`, `impideCursada`) y los
+tokens `--cal-alerta-*` de `globals.css`. Los tres roles son `sin_cursada`
+(mesa de examen y feriado: en FRRO las dos cosas suspenden la cursada, así que
+comparten el ámbar), `propio` (lo que carga el alumno, en el celeste de marca)
+e `info` (institucional sin efecto sobre la cursada, en neutro). Cinco tonos
+saturados que competían entre sí pasaron a tres con significado.
 
 **No mezclar los dos sistemas en el mismo componente.** Cada página usa uno
 u otro completo. Si una página usa `surface`/`on-surface`/etc., seguir con
@@ -81,12 +93,15 @@ compartidas por ambos sistemas.
 Material Symbols Outlined (`<span className="material-symbols-outlined">nombre_del_icono</span>`),
 cargado globalmente en `app/layout.tsx`.
 
-**Ojo: hoy conviven dos.** El shell (`TopNav`, `Sidebar`, `MenuCuenta`,
-`CampanaNotificaciones`, `BuscadorGlobal`) usa **`lucide-react`**; el resto usa
-Material Symbols. No es una decisión tomada, es deuda: la regla práctica al
-tocar un archivo es seguir la que ya usa ese archivo, no mezclar las dos en un
-mismo componente. Unificarlas es un cambio de diseño propio, no algo para
-hacer de paso.
+**La decisión está tomada: `lucide-react`.** Es lo que declara
+`components.json` (`iconLibrary: "lucide"`) desde que se configuró shadcn. Ya
+están migrados el shell (`TopNav`, `Sidebar`, `MenuCuenta`,
+`CampanaNotificaciones`, `BuscadorGlobal`), la portada, el `Dialog` compartido
+y el Calendario. Lo que queda con Material Symbols es deuda: **al tocar un
+archivo que los use, migralo**, no agregues más.
+
+Y nada de emojis como iconografía. Se ven distintos en cada sistema operativo,
+no toman el color del tema y a 10px son manchas.
 
 ### Componentes base (`components/ui/`)
 

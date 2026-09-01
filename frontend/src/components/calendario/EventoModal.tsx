@@ -1,9 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import type { EventoCalendarioCreate, EventoCalendarioOut, TipoEventoCalendario } from "@/lib/types";
-import { TIPO } from "./utils";
+import { Trash2 } from "lucide-react";
 
+import type { EventoCalendarioCreate, EventoCalendarioOut, TipoEventoCalendario } from "@/lib/types";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
+import { TIPO, rolDe } from "./utils";
+
+/** Lo que el alumno puede agendar. Mesas y feriados los pone la facultad. */
 const TIPOS_CREABLES: TipoEventoCalendario[] = ["examen", "trabajo_practico", "evento"];
 
 function pad(n: number): string { return String(n).padStart(2, "0"); }
@@ -31,9 +36,7 @@ export function EventoModal({ modo, evento, fechaInicial, plantilla, onSubmit, o
   const [tipo, setTipo] = useState<TipoEventoCalendario>(
     evento && TIPOS_CREABLES.includes(evento.tipo) ? evento.tipo : (plantilla?.tipo ?? "examen"),
   );
-  const [fecha, setFecha] = useState(
-    evento ? toDateInput(evento.fecha_inicio) : fechaInicial ?? "",
-  );
+  const [fecha, setFecha] = useState(evento ? toDateInput(evento.fecha_inicio) : fechaInicial ?? "");
   const [hora, setHora] = useState(evento ? toTimeInput(evento.fecha_inicio) : "");
   const [descripcion, setDescripcion] = useState(evento?.descripcion ?? "");
   const [guardando, setGuardando] = useState(false);
@@ -64,121 +67,123 @@ export function EventoModal({ modo, evento, fechaInicial, plantilla, onSubmit, o
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      onClick={onClose}
-      style={{ background: "rgba(5,5,6,0.7)", backdropFilter: "blur(6px)" }}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-[460px] rounded-2xl overflow-hidden"
-        style={{ background: "#121215", border: "1px solid rgba(115,115,115,0.16)", boxShadow: "0 24px 60px rgba(0,0,0,0.5)" }}
-      >
-        {/* Header */}
-        <div className="flex items-center gap-3 px-5 py-4" style={{ borderBottom: "1px solid rgba(115,115,115,0.12)" }}>
-          <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: `rgba(${TIPO[tipo].rgb},0.16)`, border: `1px solid rgba(${TIPO[tipo].rgb},0.25)` }}>
-            <span className="material-symbols-outlined text-[20px]" style={{ color: TIPO[tipo].text }}>{TIPO[tipo].icon}</span>
-          </div>
-          <h2 className="flex-1 text-[15px] font-black font-headline text-on-surface">
+    <Dialog open onOpenChange={(abierto) => { if (!abierto) onClose(); }}>
+      <DialogContent className="max-w-[460px] p-0">
+        <div className="border-b border-[var(--shell-border)] px-5 py-4">
+          <DialogTitle className="text-[15px] font-bold">
             {modo === "crear" ? "Nuevo evento" : "Editar evento"}
-          </h2>
-          <button onClick={onClose} aria-label="Cerrar" className="w-8 h-8 rounded-lg flex items-center justify-center text-outline hover:text-on-surface hover:bg-surface-container-high transition-colors">
-            <span className="material-symbols-outlined text-[20px]">close</span>
-          </button>
+          </DialogTitle>
         </div>
 
-        {/* Form */}
-        <div className="px-5 py-4 space-y-4">
+        <div className="space-y-4 px-5 py-4">
           {/* Tipo */}
           <div className="flex gap-2">
             {TIPOS_CREABLES.map((t) => {
               const on = tipo === t;
+              const rol = rolDe(t);
+              const { Icono, label } = TIPO[t];
               return (
                 <button
                   key={t}
+                  type="button"
                   onClick={() => setTipo(t)}
-                  className="flex-1 flex items-center justify-center gap-1.5 rounded-lg py-2 text-[12px] font-bold font-label transition-all"
-                  style={{
-                    color: on ? "#09090b" : "rgba(163,163,163,0.72)",
-                    background: on ? TIPO[t].text : "rgba(35,35,39,0.6)",
-                    border: `1px solid ${on ? TIPO[t].text : "rgba(115,115,115,0.18)"}`,
-                  }}
+                  aria-pressed={on}
+                  className={cn(
+                    "flex flex-1 items-center justify-center gap-1.5 rounded-lg border py-2 font-label text-xs font-semibold transition-colors",
+                    on
+                      ? cn(rol.bg, rol.borde, rol.fg)
+                      : "border-[var(--shell-border)] text-[var(--shell-fg-dim)] hover:text-[var(--shell-fg-muted)]",
+                  )}
                 >
-                  <span>{TIPO[t].emoji}</span> {TIPO[t].label}
+                  <Icono className="h-3.5 w-3.5" strokeWidth={2} />
+                  {label}
                 </button>
               );
             })}
           </div>
 
-          {/* Título */}
-          <Field label="Título">
+          <Campo label="Título">
             <input
               autoFocus
               value={titulo}
               onChange={(e) => setTitulo(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") guardar(); }}
               placeholder="Ej. Parcial de Análisis Matemático"
-              className="w-full bg-transparent outline-none text-sm text-on-surface placeholder:text-outline/40"
+              className="w-full bg-transparent text-sm text-[var(--shell-fg)] outline-none placeholder:text-[var(--shell-fg-dim)]"
             />
-          </Field>
+          </Campo>
 
-          {/* Fecha + hora */}
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Fecha">
-              <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} className="w-full bg-transparent outline-none text-sm text-on-surface [color-scheme:dark]" />
-            </Field>
-            <Field label="Hora (opcional)">
-              <input type="time" value={hora} onChange={(e) => setHora(e.target.value)} className="w-full bg-transparent outline-none text-sm text-on-surface [color-scheme:dark]" />
-            </Field>
+            <Campo label="Fecha">
+              <input
+                type="date"
+                value={fecha}
+                onChange={(e) => setFecha(e.target.value)}
+                className="w-full bg-transparent text-sm text-[var(--shell-fg)] outline-none"
+              />
+            </Campo>
+            <Campo label="Hora (opcional)">
+              <input
+                type="time"
+                value={hora}
+                onChange={(e) => setHora(e.target.value)}
+                className="w-full bg-transparent text-sm text-[var(--shell-fg)] outline-none"
+              />
+            </Campo>
           </div>
 
-          {/* Descripción */}
-          <Field label="Nota (opcional)">
+          <Campo label="Nota (opcional)">
             <textarea
               value={descripcion}
               onChange={(e) => setDescripcion(e.target.value)}
               rows={2}
               placeholder="Aula, temas, recordatorio…"
-              className="w-full bg-transparent outline-none text-sm text-on-surface placeholder:text-outline/40 resize-none"
+              className="w-full resize-none bg-transparent text-sm text-[var(--shell-fg)] outline-none placeholder:text-[var(--shell-fg-dim)]"
             />
-          </Field>
+          </Campo>
         </div>
 
-        {/* Footer */}
-        <div className="px-5 py-3.5 flex items-center gap-2" style={{ borderTop: "1px solid rgba(115,115,115,0.12)" }}>
+        <div className="flex items-center gap-2 border-t border-[var(--shell-border)] px-5 py-3.5">
           {modo === "editar" && onEliminar && (
             <button
+              type="button"
               onClick={borrar}
               disabled={borrando}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold font-label text-error hover:bg-error/10 transition-colors disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 font-label text-xs font-semibold text-[#dc2626] transition-colors hover:bg-[#dc2626]/10 disabled:opacity-50 dark:text-[#f87171]"
             >
-              <span className="material-symbols-outlined text-[16px]">delete</span>
+              <Trash2 className="h-3.5 w-3.5" strokeWidth={2} />
               {borrando ? "Borrando…" : "Borrar"}
             </button>
           )}
           <div className="flex-1" />
-          <button onClick={onClose} className="px-4 py-2 rounded-lg text-xs font-bold font-label text-outline hover:text-on-surface transition-colors">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg px-4 py-2 font-label text-xs font-semibold text-[var(--shell-fg-muted)] transition-colors hover:text-[var(--shell-fg)]"
+          >
             Cancelar
           </button>
           <button
+            type="button"
             onClick={guardar}
             disabled={!valido || guardando}
-            className="px-4 py-2 rounded-lg text-xs font-bold font-label transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-            style={{ background: "#fafafa", color: "#09090b", boxShadow: "0 2px 10px rgba(0,0,0,0.35)" }}
+            className="rounded-lg bg-[#1CA4DF] px-4 py-2 font-label text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
           >
             {guardando ? "Guardando…" : modo === "crear" ? "Crear" : "Guardar"}
           </button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Campo({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="block text-[10px] uppercase tracking-[0.12em] font-bold font-label text-outline/60 mb-1.5">{label}</span>
-      <div className="rounded-lg px-3 py-2" style={{ background: "rgba(35,35,39,0.5)", border: "1px solid rgba(115,115,115,0.16)" }}>
+      <span className="mb-1.5 block font-label text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--shell-fg-dim)]">
+        {label}
+      </span>
+      <div className="rounded-lg border border-[var(--shell-border)] bg-[var(--shell-canvas)] px-3 py-2">
         {children}
       </div>
     </label>

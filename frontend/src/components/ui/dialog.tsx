@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -52,7 +53,7 @@ const DialogContent = React.forwardRef<
         className="absolute right-4 top-4 rounded-full p-1 text-[var(--shell-fg-dim)] transition-colors hover:bg-[var(--shell-hover)] hover:text-[var(--shell-fg)] focus:outline-none"
         aria-label="Cerrar"
       >
-        <span className="material-symbols-outlined text-[20px]">close</span>
+        <X className="h-4 w-4" strokeWidth={2} />
       </DialogPrimitive.Close>
     </DialogPrimitive.Content>
   </DialogPrimitive.Portal>

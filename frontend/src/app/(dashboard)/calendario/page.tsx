@@ -27,10 +27,10 @@ export default async function CalendarioPage() {
   ]);
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-blueprint">
+    <div className="min-h-[calc(100vh-4rem)] bg-[var(--shell-canvas)]">
       {error && (
         <div className="p-5 md:p-6 max-w-[1500px] mx-auto">
-          <div className="bg-error/10 border border-error/30 rounded-2xl px-4 py-3 text-sm text-error font-medium">
+          <div className="rounded-xl border border-[#dc2626]/30 bg-[#dc2626]/10 px-4 py-3 text-sm font-medium text-[#dc2626] dark:text-[#f87171]">
             No pude traer el calendario del backend ({error}).
           </div>
         </div>
