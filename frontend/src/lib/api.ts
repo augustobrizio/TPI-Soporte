@@ -143,7 +143,11 @@ export function listarEventosCalendario(
   if (params.tipo) qs.set("tipo", params.tipo);
   if (params.carrera !== undefined) qs.set("carrera", params.carrera);
   const query = qs.toString();
-  return request<EventoCalendarioOut[]>(`/calendario${query ? `?${query}` : ""}`);
+  // revalidate: 0 → el calendario incluye eventos personales del usuario, así
+  // que NUNCA se cachea por URL (si no, un usuario vería el de otro).
+  return request<EventoCalendarioOut[]>(`/calendario${query ? `?${query}` : ""}`, {
+    revalidate: 0,
+  });
 }
 
 export function getProximosEventosCalendario(
@@ -151,8 +155,9 @@ export function getProximosEventosCalendario(
   carrera = "ISI",
 ): Promise<EventoCalendarioOut[]> {
   const qs = new URLSearchParams({ limite: String(limite), carrera });
+  // revalidate: 0 → respuesta por-usuario, no cachear por URL.
   return request<EventoCalendarioOut[]>(`/calendario/proximos?${qs.toString()}`, {
-    revalidate: 30,
+    revalidate: 0,
   });
 }
 
@@ -160,8 +165,9 @@ export function getEventosHoyCalendario(
   carrera = "ISI",
 ): Promise<EventoCalendarioOut[]> {
   const qs = new URLSearchParams({ carrera });
+  // revalidate: 0 → respuesta por-usuario, no cachear por URL.
   return request<EventoCalendarioOut[]>(`/calendario/hoy?${qs.toString()}`, {
-    revalidate: 30,
+    revalidate: 0,
   });
 }
 
@@ -487,8 +493,147 @@ export async function sincronizarCatedrasUtntac(): Promise<ResultadoSincCatedras
   return res.json() as Promise<ResultadoSincCatedras>;
 }
 
+// ---------------------------------------------------------------------------
+// Chat del asistente (RAG)
+// ---------------------------------------------------------------------------
+
+export interface ChatFuente {
+  titulo: string | null;
+  fuente: string;
+  url: string | null;
+  fecha?: string | null;
+}
+
+export interface CorrelativaFicha {
+  nombre: string;
+  tipo: string;
+}
+
+export interface FichaMateria {
+  codigo: string;
+  nombre: string;
+  carrera: string | null;
+  anio: number | null;
+  cuatrimestre: string | null;
+  tipo: string | null;
+  correlativas: CorrelativaFicha[];
+}
+
+export interface ChatRespuesta {
+  respuesta: string;
+  fuentes: ChatFuente[];
+  conversacion_id: number | null;
+  mensaje_id: number | null;
+  fichas: FichaMateria[];
+}
+
+export interface MensajeGuardado {
+  id: number;
+  role: string | null;
+  contenido: string | null;
+  created_at: string | null;
+  fuentes: ChatFuente[];
+}
+
+export interface ConversacionOut {
+  id: number;
+  titulo: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface ConversacionDetalle extends ConversacionOut {
+  mensajes: MensajeGuardado[];
+}
+
+/**
+ * Manda una pregunta al asistente y devuelve la respuesta + sus fuentes.
+ * Va por el proxy /api/backend (client-side) para que inyecte el token httpOnly.
+ * Sin `conversacionId` el backend abre una conversacion nueva.
+ */
+export async function preguntarChat(
+  pregunta: string,
+  conversacionId?: number | null,
+): Promise<ChatRespuesta> {
+  const res = await fetch(`${MUTATION_BASE}/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ pregunta, conversacion_id: conversacionId ?? null }),
+  });
+  if (!res.ok) {
+    let body: unknown = null;
+    try { body = await res.json(); } catch { /* ignorar */ }
+    throw new ApiError(res.status, body);
+  }
+  return res.json() as Promise<ChatRespuesta>;
+}
+
+/** Conversaciones del usuario (historial del chat). */
+export function listarConversaciones(): Promise<ConversacionOut[]> {
+  // revalidate: 0 → es por-usuario, nunca se cachea (ver FetchOptions).
+  return request<ConversacionOut[]>("/chat/conversaciones", { revalidate: 0 });
+}
+
+/** Una conversacion con todos sus mensajes. */
+export function getConversacion(id: number): Promise<ConversacionDetalle> {
+  return request<ConversacionDetalle>(`/chat/conversaciones/${id}`, {
+    revalidate: 0,
+  });
+}
+
+/** Envia feedback (👍/👎 + motivo) sobre una respuesta del asistente. */
+export async function enviarFeedback(
+  mensajeId: number,
+  util: boolean,
+  motivo?: string | null,
+): Promise<void> {
+  const res = await fetch(`${MUTATION_BASE}/chat/feedback`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ mensaje_id: mensajeId, util, motivo: motivo ?? null }),
+  });
+  if (!res.ok) {
+    throw new ApiError(res.status, null);
+  }
+}
+
+/** Renombra una conversacion (via proxy: mutacion client-side). */
+export async function renombrarConversacion(
+  id: number,
+  titulo: string,
+): Promise<ConversacionOut> {
+  const res = await fetch(`${MUTATION_BASE}/chat/conversaciones/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ titulo }),
+  });
+  if (!res.ok) {
+    let body: unknown = null;
+    try { body = await res.json(); } catch { /* ignorar */ }
+    throw new ApiError(res.status, body);
+  }
+  return res.json() as Promise<ConversacionOut>;
+}
+
+/** Elimina una conversacion (via proxy: mutacion client-side). */
+export async function eliminarConversacion(id: number): Promise<void> {
+  const res = await fetch(`${MUTATION_BASE}/chat/conversaciones/${id}`, {
+    method: "DELETE",
+    headers: { Accept: "application/json" },
+  });
+  if (!res.ok && res.status !== 404) {
+    throw new ApiError(res.status, null);
+  }
+}
+
 export const api = {
   getGrafo,
+  preguntarChat,
+  enviarFeedback,
+  listarConversaciones,
+  getConversacion,
+  renombrarConversacion,
+  eliminarConversacion,
   listarMaterias,
   listarEventosCalendario,
   getProximosEventosCalendario,
