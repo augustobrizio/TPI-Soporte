@@ -27,9 +27,39 @@ _NO_AUTORIZADO = HTTPException(
 )
 
 
-def get_current_user(
+def get_current_user_opcional(
     db: Annotated[Session, Depends(get_db)],
     credenciales: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)],
+) -> Usuario | None:
+    """Usuario del token si lo hay, ``None`` si no. Nunca 401.
+
+    Es la dependencia de las secciones **públicas que además tienen una capa
+    personal** (el calendario: los eventos de la facultad los ve cualquiera,
+    los propios sólo su dueño). Un token ausente y uno inválido dan lo mismo
+    —``None``— a propósito: el visitante ve la parte pública igual, y no hay
+    forma de sondear desde afuera si un token existe.
+    """
+    if credenciales is None:
+        return None
+
+    payload = decodificar_token(credenciales.credentials)
+    if payload is None:
+        return None
+
+    sub = payload.get("sub")
+    if sub is None:
+        return None
+
+    try:
+        usuario_id = int(sub)
+    except (TypeError, ValueError):
+        return None
+
+    return usuario_repo.get_by_id(db, usuario_id)
+
+
+def get_current_user(
+    usuario: Annotated[Usuario | None, Depends(get_current_user_opcional)],
 ) -> Usuario:
     """Usuario dueño del token del header ``Authorization: Bearer <jwt>``.
 
@@ -38,30 +68,13 @@ def get_current_user(
     importa: un token sigue siendo criptográficamente válido hasta que expira,
     aunque la cuenta se haya borrado.
     """
-    if credenciales is None:
-        raise _NO_AUTORIZADO
-
-    payload = decodificar_token(credenciales.credentials)
-    if payload is None:
-        raise _NO_AUTORIZADO
-
-    sub = payload.get("sub")
-    if sub is None:
-        raise _NO_AUTORIZADO
-
-    try:
-        usuario_id = int(sub)
-    except (TypeError, ValueError):
-        raise _NO_AUTORIZADO from None
-
-    usuario = usuario_repo.get_by_id(db, usuario_id)
     if usuario is None:
         raise _NO_AUTORIZADO
-
     return usuario
 
 
 UsuarioActual = Annotated[Usuario, Depends(get_current_user)]
+UsuarioOpcional = Annotated[Usuario | None, Depends(get_current_user_opcional)]
 
 
 def requerir_admin(usuario: UsuarioActual) -> Usuario:

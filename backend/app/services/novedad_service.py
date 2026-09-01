@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Sequence
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from sqlalchemy.orm import Session
@@ -51,17 +51,22 @@ CENTROS_CONOCIDOS: dict[str, dict] = {
         "url_perfil": "https://www.instagram.com/sauutnrosario/",
         "logo_url": "/novedades/fuentes/sauutnrosario.jpg",
     },
+    "utnros.sistemas": {
+        "nombre": "Ing. en Sistemas FRRO",
+        "tipo": "instagram",
+        "url_perfil": "https://www.instagram.com/utnros.sistemas/",
+        "logo_url": "/novedades/fuentes/utnros.sistemas.jpg",
+    },
 }
 
 
 def construir_fuentes() -> list[FuenteNovedad]:
-    """Fuentes habilitadas según config (import local para no exigir instagrapi)."""
+    """Fuentes habilitadas según config (import local: deps pesadas aparte)."""
     settings = get_settings()
     fuentes: list[FuenteNovedad] = []
 
-    if settings.instagram_handles_list and (
-        settings.instagram_sessionid or settings.instagram_usuario
-    ):
+    # Instagram ya no pide credenciales: alcanza con los handles a mirar.
+    if settings.instagram_handles_list:
         from app.scrapers.novedades.instagram import InstagramFuente
 
         fuentes.append(InstagramFuente())
@@ -90,6 +95,28 @@ def run_ingesta_novedades(
     return resultado
 
 
+def _partir_por_antiguedad(
+    crudos: list[NovedadCruda], max_dias: int
+) -> tuple[list[NovedadCruda], list[NovedadCruda]]:
+    """Separa ``(vigentes, viejos)`` por ``fecha_publicacion``.
+
+    Los items SIN fecha pasan siempre: preferimos gastar una clasificación
+    antes que esconder algo por no saber cuándo se publicó (le pasa a varias
+    notas de ``utn_web``). ``max_dias <= 0`` desactiva el corte.
+    """
+    if max_dias <= 0:
+        return crudos, []
+    corte = datetime.now(UTC) - timedelta(days=max_dias)
+    vigentes: list[NovedadCruda] = []
+    viejos: list[NovedadCruda] = []
+    for crudo in crudos:
+        fecha = crudo.fecha_publicacion
+        if fecha is not None and fecha.tzinfo is None:
+            fecha = fecha.replace(tzinfo=UTC)
+        (viejos if fecha is not None and fecha < corte else vigentes).append(crudo)
+    return vigentes, viejos
+
+
 def _procesar_fuente(db: Session, fuente: FuenteNovedad) -> ResultadoFuente:
     settings = get_settings()
     res = ResultadoFuente(fuente=fuente.nombre)
@@ -113,6 +140,22 @@ def _procesar_fuente(db: Session, fuente: FuenteNovedad) -> ResultadoFuente:
     )
     nuevos = [c for c in crudos if c.external_id not in existentes]
     res.items_nuevos = len(nuevos)
+
+    # Corte por antigüedad ANTES del LLM: clasificar con visión cuesta ~28k
+    # tokens por item, así que un saludo navideño de 2024 que igual íbamos a
+    # descartar no vale la llamada (ni el 429 de TPM que provoca).
+    nuevos, viejos = _partir_por_antiguedad(
+        nuevos, settings.novedades_antiguedad_max_dias
+    )
+    res.items_viejos = len(viejos)
+    if viejos:
+        logger.info(
+            "%s: %d items salteados por antigüedad (>%d días)",
+            fuente.nombre,
+            len(viejos),
+            settings.novedades_antiguedad_max_dias,
+        )
+
     # Tope por corrida (control de costos, RNF-11).
     nuevos = nuevos[: settings.novedades_max_items_por_corrida]
 
@@ -320,7 +363,13 @@ def get(db: Session, novedad_id: int):
 
 
 def moderar(db: Session, novedad_id: int, estado: str):
-    novedad = novedad_repo.actualizar_estado(db, novedad_id, estado)
+    """Corrige a mano el estado que decidio el clasificador.
+
+    Marca ``moderado_manual`` y deja intacto ``estado_llm``, de modo que
+    ``WHERE moderado_manual AND estado <> estado_llm`` devuelva exactamente los
+    errores del LLM: es la lista con la que se refina el prompt.
+    """
+    novedad = novedad_repo.actualizar_estado(db, novedad_id, estado, manual=True)
     if novedad is not None:
         db.commit()
     return novedad

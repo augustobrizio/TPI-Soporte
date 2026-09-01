@@ -145,7 +145,11 @@ export function listarEventosCalendario(
   if (params.tipo) qs.set("tipo", params.tipo);
   if (params.carrera !== undefined) qs.set("carrera", params.carrera);
   const query = qs.toString();
-  return request<EventoCalendarioOut[]>(`/calendario${query ? `?${query}` : ""}`);
+  // `revalidate: 0`: la respuesta trae los eventos personales del usuario y el
+  // cache de Next es por URL — cachearla se los serviria al siguiente visitante.
+  return request<EventoCalendarioOut[]>(`/calendario${query ? `?${query}` : ""}`, {
+    revalidate: 0,
+  });
 }
 
 export function getProximosEventosCalendario(
@@ -154,7 +158,7 @@ export function getProximosEventosCalendario(
 ): Promise<EventoCalendarioOut[]> {
   const qs = new URLSearchParams({ limite: String(limite), carrera });
   return request<EventoCalendarioOut[]>(`/calendario/proximos?${qs.toString()}`, {
-    revalidate: 30,
+    revalidate: 0,
   });
 }
 
@@ -163,7 +167,7 @@ export function getEventosHoyCalendario(
 ): Promise<EventoCalendarioOut[]> {
   const qs = new URLSearchParams({ carrera });
   return request<EventoCalendarioOut[]>(`/calendario/hoy?${qs.toString()}`, {
-    revalidate: 30,
+    revalidate: 0,
   });
 }
 

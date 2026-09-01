@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -88,7 +88,10 @@ def _crudo(external_id: str, texto: str = "algo") -> NovedadCruda:
         origen="@ceit",
         url="https://instagram.com/p/x/",
         texto=texto,
-        fecha_publicacion=datetime(2026, 6, 1),
+        # Relativa a hoy a propósito: con una fecha fija, el corte por
+        # antigüedad del pipeline empieza a filtrar estos items el día que la
+        # fecha queda vieja y los tests se rompen solos meses después.
+        fecha_publicacion=datetime.now() - timedelta(days=2),
     )
 
 
@@ -219,3 +222,172 @@ def test_listar_api_solo_publicadas_por_defecto() -> None:
     assert res.status_code == 200
     titulos = [n["titulo"] for n in res.json()]
     assert titulos == ["a"]
+
+
+def _texto_del_prompt(item, recientes=None):
+    msg = clasificador_novedades._build_message(item, recientes or [])
+    return next(p["text"] for p in msg["content"] if p["type"] == "text")
+
+
+def test_el_prompt_incluye_hoy_y_la_fecha_de_publicacion(monkeypatch):
+    """Sin estas fechas el modelo publicaba contenido vencido con confianza 1.0."""
+    from datetime import UTC
+
+    monkeypatch.setattr(
+        clasificador_novedades, "_hoy", lambda: datetime(2026, 8, 30, tzinfo=UTC)
+    )
+    item = NovedadCruda(
+        external_id="instagram_post:X",
+        fuente="instagram",
+        texto="Inscripcion al Cursado Ciclo Lectivo 2024",
+        fecha_publicacion=datetime(2024, 3, 1, tzinfo=UTC),
+    )
+    texto = _texto_del_prompt(item)
+    assert "Fecha de hoy: 2026-08-30" in texto
+    assert "Fecha de publicación: 2024-03-01" in texto
+    assert "hace 912 días" in texto
+
+
+def test_fecha_de_publicacion_naive_se_asume_utc(monkeypatch):
+    """utn_web produce datetimes naive; no debe romper el calculo de antiguedad."""
+    from datetime import UTC
+
+    monkeypatch.setattr(
+        clasificador_novedades, "_hoy", lambda: datetime(2026, 8, 30, tzinfo=UTC)
+    )
+    item = NovedadCruda(
+        external_id="utn_web:1", fuente="utn_web", fecha_publicacion=datetime(2026, 8, 20)
+    )
+    assert "hace 10 días" in _texto_del_prompt(item)
+
+
+def test_sin_fecha_de_publicacion_se_declara_desconocida(monkeypatch):
+    from datetime import UTC
+
+    monkeypatch.setattr(
+        clasificador_novedades, "_hoy", lambda: datetime(2026, 8, 30, tzinfo=UTC)
+    )
+    item = NovedadCruda(external_id="utn_web:2", fuente="utn_web")
+    assert "Fecha de publicación: desconocida" in _texto_del_prompt(item)
+
+
+# --- corte por antiguedad (previo al LLM) ----------------------------------
+
+
+def _con_fecha(external_id: str, dias_atras: int | None):
+    fecha = None if dias_atras is None else datetime.now() - timedelta(days=dias_atras)
+    return NovedadCruda(
+        external_id=external_id, fuente="instagram", fecha_publicacion=fecha
+    )
+
+
+def test_corte_por_antiguedad_separa_vigentes_de_viejos():
+    vigentes, viejos = novedad_service._partir_por_antiguedad(
+        [_con_fecha("nuevo", 10), _con_fecha("viejo", 200)], 90
+    )
+    assert [c.external_id for c in vigentes] == ["nuevo"]
+    assert [c.external_id for c in viejos] == ["viejo"]
+
+
+def test_items_sin_fecha_nunca_se_cortan():
+    """Preferimos gastar la clasificacion antes que esconder algo sin fecha."""
+    vigentes, viejos = novedad_service._partir_por_antiguedad(
+        [_con_fecha("sin_fecha", None)], 90
+    )
+    assert [c.external_id for c in vigentes] == ["sin_fecha"]
+    assert viejos == []
+
+
+def test_max_dias_en_cero_desactiva_el_corte():
+    vigentes, viejos = novedad_service._partir_por_antiguedad(
+        [_con_fecha("viejisimo", 3000)], 0
+    )
+    assert len(vigentes) == 1 and viejos == []
+
+
+def test_los_items_viejos_no_llegan_al_clasificador(monkeypatch):
+    """El corte tiene que ahorrar la llamada de vision, no solo descartar despues."""
+    db = _session()
+    llamadas = []
+    monkeypatch.setattr(
+        clasificador_novedades,
+        "clasificar",
+        lambda item, recientes=None: llamadas.append(item.external_id),
+    )
+    viejo = NovedadCruda(
+        external_id="instagram_post:NAVIDAD2024",
+        fuente="instagram",
+        texto="Saludos navideños",
+        fecha_publicacion=datetime.now() - timedelta(days=600),
+    )
+    res = novedad_service.run_ingesta_novedades(db, [_FuenteFake([viejo])])
+
+    assert llamadas == []
+    assert res.fuentes[0].items_viejos == 1
+    assert res.fuentes[0].items_novedad == 0
+
+
+# --- moderacion manual -----------------------------------------------------
+
+
+def test_crear_novedad_congela_el_estado_del_clasificador():
+    db = _session()
+    n = _crear(db, external_id="x:1", titulo="t", estado="descartada")
+    db.commit()
+    assert n.estado_llm == "descartada"
+    assert n.moderado_manual is False
+
+
+def test_moderar_corrige_el_estado_sin_pisar_lo_que_dijo_el_llm():
+    """Es lo que permite listar despues los errores del clasificador."""
+    db = _session()
+    n = _crear(db, external_id="x:2", titulo="Charla de IA", estado="descartada")
+    db.commit()
+
+    novedad_service.moderar(db, n.id, "publicada")
+
+    assert n.estado == "publicada"
+    assert n.estado_llm == "descartada"  # el LLM se habia equivocado
+    assert n.moderado_manual is True
+
+
+def test_moderar_tambien_sirve_para_bajar_algo_publicado_de_mas():
+    db = _session()
+    n = _crear(db, external_id="x:3", titulo="Curso de Revit", estado="publicada")
+    db.commit()
+
+    novedad_service.moderar(db, n.id, "descartada")
+
+    assert n.estado == "descartada"
+    assert n.estado_llm == "publicada"
+    assert n.moderado_manual is True
+
+
+def test_moderar_una_novedad_inexistente_devuelve_none():
+    assert novedad_service.moderar(_session(), 999, "publicada") is None
+
+
+def test_moderar_exige_rol_admin():
+    """El endpoint quedo abierto desde que se creo; esto fija que ya no lo esta."""
+    from app.api.deps import requerir_admin
+
+    db = _session()
+    n = _crear(db, external_id="x:4", titulo="t", estado="descartada")
+    db.commit()
+
+    app = FastAPI()
+    app.include_router(novedades_api.router)
+    app.dependency_overrides[get_db] = lambda: (yield db)
+    client = TestClient(app)
+
+    # Sin credenciales de admin no pasa.
+    assert client.patch(
+        f"/novedades/{n.id}/moderar", json={"estado": "publicada"}
+    ).status_code in (401, 403)
+
+    # Con el rol correcto, sí.
+    app.dependency_overrides[requerir_admin] = lambda: object()
+    resp = client.patch(f"/novedades/{n.id}/moderar", json={"estado": "publicada"})
+    assert resp.status_code == 200
+    assert resp.json()["estado"] == "publicada"
+    assert resp.json()["moderado_manual"] is True

@@ -12,10 +12,7 @@ logger = logging.getLogger(__name__)
 
 def ingesta_instagram() -> None:
     settings = get_settings()
-    if not (
-        settings.instagram_handles_list
-        and (settings.instagram_sessionid or settings.instagram_usuario)
-    ):
+    if not settings.instagram_handles_list:
         logger.info("Ingesta Instagram omitida: fuente no configurada.")
         return
     from app.scrapers.novedades.instagram import InstagramFuente
