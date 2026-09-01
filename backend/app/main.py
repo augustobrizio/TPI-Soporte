@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api import (
     auth,
     calendario,
+    chat,
     comisiones,
     materias,
     novedades,
@@ -51,6 +52,7 @@ app.include_router(usuario_materia.router)
 app.include_router(calendario.router)
 app.include_router(novedades.router)
 app.include_router(comisiones.router)
+app.include_router(chat.router)
 
 
 @app.get("/health")
