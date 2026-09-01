@@ -20,6 +20,7 @@ from app.db.models.rag import RagChunk
 from app.db.session import SessionLocal
 from app.rag.ingest import ingestar_fuente
 from app.scrapers.base import FuenteRAG
+from app.scrapers.drive import DriveFuente
 from app.scrapers.frro_web import FrroWebFuente
 from app.scrapers.gradiente import GradienteFuente
 from app.scrapers.pdfs import PdfFuente
@@ -34,6 +35,7 @@ FUENTES: dict[str, type[FuenteRAG]] = {
     "gradiente": GradienteFuente,
     "frro_web": FrroWebFuente,
     "frro_pdf": PdfFuente,
+    "drive": DriveFuente,
 }
 
 
