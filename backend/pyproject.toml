@@ -32,6 +32,12 @@
       "openpyxl>=3.1",
       "boto3>=1.35",
       "langchain-google-genai>=2.0",
+    # OCR de PDFs escaneados (reglamentos/ordenanzas de FRRO que son imágenes,
+    # sin capa de texto). pytesseract envuelve el binario tesseract-ocr (que se
+    # instala en el Dockerfile, con el idioma español); pillow para pasarle las
+    # páginas rasterizadas por PyMuPDF.
+    "pytesseract>=0.3",
+    "pillow>=11.0",
 ]
 
   [dependency-groups]
