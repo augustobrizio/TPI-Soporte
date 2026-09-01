@@ -8,12 +8,10 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Sequence
-from datetime import datetime
-from email.utils import parsedate_to_datetime
 
 import httpx
 
-from app.scrapers.base import DocumentoRAG, extraer_texto_html
+from app.scrapers.base import DocumentoRAG, extraer_texto_html, parse_last_modified
 
 logger = logging.getLogger(__name__)
 
@@ -68,19 +66,7 @@ class GradienteFuente:
             )
             return None
 
-        fecha = _parse_last_modified(resp.headers.get("last-modified"))
+        fecha = parse_last_modified(resp.headers.get("last-modified"))
         return DocumentoRAG(
             texto=texto, url=url, titulo=titulo, fecha_actualizacion=fecha
         )
-
-
-def _parse_last_modified(valor: str | None) -> datetime | None:
-    """Header HTTP ``Last-Modified`` -> datetime (naive). Best-effort."""
-    if not valor:
-        return None
-    try:
-        dt = parsedate_to_datetime(valor)
-    except (TypeError, ValueError):
-        return None
-    # La columna es ``DateTime`` sin timezone: se guarda naive para no mezclar.
-    return dt.replace(tzinfo=None) if dt is not None else None

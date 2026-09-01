@@ -11,6 +11,7 @@ import re
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime
+from email.utils import parsedate_to_datetime
 from typing import Protocol, runtime_checkable
 
 from bs4 import BeautifulSoup
@@ -87,6 +88,21 @@ def extraer_texto_html(html: str) -> tuple[str | None, str]:
         contenido = soup.body or soup
 
     return titulo, _limpiar_bloques(contenido.get_text("\n"))
+
+
+def parse_last_modified(valor: str | None) -> datetime | None:
+    """Header HTTP ``Last-Modified`` -> datetime naive. Best-effort.
+
+    Se guarda naive (sin timezone) porque la columna ``fecha_actualizacion`` es
+    ``DateTime`` sin tz: mezclar aware y naive rompe comparaciones.
+    """
+    if not valor:
+        return None
+    try:
+        dt = parsedate_to_datetime(valor)
+    except (TypeError, ValueError):
+        return None
+    return dt.replace(tzinfo=None) if dt is not None else None
 
 
 def _texto_de(nodo) -> str | None:
