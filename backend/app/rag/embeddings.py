@@ -6,10 +6,23 @@ Mismo patrón que ``app/ai/clasificador_novedades.py``: cliente cacheado con
 """
 from __future__ import annotations
 
+import logging
+import re
+import time
 from functools import lru_cache
 
 from app.config import get_settings
 from app.db.models.rag import EMBEDDING_DIM
+
+logger = logging.getLogger(__name__)
+
+# El tier gratis de Gemini limita los embeddings a 100 por minuto. Al cargar el
+# corpus (ingesta) se pasa fácil, así que se manda en sub-lotes y se reintenta
+# con backoff cuando la API devuelve 429 (RESOURCE_EXHAUSTED). El chat (una sola
+# consulta por pregunta) no lo toca.
+_SUB_LOTE = 80
+_MAX_REINTENTOS = 6
+_ESPERA_DEFAULT_S = 55
 
 
 @lru_cache
@@ -35,14 +48,47 @@ def _get_embeddings():
 
 
 def embed_textos(textos: list[str]) -> list[list[float]]:
-    """Vectoriza una lista de textos en una sola llamada (batch).
+    """Vectoriza una lista de textos (ingesta del corpus).
 
-    Mandar N textos juntos es más barato y rápido que N llamadas sueltas.
-    Se usa al cargar el corpus (ingesta).
+    Divide en sub-lotes para no pasar el límite del tier gratis y reintenta con
+    backoff si la API tira 429. Se usa offline al cargar el corpus, nunca en el
+    camino del chat.
     """
     if not textos:
         return []
-    return _get_embeddings().embed_documents(textos)
+    emb = _get_embeddings()
+    vectores: list[list[float]] = []
+    for i in range(0, len(textos), _SUB_LOTE):
+        vectores.extend(_embed_lote_con_reintentos(emb, textos[i : i + _SUB_LOTE]))
+    return vectores
+
+
+def _embed_lote_con_reintentos(emb, lote: list[str]) -> list[list[float]]:
+    for intento in range(1, _MAX_REINTENTOS + 1):
+        try:
+            return emb.embed_documents(lote)
+        except Exception as exc:  # noqa: BLE001 - se re-lanza si no es 429
+            espera = _segundos_de_espera(exc)
+            if espera is None or intento == _MAX_REINTENTOS:
+                raise
+            logger.warning(
+                "Rate limit de embeddings (429); reintento %d/%d en %ds",
+                intento, _MAX_REINTENTOS, espera,
+            )
+            time.sleep(espera)
+    return []  # inalcanzable: el loop retorna o re-lanza
+
+
+def _segundos_de_espera(exc: Exception) -> int | None:
+    """Si ``exc`` es un 429, cuántos segundos esperar; si no, ``None``."""
+    msg = str(exc)
+    if "RESOURCE_EXHAUSTED" not in msg and "429" not in msg:
+        return None
+    # Google sugiere el retraso: "retry in 52.8s" o "retryDelay: '52s'".
+    m = re.search(r"retry in ([\d.]+)s", msg, re.IGNORECASE) or re.search(
+        r"retryDelay['\"]?:\s*['\"]?(\d+)", msg
+    )
+    return int(float(m.group(1))) + 2 if m else _ESPERA_DEFAULT_S
 
 
 def embed_consulta(texto: str) -> list[float]:
