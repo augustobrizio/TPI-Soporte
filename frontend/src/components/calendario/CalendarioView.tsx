@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import type { EventoCalendarioCreate, EventoCalendarioOut, TipoEventoCalendario } from "@/lib/types";
 import { crearEvento, actualizarEvento, eliminarEvento } from "@/lib/api";
 import {
@@ -57,7 +58,22 @@ function calcBorderShadow(eventos: EventoCalendarioOut[]): string | undefined {
   return `${s1}, inset 0 0 0 3px rgba(${TIPO[p2].rgb},0.6)`;
 }
 
-export function CalendarioView({ eventos: eventosProp }: { eventos: EventoCalendarioOut[] }) {
+/** Adonde mandamos al visitante sin cuenta que quiere agendar algo propio. */
+const LOGIN_CALENDARIO = `/login?next=${encodeURIComponent("/calendario")}`;
+
+export function CalendarioView({
+  eventos: eventosProp,
+  autenticado = false,
+}: {
+  eventos: EventoCalendarioOut[];
+  /**
+   * El calendario de la facultad es publico; los eventos propios no. Sin
+   * sesion se ve todo igual, pero los disparadores de "crear" llevan al login
+   * en vez de abrir un modal que terminaria en un 401 del backend.
+   */
+  autenticado?: boolean;
+}) {
+  const router = useRouter();
   const [eventos, setEventos] = useState(eventosProp);
   const [vista, setVista] = useState<Vista>("mes");
   const [visibles, setVisibles] = useState<Set<TipoEventoCalendario>>(() => new Set(ORDEN_TIPOS));
@@ -158,7 +174,12 @@ export function CalendarioView({ eventos: eventosProp }: { eventos: EventoCalend
     }
   };
   const onSelDia = (iso: string) => setDiaSel((d) => (d === iso ? null : iso));
-  const onCrearDia = (iso: string) => setModal({ modo: "crear", fecha: iso });
+  /** Abre el modal de alta, o manda al login si el visitante no tiene cuenta. */
+  const abrirCrear = (cfg: { fecha?: string; plantilla?: { titulo?: string; tipo?: TipoEventoCalendario } } = {}) => {
+    if (!autenticado) { router.push(LOGIN_CALENDARIO); return; }
+    setModal({ modo: "crear", ...cfg });
+  };
+  const onCrearDia = (iso: string) => abrirCrear({ fecha: iso });
   const toggleTipo = (t: TipoEventoCalendario) => setVisibles((s) => {
     // Desde "todos activos" → aislar solo este tipo
     if (s.size === ORDEN_TIPOS.length) return new Set([t]);
@@ -194,7 +215,7 @@ export function CalendarioView({ eventos: eventosProp }: { eventos: EventoCalend
         </div>
 
         <button
-          onClick={() => setModal({ modo: "crear", fecha: diaSel ?? toISODate(HOY) })}
+          onClick={() => abrirCrear({ fecha: diaSel ?? toISODate(HOY) })}
           className="cal-card flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold font-label shrink-0"
           style={{ color: "rgb(var(--surface))", background: "rgb(var(--on-surface))", boxShadow: "0 4px 16px -4px rgba(0,0,0,0.45)" }}
         >
@@ -304,9 +325,9 @@ export function CalendarioView({ eventos: eventosProp }: { eventos: EventoCalend
             <DiaPanel
               fechaISO={diaSel}
               eventos={eventosDia}
-              onAgregar={() => setModal({ modo: "crear", fecha: diaSel })}
+              onAgregar={() => abrirCrear({ fecha: diaSel })}
               onEditar={(e) => setModal({ modo: "editar", evento: e })}
-              onRendir={(e) => setModal({ modo: "crear", fecha: toISODate(new Date(e.fecha_inicio)), plantilla: { titulo: e.titulo, tipo: "examen" } })}
+              onRendir={(e) => abrirCrear({ fecha: toISODate(new Date(e.fecha_inicio)), plantilla: { titulo: e.titulo, tipo: "examen" } })}
               onCerrar={() => setDiaSel(null)}
             />
           ) : (

@@ -7,7 +7,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import UsuarioActual
+from app.api.deps import UsuarioActual, UsuarioOpcional
 from app.db.session import get_db
 from app.schemas.calendario import (
     EventoCalendarioCreate,
@@ -97,20 +97,24 @@ def eliminar_evento(
 @router.get("", response_model=list[EventoCalendarioOut])
 def listar_eventos(
     db: Annotated[Session, Depends(get_db)],
-    usuario: UsuarioActual,
+    usuario: UsuarioOpcional,
     desde: date | None = Query(None, description="Fecha inicial inclusive"),
     hasta: date | None = Query(None, description="Fecha final inclusive"),
     tipo: TipoEventoLiteral | None = Query(None),
     carrera: str | None = Query("ISI", description="ISI o null para todas"),
 ) -> list[EventoCalendarioOut]:
-    """Lista eventos del calendario (compartidos + personales del usuario)."""
+    """Lista eventos del calendario (compartidos + personales del usuario).
+
+    Público: sin sesión devuelve el calendario de la facultad. Con sesión suma
+    los eventos propios del alumno.
+    """
     eventos = calendario_service.listar_eventos(
         db,
         desde=desde,
         hasta=hasta,
         tipo=tipo,
         carrera=carrera,
-        usuario_id=usuario.id,
+        usuario_id=usuario.id if usuario else None,
     )
     return [EventoCalendarioOut.model_validate(e) for e in eventos]
 
@@ -118,7 +122,7 @@ def listar_eventos(
 @router.get("/proximos", response_model=list[EventoCalendarioOut])
 def proximos_eventos(
     db: Annotated[Session, Depends(get_db)],
-    usuario: UsuarioActual,
+    usuario: UsuarioOpcional,
     limite: int = Query(5, ge=1, le=50),
     carrera: str | None = Query("ISI"),
 ) -> list[EventoCalendarioOut]:
@@ -127,7 +131,7 @@ def proximos_eventos(
         db,
         limite=limite,
         carrera=carrera,
-        usuario_id=usuario.id,
+        usuario_id=usuario.id if usuario else None,
     )
     return [EventoCalendarioOut.model_validate(e) for e in eventos]
 
@@ -135,12 +139,12 @@ def proximos_eventos(
 @router.get("/hoy", response_model=list[EventoCalendarioOut])
 def eventos_hoy(
     db: Annotated[Session, Depends(get_db)],
-    usuario: UsuarioActual,
+    usuario: UsuarioOpcional,
     carrera: str | None = Query("ISI"),
 ) -> list[EventoCalendarioOut]:
     """Eventos de hoy (compartidos + personales del usuario)."""
     eventos = calendario_service.eventos_hoy(
-        db, carrera=carrera, usuario_id=usuario.id
+        db, carrera=carrera, usuario_id=usuario.id if usuario else None
     )
     return [EventoCalendarioOut.model_validate(e) for e in eventos]
 
@@ -149,16 +153,16 @@ def eventos_hoy(
 def get_evento(
     evento_id: int,
     db: Annotated[Session, Depends(get_db)],
-    usuario: UsuarioActual,
+    usuario: UsuarioOpcional,
 ) -> EventoCalendarioOut:
     """Detalle de un evento por ID (propio o compartido)."""
     evento = calendario_service.get_evento(db, evento_id)
-    # 404 también si el evento es personal de OTRO usuario (no filtramos su
-    # existencia).
+    # 404 también si el evento es personal de OTRO usuario, o de cualquiera
+    # cuando no hay sesión (no filtramos su existencia).
     if (
         evento is None
         or evento.usuario_id is not None
-        and evento.usuario_id != usuario.id
+        and (usuario is None or evento.usuario_id != usuario.id)
     ):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

@@ -1,6 +1,7 @@
 import { ApiError, listarEventosCalendario } from "@/lib/api";
 import type { EventoCalendarioOut } from "@/lib/types";
 import { CalendarioView } from "@/components/calendario/CalendarioView";
+import { getUsuarioActual } from "@/lib/auth";
 
 async function obtenerEventos(): Promise<{ eventos: EventoCalendarioOut[]; error: string | null }> {
   try {
@@ -18,7 +19,12 @@ async function obtenerEventos(): Promise<{ eventos: EventoCalendarioOut[]; error
 }
 
 export default async function CalendarioPage() {
-  const { eventos, error } = await obtenerEventos();
+  // Seccion publica (ver middleware.ts): el calendario academico se ve sin
+  // cuenta. La sesion solo decide si ademas se pueden agendar eventos propios.
+  const [{ eventos, error }, usuario] = await Promise.all([
+    obtenerEventos(),
+    getUsuarioActual(),
+  ]);
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-blueprint">
@@ -29,7 +35,7 @@ export default async function CalendarioPage() {
           </div>
         </div>
       )}
-      <CalendarioView eventos={eventos} />
+      <CalendarioView eventos={eventos} autenticado={usuario !== null} />
     </div>
   );
 }
