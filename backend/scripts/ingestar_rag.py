@@ -23,6 +23,7 @@ from app.scrapers.base import FuenteRAG
 from app.scrapers.drive import DriveFuente
 from app.scrapers.frro_web import FrroWebFuente
 from app.scrapers.gradiente import GradienteFuente
+from app.scrapers.manual import ManualFuente
 from app.scrapers.pdfs import PdfFuente
 
 logging.basicConfig(
@@ -36,6 +37,7 @@ FUENTES: dict[str, type[FuenteRAG]] = {
     "frro_web": FrroWebFuente,
     "frro_pdf": PdfFuente,
     "drive": DriveFuente,
+    "manual": ManualFuente,
 }
 
 
