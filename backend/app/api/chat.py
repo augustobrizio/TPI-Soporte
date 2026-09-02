@@ -1,6 +1,8 @@
 """Endpoints REST del chat del asistente (agente + RAG)."""
 from __future__ import annotations
 
+import asyncio
+from collections.abc import AsyncIterator, Iterator
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -22,6 +24,45 @@ from app.services import chat_service
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
+# Cada cuántos segundos de silencio mandamos un heartbeat SSE.
+_HEARTBEAT_SEGUNDOS = 10.0
+
+
+async def _con_heartbeat(
+    sync_gen: Iterator[str], intervalo: float = _HEARTBEAT_SEGUNDOS
+) -> AsyncIterator[str]:
+    """Intercala heartbeats en un generador SSE síncrono para que un proxy no
+    corte la conexión por inactividad.
+
+    El generador del servicio bloquea durante las llamadas al modelo (segundos
+    sin emitir nada). En producción, detrás del proxy de Railway, ese silencio
+    hacía que se cortara el stream a mitad. Acá lo corremos en un thread y, si
+    pasan ``intervalo`` segundos sin un evento, mandamos un comentario SSE
+    (``: ping``) —que el cliente ignora— para mantener viva la conexión.
+    """
+    loop = asyncio.get_running_loop()
+    cola: asyncio.Queue[str | object] = asyncio.Queue()
+    fin = object()
+
+    def producir() -> None:
+        try:
+            for item in sync_gen:
+                loop.call_soon_threadsafe(cola.put_nowait, item)
+        finally:
+            loop.call_soon_threadsafe(cola.put_nowait, fin)
+
+    loop.run_in_executor(None, producir)
+
+    while True:
+        try:
+            item = await asyncio.wait_for(cola.get(), timeout=intervalo)
+        except asyncio.TimeoutError:
+            yield ": ping\n\n"
+            continue
+        if item is fin:
+            break
+        yield item  # type: ignore[misc]
+
 
 @router.post("", response_model=ChatOut, summary="Preguntar al asistente")
 def preguntar(
@@ -41,7 +82,7 @@ def preguntar(
 
 
 @router.post("/stream", summary="Preguntar al asistente (respuesta en streaming)")
-def preguntar_stream(
+async def preguntar_stream(
     payload: ChatIn,
     db: Annotated[Session, Depends(get_db)],
     usuario: UsuarioActual,
@@ -49,7 +90,9 @@ def preguntar_stream(
     """Igual que ``POST /chat`` pero devuelve la respuesta como eventos SSE.
 
     El generador del servicio va emitiendo pasos del agente y tokens a medida
-    que se producen, y persiste el turno al final (hace el commit él mismo).
+    que se producen, y persiste el turno al final (hace el commit él mismo). Se
+    envuelve con ``_con_heartbeat`` para que un proxy no corte la conexión
+    mientras el agente piensa.
     """
     stream = chat_service.responder_stream(
         db,
@@ -59,7 +102,7 @@ def preguntar_stream(
         regenerar=payload.regenerar,
     )
     return StreamingResponse(
-        stream,
+        _con_heartbeat(stream),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
