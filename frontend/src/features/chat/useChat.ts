@@ -67,6 +67,7 @@ export function useChat({ conversacionId = null, inicial = [] }: Opciones = {}) 
         setMensajes((prev) => prev.map((m) => (m.id === idAsist ? fn(m) : m)));
 
       let ok = true;
+      let huboFin = false;
       try {
         await preguntarChatStream(
           pregunta,
@@ -77,6 +78,7 @@ export function useChat({ conversacionId = null, inicial = [] }: Opciones = {}) 
               parche((m) => ({ ...m, pasos: [...(m.pasos ?? []), p] })),
             onToken: (t) => parche((m) => ({ ...m, texto: m.texto + t })),
             onFin: (fin) => {
+              huboFin = true;
               if (fin.conversacion_id) setConvId(fin.conversacion_id);
               // El `fin` trae la respuesta autoritativa (completa, persistida):
               // la usamos como texto final por si el stream de tokens se ensució.
@@ -100,6 +102,15 @@ export function useChat({ conversacionId = null, inicial = [] }: Opciones = {}) 
           },
           { regenerar: opts.regenerar },
         );
+        // El stream terminó sin `fin` (ni `error`): la conexión se cortó a mitad
+        // (típico en producción detrás de un proxy). Lo tratamos como error para
+        // no dejar el mensaje colgado ni navegar a una respuesta que no llegó.
+        if (ok && !huboFin) {
+          ok = false;
+          pendiente.current = pregunta;
+          setMensajes((prev) => prev.filter((m) => m.id !== idAsist));
+          setError("Se cortó la conexión con el asistente. Probá de nuevo.");
+        }
         if (ok) pendiente.current = null;
       } catch (e) {
         pendiente.current = pregunta;
