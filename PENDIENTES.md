@@ -9,6 +9,12 @@
 > **Frentes 7 a 13** — el repaso de UX y de datos del alumno que quedó pendiente
 > después de auth y reseñas. Verificados archivo por archivo igual que el resto.
 >
+> **Actualización 2026-09-01** (`86a51f7`): se cierran el **Frente 3** (tests del
+> núcleo académico) y **T12.1** (endpoints de sincronización abiertos). Auditando
+> todos los `@router.post/put/patch/delete` de `api/` aparecieron **dos endpoints
+> de sync abiertos que este documento no registraba** — `POST /calendario/sincronizar`
+> y `POST /novedades/sincronizar` —, así que eran cinco y no tres. Suite: **184 → 259**.
+>
 > Escala de esfuerzo: **S** ≤ medio día · **M** 1–2 días · **L** 3–5 días · **XL** > 1 semana.
 
 ---
@@ -27,7 +33,7 @@
 ### 🔴 Pendiente (el grueso del trabajo)
 1. ~~**Autenticación & sesión**~~ — **hecho**, Google incluido (Frente 8 ✅). Queda solo la expiración por inactividad. Ver Frente 1.
 2. **Chatbot: RAG + Agente + Chat** — greenfield *(feature de Bruno)*
-3. **Tests de reglas de negocio** — obligatorio por la materia
+3. ~~**Tests de reglas de negocio**~~ — ✅ **hecho** (2026-09-01): correlatividad, inscripción y promedio. Ver Frente 3.
 4. ~~**Integración multi-usuario en el frontend**~~ — **hecho**. Ver Frente 4.
 5. **Deuda técnica / housekeeping**
 
@@ -37,7 +43,7 @@
 8. **Modo claro** — los tokens ya están; faltan los hardcodeos — Frente 9
 9. ~~**Importación de SYSACAD**~~ — ✅ **hecho** (Frente 10): marca la comisión al importar y deja corregir el mapeo a mano.
 10. **Calendario ↔ Google** — greenfield — Frente 11
-11. **Comisiones y profesores** — implementado; quedan puntas sueltas (una de seguridad) — Frente 12
+11. ~~**Comisiones y profesores**~~ — la punta de **seguridad cerrada** ✅ (T12.1, 2026-09-01). Quedan las puntas sin riesgo — Frente 12
 12. **Inicio / dashboard / panel personal** — ruteo por sesión + mocks a reemplazar — Frente 13
 
 ---
@@ -55,16 +61,16 @@
 
 ---
 
-## Frente 1 — Autenticación & Sesión  🟡  *(casi cerrado — revisado 2026-08-26)*
+## Frente 1 — Autenticación & Sesión  🟢  *(sólo falta T1.4 — revisado 2026-09-01)*
 **Requerimientos:** RF-01, RNF-02, RNF-04, RNF-05, RNF-06
 **Estado:** **implementado y andando.** `api/auth.py` (registro, login, `/auth/me`), `services/auth_service.py` y `core/security.py` (bcrypt con pre-hash SHA-256 + JWT), rate limit de login, router registrado en `main.py`. En el front: login y registro reales, cookie **httpOnly** escrita por los route handlers de Next (`app/api/auth/*`), `middleware.ts` y `getUsuarioActual()` validando contra el backend en cada Server Component.
-**Lo que queda:** ~~Google OAuth~~ (hecho en el **Frente 8** ✅), la expiración **por inactividad** de RNF-05 y aplicar `requerir_admin` a los endpoints que reescriben datos (ver **Frente 12**, T12.1).
+**Lo que queda:** ~~Google OAuth~~ (hecho en el **Frente 8** ✅), ~~aplicar `requerir_admin` a los endpoints que reescriben datos~~ (hecho en **T12.1** ✅). Queda **sólo** la expiración **por inactividad** de RNF-05 (T1.4).
 **Depende de:** D1, D5.
 
 | ID | Tarea | Área | Alcance | Esf. |
 |----|-------|------|---------|------|
 | ~~T1.1~~ ✅ | Login + hashing | Back | Crear `api/auth.py` + `services/auth_service.py`. Hash de password con `passlib`/`bcrypt` (RNF-02). Emitir JWT (o sesión). Registrar router en `main.py`. | M |
-| T1.2 ⚠️ | `get_current_user` + roles | Back | `get_current_user` ✅ y aplicado en calendario, comisiones, materias, reseñas y usuario_materia. **Falta el control por rol:** `deps.requerir_admin` está escrito pero no se usa en ningún endpoint (ver T12.1). | S |
+| ~~T1.2~~ ✅ | `get_current_user` + roles | Back | `get_current_user` aplicado en calendario, comisiones, materias, reseñas y usuario_materia. Y `deps.requerir_admin` ya se usa: en `PATCH /novedades/{id}/moderar` y en los **cinco** endpoints de sincronización (T12.1, 2026-09-01). | S |
 | ~~T1.3~~ ✅ | Google OAuth | Back | Hecho en el **Frente 8**. | — |
 | T1.4 ⚠️ | Expiración + logout | Back | Logout manual ✅ (`app/api/auth/logout/route.ts`, POST). **Falta la expiración por inactividad:** hoy el JWT tiene un `exp` fijo (`JWT_EXPIRE_MINUTES`, 12 h) que no se renueva con el uso. | S |
 | ~~T1.5~~ ✅ | Pantalla de login real | Front | Reemplazar el placeholder `login/page.tsx`. Form o botón OAuth, guardar token, redirigir al dashboard. | M |
@@ -92,17 +98,56 @@
 
 ---
 
-## Frente 3 — Tests de reglas de negocio  🟡  *(obligatorio por la materia)*
+## ~~Frente 3 — Tests de reglas de negocio~~  ✅  *(cerrado — 2026-09-01)*
 **Requerimientos:** condición de la cátedra ("reglas de negocio con tests").
-**Estado:** hay tests de calendario, cursada_profesor, novedades y review. **Faltan los del núcleo académico.** `tests/unit/` e `tests/integration/` existen vacías.
+**Estado:** **cerrado.** 59 tests nuevos sobre el núcleo académico, que era justo
+lo que faltaba: había cobertura de calendario, cursada_profesor, novedades y
+review, pero **cero** sobre los tres servicios que la materia pide.
 
-| ID | Tarea | Área | Alcance | Esf. |
-|----|-------|------|---------|------|
-| T3.1 | Tests de correlatividad | Back | `correlatividad_service`: `puede_cursar`, `puede_rendir`, `calcular_estado` (+ regla de proyecto final). Casos: correlativas cumplidas/faltantes, regular vs aprobada. | M |
-| T3.2 | Tests de inscripción | Back | `inscripcion_service`: `registrar_estado` (validando correlativas), `eliminar_estado`, `listar_estado_usuario`. | M |
-| T3.3 | Tests de promedio | Back | `materia_service`: `promedio_general` y % ingeniero (troncales + electivas). | S |
+| ID | Tarea | Cómo quedó |
+|----|-------|------------|
+| ~~T3.1~~ ✅ | Tests de correlatividad | `tests/test_correlatividad.py` — 23 tests sobre `puede_cursar`, `puede_rendir` y `calcular_estado`. |
+| ~~T3.2~~ ✅ | Tests de inscripción | `tests/test_inscripcion.py` — 19 tests sobre `registrar_estado`, `eliminar_estado` y `listar_estado_usuario`. |
+| ~~T3.3~~ ✅ | Tests de promedio | `tests/test_promedio.py` — 17 tests sobre `promedio_general`, % de avance, carga horaria y créditos de electivas. |
 
-**Criterios de aceptación:** `docker compose exec app uv run pytest` pasa en verde y cubre las tres áreas.
+### Decisiones que quedaron tomadas
+
+- **Apareció un `tests/conftest.py`.** Los tests previos se arman cada uno su
+  sesión SQLite porque cada uno necesita tablas distintas; los tres del núcleo
+  académico comparten el *mismo* plan de estudios de juguete, así que ese armado
+  se centralizó en fixtures (`db`, `usuario`) en vez de quedar copiado tres veces.
+  No toca a los tests que ya existían.
+- **Plan de juguete, no el seed real.** Seis materias elegidas para que cada
+  regla tenga un caso: una correlativa `regular`, una `aprobada`, una electiva,
+  ADUSI (troncal pero opcional) y Proyecto Final. Con las 56 del plan real, para
+  entender por qué falla un test habría que reconstruir medio plan de memoria.
+- **Los tests fijan la asimetría de `inscripcion_service`**, que es lo más fácil
+  de "arreglar" de más: `cursando` y `regular` validan correlativas, `aprobado` y
+  `libre` **no** (el caso de uso es cargar historial viejo, donde la libreta
+  todavía está a medio llenar). Hay tests de los dos lados.
+- **Y la de `correlatividad_service`:** para *cursar*, una correlativa marcada
+  `regular` se cumple estando regular; para *rendir*, esa misma fila exige
+  aprobada. Son dos umbrales distintos sobre el mismo dato, y varios tests
+  existen sólo para que no se colapsen en uno.
+
+### 🔎 Hallazgo: dos services no se ponen de acuerdo sobre ADUSI
+
+`materia_service._MATERIAS_OPCIONALES` excluye a ADUSI del porcentaje de avance
+porque "no es obligatoria para graduarse en ISI". Pero ADUSI está cargada con
+`tipo="troncal"` en el seed, y la regla de Proyecto Final
+(`correlatividad_service._validar_proyecto_final_para_rendir`) barre **todas**
+las troncales, así que ahí sí la exige.
+
+O sea: un alumno con todo aprobado menos ADUSI ve **100% de avance** y al mismo
+tiempo **no puede rendir Proyecto Final**. Las dos cosas no pueden ser ciertas.
+
+No se tocó nada: cuál de los dos tiene razón es una decisión de dominio (¿ADUSI
+es obligatoria para recibirse o no?). El comportamiento actual quedó fijado en
+`test_proyecto_final_hoy_exige_adusi`, así que el día que se decida, el test que
+se rompa marca dónde está el cambio.
+
+**Criterio de aceptación:** ✅ la suite pasa en verde y cubre las tres áreas.
+Total **259 tests** (eran 184 antes de este frente y de T12.1).
 
 ---
 
@@ -125,7 +170,9 @@
 | T5.3 | Setup del frontend | Docs | El equipo migró a **pnpm**. Documentar `pnpm install` limpio (había symlinks rotos apuntando a una copia fantasma `C:\Soporte\TPI-Soporte`). | S |
 | T5.4 | `.env` completo | Docs | Documentar y repartir las claves de `OPENAI_API_KEY`, S3 y LangSmith; sin ellas no corren chat ni ingesta. | S |
 | T5.5 | Auth de cliente sin usar | Front | `features/auth/AuthProvider.tsx`, `useAuth.ts` y `destino.ts` no los importa nadie fuera de `features/auth/`: la sesión se resuelve en el servidor. Borrarlos o dejarlos si se van a usar. | S |
-| T5.6 | Dos lockfiles | Front | Conviven `pnpm-lock.yaml` y `package-lock.json` en `frontend/`. Elegir uno y borrar el otro: instalar con el gestor equivocado deja el árbol distinto al de producción. | S |
+| T5.6 | Dos lockfiles | Front | Conviven `pnpm-lock.yaml` y `package-lock.json` en `frontend/`. Elegir uno y borrar el otro: instalar con el gestor equivocado deja el árbol distinto al de producción. **Y apareció un tercero**: un `package-lock.json` de 90 bytes en la **raíz del repo**, sin trackear — alguien corrió `npm install` fuera de `frontend/`. Borrarlo y agregarlo al `.gitignore`. | S |
+| T5.7 | Faltan 4 de los 6 `agent_docs/` | Docs | `CLAUDE.md` y `AGENTS.md` mandan leer `architecture.md`, `code_conventions.md`, `database_schema.md` y `api_conventions.md` antes de tocar un área. **Ninguno de los cuatro existe**: en `agent_docs/` sólo están `google_oauth.md`, `novedades_infra.md`, `scraper_guide.md` y `ui_style_guide.md`. O se escriben, o se saca la referencia — hoy cualquiera que siga las instrucciones se choca con un 404. | M |
+| T5.8 | `api/admin.py` en 0 líneas | Back | Andamiaje muerto: la moderación de novedades terminó viviendo en `api/novedades.py`. Borrarlo, o usarlo si sale el panel de admin de T12.6. Va junto con T5.1. | S |
 
 ---
 
@@ -308,23 +355,51 @@ Recomendación: ICS primero; el import desde Google, atado al Frente 8.
 
 ---
 
-## Frente 12 — Comisiones y profesores: repaso  🟡
+## Frente 12 — Comisiones y profesores: repaso  🟢  *(la parte de seguridad, cerrada)*
 **Estado:** es de lo más completo del proyecto. Las specs `001-profesores-directory`, `002-comisiones-profesores`, `003-reviews-catedra` y `004-resenas-alumnos` están implementadas: directorio con búsqueda, detalle con cátedras y horarios de consulta, comisiones agrupadas por año con modal de materias, score combinado (UTNTAC + reseñas de alumnos) y los tres scrapers de sincronización. Lo que queda son puntas sueltas — una de ellas seria:
 
-1. **Los endpoints de sincronización están abiertos.** `POST /profesores/sincronizar-horarios`, `/sincronizar-mails` y `/sincronizar-catedras-utntac` (`api/profesores.py:117`) no piden token: cualquiera con la URL dispara un scrapeo completo que **reemplaza** `horario_consulta` y `materia_profesor`. Y `deps.requerir_admin` ya está escrito pero **no se usa en ningún lado** (`grep -rn requerir_admin backend/app/` devuelve sólo su definición). Es T1.2 del Frente 1 sin terminar, y acá es donde más duele.
-2. **El `SincronizarMenu` se le muestra a cualquiera** en `/profesores`, incluso sin sesión. `UsuarioOut` y `UsuarioSesion` ya traen `rol`, así que condicionarlo es directo.
+1. ~~**Los endpoints de sincronización están abiertos.**~~ ✅ **cerrado (2026-09-01).** Ver abajo: eran **cinco**, no tres.
+2. ~~**El `SincronizarMenu` se le muestra a cualquiera**~~ ✅ **no aplica.** El menú ya no se renderiza en ningún lado: se sacó de `ProfesoresView`, que lo dice en un comentario ("se movió al futuro panel de admin"). El componente `SincronizarMenu.tsx` quedó **huérfano** esperando ese panel — ver T12.6.
 3. **Puntajes de UTNTAC sin capturar.** El docstring de `sincronizar_catedras_utntac` avisa que los puntajes / popularidad / recomendaciones de la sheet no se guardan porque "requieren un modelo nuevo". Hoy el score sale de reviews de cátedra + reseñas de alumnos.
-4. **Cambios sin commitear.** `ComisionCard`, `ComisionModal` y `ComisionesView` están modificados en el árbol de trabajo: las electivas pasan de badge por card a sección propia con título. Hay que cerrarlo.
+4. ~~**Cambios sin commitear.**~~ ✅ El rediseño de electivas se commiteó; el árbol de trabajo está limpio.
+
+### T12.1 — eran cinco endpoints abiertos, no tres
+
+El documento registraba los tres de `profesores.py`. Auditando **todos** los
+`@router.post/put/patch/delete` de `api/` aparecieron dos más:
+
+| Endpoint | Qué podía hacer un anónimo |
+|---|---|
+| `POST /profesores/sincronizar-horarios` | Borrar y reescribir `horario_consulta` + `materia_profesor` enteras (es un full refresh). |
+| `POST /profesores/sincronizar-mails` | Crear profesores en el padrón. |
+| `POST /profesores/sincronizar-catedras-utntac` | Ídem + reescribir cátedras. |
+| **`POST /calendario/sincronizar`** ⚠️ | Escribir los eventos **institucionales** — los que ve todo el mundo (`usuario_id` NULL), no los propios de quien llama. |
+| **`POST /novedades/sincronizar`** ⚠️ | Disparar el pipeline completo de ingesta, que pasa **cada post por el clasificador LLM**. Era una factura de API ajena que se podía disparar en loop desde afuera. |
+
+Los cinco llevan ahora `dependencies=[Depends(requerir_admin)]`, siguiendo la
+convención que ya usaba `PATCH /novedades/{id}/moderar`. El resto de las
+escrituras ya estaba bien: el CRUD de eventos del calendario, reseñas,
+`usuario_materia` y la selección de cursada toman el usuario del token.
+`POST /comisiones/optimizar` queda público a propósito — es un cálculo puro,
+no escribe nada.
+
+Los tests (`tests/test_sync_admin.py`, 16) fijan los tres casos para cada uno:
+anónimo → 401, alumno logueado → 403 (`rol` arranca en NULL para toda cuenta
+nueva), admin → pasa. Y uno extra verifica que el guard corta **antes** del
+handler: si el servicio corriera igual y sólo se ocultara la respuesta, un
+anónimo seguiría reescribiendo tablas y gastando cuota de LLM sin ver la salida.
 
 | ID | Tarea | Área | Alcance | Esf. |
 |----|-------|------|---------|------|
-| T12.1 | Cerrar los endpoints de sync | Back | `Depends(requerir_admin)` en las tres rutas de sincronización. Es lo mínimo antes de que esto quede público. | S |
-| T12.2 | Ocultar el menú de sync | Front | Mostrar `SincronizarMenu` sólo con `rol == "admin"`. Sin T12.1 es cosmético: la ruta sigue abierta. | S |
-| T12.3 | Cerrar el rediseño de electivas | Front | Commitear o descartar los cambios de `ComisionCard` / `ComisionModal` / `ComisionesView`. `ElectivaBadge` queda usado sólo por el modal: revisar que no quede huérfano. | S |
+| ~~T12.1~~ ✅ | Cerrar los endpoints de sync | Back | Los **cinco** con `requerir_admin` + 16 tests. | S |
+| ~~T12.2~~ ✅ | Ocultar el menú de sync | Front | No aplica: `SincronizarMenu` ya no se renderiza. Las llamadas salen por `/api/backend` (el proxy que adjunta la cookie), así que el día que vuelva, con un admin funciona sin tocar nada. | S |
+| ~~T12.3~~ ✅ | Cerrar el rediseño de electivas | Front | Commiteado. | S |
 | T12.4 | Puntajes de UTNTAC | Back | Evaluar si se capturan (modelo nuevo + merge con el score actual) o si se documenta que quedan afuera a propósito. | M |
 | T12.5 | Repaso de datos | QA | Contra la DB: comisiones sin horarios, profesores sin cátedra, cursadas sin docente, duplicados por nombre. Es lo que "no está muy visto". | M |
+| T12.6 | Panel de admin (o borrar el menú) | Front | `SincronizarMenu.tsx` no lo importa nadie desde que salió de `ProfesoresView`. Decidir: se arma el panel de admin que el comentario promete, o se borra el componente. Hoy es código muerto que igual hay que mantener. | S |
 
-**Criterio de aceptación:** ningún endpoint que reescribe tablas queda abierto, la UI de mantenimiento sólo la ve un admin, y hay un informe corto de huecos de datos.
+**Criterio de aceptación:** ✅ ningún endpoint que reescribe tablas queda abierto
+y la UI de mantenimiento no la ve nadie. Falta el informe de huecos de datos (T12.5).
 
 ---
 
@@ -375,24 +450,33 @@ D4, D5, D6    ──► destraban los frentes 13.A, 8 y 11
 
 Frente 1  (auth)            ── ✅ salvo Google, inactividad y rol
 Frente 4  (multi-usuario)   ── ✅ cerrado
-Frente 3  (tests)           ── independiente, se puede empezar YA — obligatorio por la materia
+Frente 3  (tests)           ── ✅ cerrado (2026-09-01)
 Frente 2  (chatbot)         ── de Bruno; necesita D2/D3 + pgvector
 Frente 5  (housekeeping)    ── en cualquier momento, tareas chicas
 
-Frente 12 (comisiones/profes) ── T12.1 y T12.2 primero: hoy hay endpoints
-                                 abiertos que reescriben tablas
-Frente 10 (import SYSACAD)  ── independiente; destraba Horarios y la Agenda del panel
+Frente 12 (comisiones/profes) ── ✅ T12.1 y T12.2 cerrados; quedan T12.4/5/6,
+                                 ninguno de riesgo
+Frente 10 (import SYSACAD)  ── ✅ hecho (2026-08-26)
 Frente 9  (modo claro)      ── independiente; se reparte por pantalla entre varios
 Frente 7  (shell/topbar)    ── ✅ hecho (2026-08-26)
 Frente 13 (inicio/dashboard)── 13.B se puede hacer ya; 13.A necesita D4
-Frente 8  (Google OAuth)    ── necesita D5 + credenciales de Google Cloud (T8.1)
+Frente 8  (Google OAuth)    ── sólo falta T8.1 (credenciales de Google Cloud)
 Frente 11 (calendario ICS)  ── T11.1–T11.3 independientes; T11.4 después del Frente 8
 ```
 
-**Recomendación:** el orden de arriba está pensado por **riesgo y dependencia**, no por
-tamaño. Primero **T12.1** (cerrar los endpoints de sincronización: es la única falla de
-seguridad abierta y son minutos de trabajo), después **Frente 3 (tests)**, que es
-condición de la materia y no depende de nadie. En paralelo, **Frente 10** y **Frente 9**
-se pueden repartir entre varias personas porque no se pisan entre sí ni necesitan
-credenciales externas. **Frente 8** y **Frente 11 (T11.4)** quedan últimos porque
-dependen de credenciales de Google que hay que gestionar antes.
+**Recomendación (actualizada 2026-09-01).** Cerrados el Frente 3 y T12.1, no queda
+ninguna falla de seguridad abierta ni nada bloqueante para la materia. Lo que sigue,
+por valor y no por tamaño:
+
+1. **Frente 13.B** (S) — el panel anuncia un paro docente de mayo que no existe
+   (`NOVEDADES_MOCK`). Es el mock más visible del proyecto y se reemplaza con una
+   llamada que ya existe.
+2. **Frente 11, T11.1–T11.3** (M) — exportar `.ics` es el único frente grande que
+   no depende de credenciales de nadie, así que no choca con quien esté con T8.1.
+3. **Frente 9** (M) — el modo claro se reparte por pantalla entre varios. El 60%
+   de la deuda son dos archivos: `HorariosBuilder` (49 hardcodeos) y
+   `OptimizadorModal` (42).
+4. **T5.7** (M) — faltan 4 de los 6 `agent_docs/` que `CLAUDE.md` manda leer.
+   Cuanto más crece el proyecto, más caro es escribirlos después.
+
+**Frente 13.A** sigue esperando **D4**, que es una charla de 5 minutos y no código.
