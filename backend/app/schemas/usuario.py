@@ -95,6 +95,11 @@ class UsuarioOut(BaseModel):
     legajo: str | None = None
     rol: str | None = None
     avatar_url: str | None = None
+    # Ya existía en el modelo desde siempre; no se exponía, así que el panel
+    # personal mostraba la carrera y la cohorte hardcodeadas. Es NULL para toda
+    # cuenta creada hasta hoy: el registro no lo pide (ni por password ni por
+    # Google), así que el front tiene que saber mostrarse sin él.
+    anio_ingresado: int | None = None
     created_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)

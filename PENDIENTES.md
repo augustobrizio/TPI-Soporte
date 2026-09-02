@@ -427,18 +427,40 @@ Lo pedido: sin sesión → "Inicio" con la portada; con sesión → desaparece "
 |---|---|
 | `ProgresoHero` | **Real** — `getGrafo()`: aprobadas, %, carga horaria, créditos de electivas, promedio. |
 | `AgendaHoy` | **Real** — clases de hoy desde la comisión elegida + eventos del calendario. Queda vacío sólo si el alumno nunca eligió comisión; el import de SYSACAD ya la elige solo (Frente 10.A ✅). |
-| `NovedadesAlertas` | **Mock** — `NOVEDADES_MOCK` hardcodeado ("Paro docente del 09/05"), con `/novedades` real al lado. |
+| `NovedadesAlertas` | ~~**Mock**~~ ✅ **Real** (2026-09-01) — `listarNovedades({ limite: 4 })`, con deep link a `/novedades?novedad=<id>`. |
 | `ChatSnippet` | **Vacío por diseño** — recibe `null` fijo; depende del Frente 2. |
 | `AccionesRapidas` / `AtajosToolbox` | Links estáticos; funcionan. |
-| Carrera | Constante `CARRERA` hardcodeada. `Usuario.anio_ingresado` existe en el modelo pero no se expone en `UsuarioOut`. |
+| Carrera | ~~Constante hardcodeada~~ ✅ La **cohorte** sale de `anio_ingresado`, ya expuesto en `UsuarioOut`. La carrera sigue siendo constante **a propósito**: ver abajo. |
 
 | ID | Tarea | Área | Alcance | Esf. |
 |----|-------|------|---------|------|
-| T13.4 | Novedades reales | Front | Reemplazar `NOVEDADES_MOCK` por `listarNovedades({ limite })` y mapear categoría → severidad. Es el mock más visible: hoy el panel anuncia un paro de mayo que no existe. | S |
-| T13.5 | Datos reales de la cuenta | Back+Front | Exponer `anio_ingresado` (y carrera, si se agrega al modelo) en `UsuarioOut` / `UsuarioSesion` y dejar de hardcodear `CARRERA`. | S |
+| ~~T13.4~~ ✅ | Novedades reales | Front | `obtenerNovedadesSeguro()` en `PanelPersonal`. Mapeo categoría → severidad, fallo aislado (un feed caído no tumba el panel) y banner propio para no confundir "backend caído" con "no hay novedades". | S |
+| ~~T13.5~~ ✅ | Datos reales de la cuenta | Back+Front | `anio_ingresado` en `UsuarioOut` (Pydantic) y en `UsuarioSesion` (front). El hero muestra "Ingeniería en Sistemas de Información · Ingreso 2022" cuando la cohorte se conoce, y sólo la carrera cuando no. | S |
 | T13.6 | Qué agregar y qué sacar | Front | Con lo que el backend ya devuelve, entran sin trabajo de back: **próximas mesas/finales** (`finalesProximos` ya se calcula y se usa sólo como número suelto), **materias que podés cursar** (`/comisiones/cursables`), **reseñas pendientes** (`MisCatedrasCalificar`) y **horarios de consulta de hoy**. Del otro lado, `ChatSnippet` ocupa 4 columnas para mostrar un empty state hasta que exista el chat: evaluar achicarlo o esconderlo. | M |
 
-**Criterio de aceptación:** ningún widget del panel muestra datos inventados, y cada uno enlaza a la sección donde ese dato vive.
+### Decisiones que quedaron tomadas
+
+- **La carrera queda hardcodeada, y está bien.** No es un dato del usuario que
+  falte: UTNHub cubre una sola carrera (el plan cargado es ISI 2023) y no hay
+  tabla de carreras. Lo que sí era del alumno y estaba inventado era la cohorte.
+- **`anio_ingresado` es NULL en toda cuenta existente.** El registro no lo pide,
+  ni por password ni por Google, así que el front tiene que saber mostrarse sin
+  él — y por eso `lineaCarrera()` degrada a sólo la carrera. Si se quiere el dato
+  poblado, hay que pedirlo en el registro o inferirlo del legajo: tarea aparte.
+- **Severidad `crítica` (roja) queda deliberadamente sin usar.** El clasificador
+  no tiene hoy ninguna noción de urgencia: un paro entra como `aviso` igual que
+  un cambio de aula, así que pintar algo de rojo sería inventar el dato que este
+  frente vino a sacar. El mapeo es `aviso → importante`, el resto `info`. El día
+  que `ClasificacionNovedad` gane un campo de urgencia, `severidadDe()` es el
+  único lugar a tocar.
+- **Deep link interno, no la URL de Instagram.** Las cards navegan a
+  `/novedades?novedad=<id>` (el mismo link que ya usaban el buscador global y la
+  campana), que muestra la novedad clasificada y con sus fuentes sin sacar al
+  alumno de la app. `NovedadesAlertas` ahora distingue: href que arranca con `/`
+  va por `Link`, una URL externa sigue abriendo pestaña nueva.
+
+**Criterio de aceptación:** ✅ ningún widget del panel muestra datos inventados.
+Queda T13.6 (qué widgets agregar y cuáles achicar), que es diseño y no deuda.
 
 ---
 
@@ -468,9 +490,8 @@ Frente 11 (calendario ICS)  ── T11.1–T11.3 independientes; T11.4 después 
 ninguna falla de seguridad abierta ni nada bloqueante para la materia. Lo que sigue,
 por valor y no por tamaño:
 
-1. **Frente 13.B** (S) — el panel anuncia un paro docente de mayo que no existe
-   (`NOVEDADES_MOCK`). Es el mock más visible del proyecto y se reemplaza con una
-   llamada que ya existe.
+1. ~~**Frente 13.B**~~ ✅ hecho (2026-09-01): el panel ya no inventa novedades ni
+   la cohorte del alumno. Queda T13.6, que es diseño.
 2. **Frente 11, T11.1–T11.3** (M) — exportar `.ics` es el único frente grande que
    no depende de credenciales de nadie, así que no choca con quien esté con T8.1.
 3. **Frente 9** (M) — el modo claro se reparte por pantalla entre varios. El 60%

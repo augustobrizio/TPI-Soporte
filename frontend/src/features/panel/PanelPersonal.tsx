@@ -4,12 +4,14 @@ import {
   getEventosHoyCalendario,
   getGrafo,
   getProximosEventosCalendario,
+  listarNovedades,
 } from "@/lib/api";
 import type {
   ContadoresGrafo,
   EventoCalendarioOut,
   GrafoResponse,
   MateriaCursableOut,
+  NovedadOut,
 } from "@/lib/types";
 import { materiaIcon } from "@/lib/materiaIcon";
 import { getUsuarioActual } from "@/lib/auth";
@@ -21,12 +23,23 @@ import { AccionesRapidas } from "@/components/dashboard/AccionesRapidas";
 import {
   NovedadesAlertas,
   type NovedadAlerta,
+  type Severidad,
 } from "@/components/dashboard/NovedadesAlertas";
 import { AtajosToolbox } from "@/components/dashboard/AtajosToolbox";
 
-// La carrera todavia no esta en el modelo `Usuario` (solo hay legajo y anio
-// de ingreso), asi que por ahora es fija. El nombre sale de la sesion.
-const CARRERA = "Ingenieria en Sistemas de Informacion";
+// UTNHub cubre una sola carrera: el plan de estudios que hay cargado en la DB
+// es el de ISI 2023 y no hay tabla de carreras. O sea que esto no es un dato
+// del usuario que este faltando, es una constante del producto — y por eso
+// sigue siendo una constante y no un TODO.
+//
+// Lo que si era del usuario y estaba hardcodeado es la cohorte: `anio_ingresado`
+// vivia en el modelo desde siempre pero no se exponia en `UsuarioOut`.
+const CARRERA = "Ingeniería en Sistemas de Información";
+
+/** "Ingeniería en Sistemas de Información · Ingreso 2022", si sabemos la cohorte. */
+function lineaCarrera(anioIngresado: number | null | undefined): string {
+  return anioIngresado ? `${CARRERA} · Ingreso ${anioIngresado}` : CARRERA;
+}
 
 // Fallback de contadores si el backend no responde. Mantiene la UI usable
 // y evita arrastrar un null por todo el render.
@@ -45,28 +58,72 @@ const CONTADORES_VACIOS: ContadoresGrafo = {
 };
 
 // ---------------------------------------------------------------------------
-// Mocks — se reemplazan por endpoints cuando esten implementados.
-// La forma del dato ya respeta el contrato que va a exponer el BE.
+// Novedades reales
 // ---------------------------------------------------------------------------
+//
+// El panel mostraba dos novedades inventadas —entre ellas "Paro docente del
+// 09/05"— con el cartel de "datos de ejemplo". El feed real existe desde el
+// pipeline de ingesta; lo unico que faltaba era llamarlo.
 
-const NOVEDADES_MOCK: NovedadAlerta[] = [
-  {
-    id: "paro-adutn",
-    categoria: "Paro academico",
-    titulo: "Paro docente del 09/05",
-    resumen:
-      "ADUTN convoco a 24h de paro. Verifica el campus virtual antes de salir de tu casa: hay clases que pasan a virtual.",
-    severidad: "critica",
-  },
-  {
-    id: "insc-finales",
-    categoria: "Administrativo",
-    titulo: "Inscripcion a finales de mayo",
-    resumen:
-      "La ventana de inscripcion al turno de mayo cierra el viernes 16 a las 23:59. Recorda chequear correlativas para rendir.",
-    severidad: "importante",
-  },
-];
+/** Cuantas alertas entran en la card sin que se vuelva un muro de texto. */
+const NOVEDADES_EN_PANEL = 4;
+
+/** Etiqueta legible de la categoria que devuelve el clasificador. */
+const ETIQUETA_CATEGORIA: Record<string, string> = {
+  evento: "Evento",
+  aviso: "Aviso",
+  noticia: "Noticia",
+  general: "General",
+};
+
+/** Categoria del backend -> severidad visual de la card.
+ *
+ * `critica` (rojo) queda deliberadamente sin usar: el clasificador no tiene
+ * hoy ninguna nocion de urgencia, asi que pintar algo de rojo seria inventarla.
+ * Un paro entra como `aviso` igual que un cambio de aula. El dia que
+ * `ClasificacionNovedad` gane un campo de urgencia, este es el unico lugar a
+ * tocar. */
+function severidadDe(categoria: string | null): Severidad {
+  return categoria === "aviso" ? "importante" : "info";
+}
+
+function novedadToAlerta(n: NovedadOut): NovedadAlerta {
+  // `|| null` y no `?? null`: la columna es texto libre en la DB, asi que un
+  // string vacio es tan "sin categoria" como un NULL.
+  const categoria =
+    (typeof n.categoria === "string" ? n.categoria.trim() : "") || null;
+  return {
+    id: n.id,
+    categoria: (categoria && ETIQUETA_CATEGORIA[categoria]) || "Novedad",
+    // `titulo` y `descripcion` son nullable en el schema: el clasificador
+    // siempre los llena, pero una fila cargada a mano puede no tenerlos.
+    titulo: n.titulo ?? "Novedad sin titulo",
+    resumen: n.descripcion ?? n.contenido ?? "",
+    severidad: severidadDe(categoria),
+    // Deep link interno (el mismo que usa el buscador global), no la URL de
+    // Instagram: el detalle en UTNHub muestra la novedad ya clasificada y con
+    // sus fuentes, y no saca al alumno de la app.
+    url: `/novedades?novedad=${n.id}`,
+  };
+}
+
+async function obtenerNovedadesSeguro(): Promise<{
+  novedades: NovedadAlerta[];
+  error: string | null;
+}> {
+  try {
+    const feed = await listarNovedades({ limite: NOVEDADES_EN_PANEL });
+    return { novedades: feed.map(novedadToAlerta), error: null };
+  } catch (err) {
+    // Un feed caido no puede tumbar el panel entero: la card se muestra
+    // vacia y el resto (progreso, agenda) sigue andando.
+    if (err instanceof ApiError) {
+      return { novedades: [], error: `Backend devolvio ${err.status}.` };
+    }
+    if (err instanceof Error) return { novedades: [], error: err.message };
+    return { novedades: [], error: "Error desconocido." };
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -217,9 +274,10 @@ function iconoTipo(tipo: EventoCalendarioOut["tipo"]): string {
 // publica y esto es la parte personal, que se renderiza dentro de /perfil.
 
 export async function PanelPersonal() {
-  const [{ grafo, error }, dia, usuario] = await Promise.all([
+  const [{ grafo, error }, dia, novedades, usuario] = await Promise.all([
     obtenerGrafoSeguro(),
     obtenerDiaSeguro(),
+    obtenerNovedadesSeguro(),
     getUsuarioActual(),
   ]);
   const contadores = grafo?.contadores ?? CONTADORES_VACIOS;
@@ -238,10 +296,18 @@ export async function PanelPersonal() {
           No pude traer tu día del backend ({dia.error}).
         </div>
       )}
+      {/* Sin este aviso, un feed caído se ve igual que "no hay novedades":
+          la card cae al mismo empty state y el alumno concluye que no pasa
+          nada en la facultad. */}
+      {novedades.error && (
+        <div className="bg-error/10 border border-error/30 rounded-2xl px-4 py-3 text-sm text-error font-medium">
+          No pude traer las novedades del backend ({novedades.error}).
+        </div>
+      )}
 
       <ProgresoHero
         nombre={usuario?.nombre ?? usuario?.email ?? "Estudiante"}
-        carrera={CARRERA}
+        carrera={lineaCarrera(usuario?.anio_ingresado)}
         contadores={contadores}
         enCursada={enCursada}
         finalesProximos={dia.finalesProximos}
@@ -264,7 +330,7 @@ export async function PanelPersonal() {
           <AccionesRapidas />
         </div>
         <div className="md:col-span-8">
-          <NovedadesAlertas novedades={NOVEDADES_MOCK} esMock />
+          <NovedadesAlertas novedades={novedades.novedades} />
         </div>
         <div className="md:col-span-12">
           <AtajosToolbox />
