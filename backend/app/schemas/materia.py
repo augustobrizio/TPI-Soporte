@@ -9,6 +9,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.core.plan import HORAS_ELECTIVAS_REQUERIDAS
 from app.db.models.academico import CondicionMateria
 
 TipoMateriaLiteral = Literal["troncal", "electiva"]
@@ -85,7 +86,7 @@ class ContadoresGrafo(BaseModel):
     porcentaje_aprobadas: float
     carga_horaria_cursando: int = 0
     creditos_electivas: int = 0
-    meta_creditos_electivas: int = 20
+    meta_creditos_electivas: int = HORAS_ELECTIVAS_REQUERIDAS
     # Promedio sobre TODAS las materias aprobadas con nota (troncales + electivas).
     # Es el mismo valor en ambas pestañas: refleja el promedio general de la carrera.
     promedio_general: float | None = None
