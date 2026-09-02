@@ -14,12 +14,14 @@ import json
 import logging
 from collections.abc import Iterator
 from dataclasses import asdict, dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from langchain_core.messages import AIMessage, HumanMessage
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.agent.graph import construir_grafo
+from app.db.models.chat import ChatFeedback, Mensaje
 from app.db.models.rag import RagChunk
 from app.repositories import conversacion_repo
 
@@ -431,3 +433,101 @@ def registrar_feedback(
         motivo=motivo,
     )
     return fb is not None
+
+
+def reporte_huecos(db: Session, *, dias: int = 7, limite: int = 20) -> dict:
+    """Reporte de "huecos" del chatbot para el feedback loop (sólo admin).
+
+    Un hueco es una respuesta que NO se apoyó en datos: no usó ninguna tool
+    estructurada (correlativas, progreso, etc.) y tampoco trajo fuentes de RAG,
+    o bien recibió un 👎. Ojo: el agente casi siempre llama ``rag_search``, así
+    que "usó una tool" no alcanza — lo que cuenta es si RAG encontró algo
+    (fuentes) o si una tool estructurada devolvió datos. Agrupa por pregunta y
+    ordena por frecuencia: la lista priorizada de qué sumar después.
+
+    Sólo mira respuestas *con tracking* (``tools_json`` no NULL): las anteriores
+    a esta feature no se cuentan, para no ensuciar las métricas.
+    """
+    desde = datetime.now() - timedelta(days=dias)
+
+    # Mensajes de la ventana, en orden, para emparejar cada respuesta con la
+    # última pregunta del usuario que la precede en su conversación.
+    mensajes = db.scalars(
+        select(Mensaje)
+        .where(Mensaje.created_at >= desde)
+        .order_by(Mensaje.conversacion_id, Mensaje.id)
+    ).all()
+
+    ids_asistente = [
+        m.id for m in mensajes if m.role == "assistant" and m.tools_json is not None
+    ]
+    votos_negativos: set[int] = set()
+    if ids_asistente:
+        votos_negativos = set(
+            db.scalars(
+                select(ChatFeedback.mensaje_id).where(
+                    ChatFeedback.mensaje_id.in_(ids_asistente),
+                    ChatFeedback.util.is_(False),
+                )
+            ).all()
+        )
+
+    total = 0
+    con_datos = 0
+    sin_datos_total = 0
+    agrupados: dict[str, dict] = {}
+    ultima_pregunta: dict[int, str] = {}
+    for m in mensajes:
+        if m.role == "user":
+            if m.contenido:
+                ultima_pregunta[m.conversacion_id] = m.contenido
+            continue
+        if m.role != "assistant" or m.tools_json is None:
+            continue  # otros roles o respuestas viejas sin tracking
+
+        total += 1
+        # "Se apoyó en datos" = usó una tool estructurada (algo que no sea
+        # rag_search) o RAG trajo fuentes. Un rag_search sin fuentes = buscó y
+        # no encontró → hueco.
+        uso_estructurada = any(t != "rag_search" for t in m.tools_usadas)
+        apoyo = uso_estructurada or len(m.fuentes) > 0
+        if apoyo:
+            con_datos += 1
+        else:
+            sin_datos_total += 1
+        es_negativo = m.id in votos_negativos
+
+        if apoyo and not es_negativo:
+            continue  # respondió con datos y sin queja: no es hueco
+
+        pregunta = ultima_pregunta.get(m.conversacion_id, "(sin pregunta)")
+        clave = " ".join(pregunta.lower().split())
+        agg = agrupados.setdefault(
+            clave,
+            {
+                "pregunta": pregunta,
+                "cantidad": 0,
+                "sin_datos": False,
+                "voto_negativo": False,
+            },
+        )
+        agg["cantidad"] += 1
+        if not apoyo:
+            agg["sin_datos"] = True
+        if es_negativo:
+            agg["voto_negativo"] = True
+
+    huecos = sorted(
+        agrupados.values(), key=lambda h: h["cantidad"], reverse=True
+    )[:limite]
+
+    return {
+        "dias": dias,
+        "kpis": {
+            "preguntas": total,
+            "con_datos_pct": round(con_datos / total * 100) if total else 0,
+            "huecos": sin_datos_total,
+            "voto_negativo": len(votos_negativos),
+        },
+        "huecos": huecos,
+    }

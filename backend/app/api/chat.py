@@ -7,7 +7,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
-from app.api.deps import UsuarioActual
+from app.api.deps import UsuarioActual, requerir_admin
+from app.db.models.usuario import Usuario
 from app.db.session import get_db
 from app.schemas.chat import (
     ChatIn,
@@ -93,6 +94,22 @@ def registrar_feedback(
             detail="Mensaje no encontrado.",
         )
     db.commit()
+
+
+@router.get(
+    "/admin/huecos",
+    summary="Reporte de huecos del chatbot (sólo admin)",
+)
+def reporte_huecos(
+    db: Annotated[Session, Depends(get_db)],
+    _admin: Annotated[Usuario, Depends(requerir_admin)],
+    dias: int = 7,
+) -> dict:
+    """Preguntas que el chatbot no pudo responder con datos (sin tool o con 👎).
+
+    Cross-usuario: por eso está restringido a cuentas admin.
+    """
+    return chat_service.reporte_huecos(db, dias=dias)
 
 
 @router.get(
