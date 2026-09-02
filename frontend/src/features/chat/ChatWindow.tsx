@@ -221,18 +221,6 @@ export function ChatWindow({ conversacionId = null, inicial = [] }: Props) {
             {mensajes.map((m) => (
               <MessageBubble key={m.id} mensaje={m} onAccion={enviar} />
             ))}
-
-            {cargando && (
-              <div className="flex justify-start gap-3">
-                <div className="icon-chip chip-primary mt-0.5 flex h-8 w-8 items-center justify-center rounded-xl text-primary">
-                  <span className="material-symbols-outlined text-[18px]">smart_toy</span>
-                </div>
-                <div className="card-3d chat-bubble rounded-2xl rounded-tl-sm border border-outline-variant/10 bg-surface-container px-4 py-3 text-sm text-outline">
-                  <span className="animate-pulse">Consultando fuentes de UTN FRRO…</span>
-                </div>
-              </div>
-            )}
-
           </>
         )}
 

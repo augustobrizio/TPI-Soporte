@@ -527,6 +527,30 @@ export interface ChatRespuesta {
   fichas: FichaMateria[];
 }
 
+/** Un paso del agente (uso de una tool) reportado en vivo durante el stream. */
+export interface ChatPaso {
+  tool: string;
+  label: string;
+}
+
+/** Payload del evento `fin`: la respuesta completa ya persistida. */
+export interface ChatStreamFin {
+  respuesta: string;
+  fuentes: ChatFuente[];
+  fichas: FichaMateria[];
+  conversacion_id: number | null;
+  mensaje_id: number | null;
+}
+
+/** Callbacks para cada tipo de evento SSE del chat. Todos opcionales. */
+export interface ChatStreamHandlers {
+  onInicio?: (conversacionId: number) => void;
+  onPaso?: (paso: ChatPaso) => void;
+  onToken?: (texto: string) => void;
+  onFin?: (fin: ChatStreamFin) => void;
+  onError?: (mensaje: string) => void;
+}
+
 export interface MensajeGuardado {
   id: number;
   role: string | null;
@@ -566,6 +590,101 @@ export async function preguntarChat(
     throw new ApiError(res.status, body);
   }
   return res.json() as Promise<ChatRespuesta>;
+}
+
+/**
+ * Despacha un evento SSE ya parseado al handler que corresponda.
+ *
+ * Un frame SSE es un bloque de líneas: `event: <tipo>` y una o más `data:`.
+ * El `data` es JSON (puede venir partido en varias líneas, se re-une con \n).
+ */
+function despacharEventoSSE(raw: string, handlers: ChatStreamHandlers): void {
+  let evento = "message";
+  const datos: string[] = [];
+  for (const linea of raw.split("\n")) {
+    if (linea.startsWith("event:")) evento = linea.slice(6).trim();
+    // SSE descarta un único espacio después de los dos puntos de `data:`.
+    else if (linea.startsWith("data:")) datos.push(linea.slice(5).replace(/^ /, ""));
+  }
+  if (datos.length === 0) return;
+
+  let payload: Record<string, unknown>;
+  try {
+    payload = JSON.parse(datos.join("\n"));
+  } catch {
+    return; // frame incompleto o comentario SSE (`:` keepalive): lo ignoramos
+  }
+
+  switch (evento) {
+    case "inicio":
+      handlers.onInicio?.(payload.conversacion_id as number);
+      break;
+    case "paso":
+      handlers.onPaso?.(payload as unknown as ChatPaso);
+      break;
+    case "token":
+      handlers.onToken?.(payload.texto as string);
+      break;
+    case "fin":
+      handlers.onFin?.(payload as unknown as ChatStreamFin);
+      break;
+    case "error":
+      handlers.onError?.(payload.mensaje as string);
+      break;
+  }
+}
+
+/**
+ * Versión en streaming de {@link preguntarChat}: en vez de esperar la respuesta
+ * completa, va invocando `handlers` con cada evento SSE (paso del agente, token,
+ * fin). Lee `res.body` como un `ReadableStream` y parsea los frames a mano.
+ *
+ * Va por el proxy /api/backend, que hace passthrough del stream sin bufferear.
+ */
+export async function preguntarChatStream(
+  pregunta: string,
+  conversacionId: number | null | undefined,
+  handlers: ChatStreamHandlers,
+  signal?: AbortSignal,
+): Promise<void> {
+  const res = await fetch(`${MUTATION_BASE}/chat/stream`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
+    body: JSON.stringify({ pregunta, conversacion_id: conversacionId ?? null }),
+    signal,
+  });
+  if (!res.ok || !res.body) {
+    let body: unknown = null;
+    try {
+      body = await res.json();
+    } catch {
+      /* ignorar */
+    }
+    throw new ApiError(res.status, body);
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  // Los frames vienen separados por doble salto de línea. La red puede partir
+  // un frame en varios chunks (o juntar varios en uno), así que acumulamos en
+  // `buffer` y cortamos por "\n\n".
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    let corte = buffer.indexOf("\n\n");
+    while (corte !== -1) {
+      const frame = buffer.slice(0, corte);
+      buffer = buffer.slice(corte + 2);
+      despacharEventoSSE(frame, handlers);
+      corte = buffer.indexOf("\n\n");
+    }
+  }
+  // Último frame sin "\n\n" de cierre (por las dudas).
+  if (buffer.trim()) despacharEventoSSE(buffer, handlers);
 }
 
 /** Conversaciones del usuario (historial del chat). */

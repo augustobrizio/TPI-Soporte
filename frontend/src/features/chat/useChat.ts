@@ -4,8 +4,9 @@ import { useCallback, useRef, useState } from "react";
 
 import {
   ApiError,
-  preguntarChat,
+  preguntarChatStream,
   type ChatFuente,
+  type ChatPaso,
   type FichaMateria,
 } from "@/lib/api";
 
@@ -20,6 +21,10 @@ export interface MensajeChat {
   mensajeId?: number;
   /** fichas de materia a mostrar como tarjeta (§19). */
   fichas?: FichaMateria[];
+  /** pasos del agente (uso de tools) reportados en vivo durante el stream. */
+  pasos?: ChatPaso[];
+  /** true mientras el asistente todavía está escribiendo esta respuesta. */
+  streaming?: boolean;
 }
 
 interface Opciones {
@@ -48,23 +53,52 @@ export function useChat({ conversacionId = null, inicial = [] }: Opciones = {}) 
     async (pregunta: string) => {
       setError(null);
       setCargando(true);
+
+      // Insertamos ya el mensaje del asistente vacío: el stream lo va llenando
+      // (pasos + tokens) mutándolo por su id.
+      const idAsist = crypto.randomUUID();
+      setMensajes((prev) => [
+        ...prev,
+        { id: idAsist, rol: "assistant", texto: "", streaming: true, pasos: [] },
+      ]);
+
+      // Helper: aplica un patch al mensaje del asistente en curso.
+      const parche = (fn: (m: MensajeChat) => MensajeChat) =>
+        setMensajes((prev) => prev.map((m) => (m.id === idAsist ? fn(m) : m)));
+
+      let ok = true;
       try {
-        const r = await preguntarChat(pregunta, convId);
-        if (r.conversacion_id) setConvId(r.conversacion_id);
-        setMensajes((prev) => [
-          ...prev,
-          {
-            id: crypto.randomUUID(),
-            rol: "assistant",
-            texto: r.respuesta,
-            fuentes: r.fuentes,
-            mensajeId: r.mensaje_id ?? undefined,
-            fichas: r.fichas,
+        await preguntarChatStream(pregunta, convId, {
+          onInicio: (cid) => setConvId(cid),
+          onPaso: (p) =>
+            parche((m) => ({ ...m, pasos: [...(m.pasos ?? []), p] })),
+          onToken: (t) => parche((m) => ({ ...m, texto: m.texto + t })),
+          onFin: (fin) => {
+            if (fin.conversacion_id) setConvId(fin.conversacion_id);
+            // El `fin` trae la respuesta autoritativa (completa y persistida):
+            // la usamos como texto final por si el stream de tokens se ensució.
+            parche((m) => ({
+              ...m,
+              texto: fin.respuesta,
+              fuentes: fin.fuentes,
+              fichas: fin.fichas,
+              mensajeId: fin.mensaje_id ?? undefined,
+              streaming: false,
+            }));
           },
-        ]);
-        pendiente.current = null;
+          onError: (msg) => {
+            // Error controlado del backend (proveedor sobrecargado): sacamos el
+            // placeholder y mostramos el error con botón de reintento.
+            ok = false;
+            pendiente.current = pregunta;
+            setMensajes((prev) => prev.filter((m) => m.id !== idAsist));
+            setError(msg);
+          },
+        });
+        if (ok) pendiente.current = null;
       } catch (e) {
         pendiente.current = pregunta;
+        setMensajes((prev) => prev.filter((m) => m.id !== idAsist));
         const status = e instanceof ApiError ? e.status : 0;
         setError(
           status === 401
