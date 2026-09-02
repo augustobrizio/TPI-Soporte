@@ -299,9 +299,23 @@ def responder_stream(
         # Rehacer la última respuesta: descartamos el turno previo antes de
         # reconstruir el historial, así no queda duplicado.
         conversacion_repo.eliminar_ultimo_turno(db, conversacion.id)
-    yield _sse("inicio", {"conversacion_id": conversacion.id})
 
+    # El historial se arma ANTES de guardar la pregunta actual; si no, el agente
+    # la vería duplicada en su contexto.
     historial = _historial_langchain(db, conversacion.id)
+
+    # Persistimos la conversación + la pregunta YA, antes de correr el agente. Así
+    # /chat/{id} existe apenas el frontend navega, y la pregunta no se pierde
+    # aunque el turno del asistente falle después (p. ej. si se cae la conexión a
+    # Neon durante las llamadas al modelo, que es lo que producía 404 en Railway).
+    conversacion_repo.agregar_mensaje(
+        db, conversacion.id, role="user", contenido=pregunta
+    )
+    conversacion.updated_at = datetime.now()
+    conv_id = conversacion.id  # fijo antes del commit (expire_on_commit)
+    db.commit()
+
+    yield _sse("inicio", {"conversacion_id": conv_id})
 
     recolector: list[RagChunk] = []
     recolector_fichas: list[dict] = []
@@ -350,10 +364,7 @@ def responder_stream(
                     texto_final = _extraer_texto(msg.content)
     except Exception:
         logger.exception("Fallo al generar la respuesta del chat (stream)")
-        yield _sse(
-            "error",
-            {"mensaje": _ERROR_LLM, "conversacion_id": conversacion.id},
-        )
+        yield _sse("error", {"mensaje": _ERROR_LLM, "conversacion_id": conv_id})
         return
 
     fuentes = _construir_fuentes(recolector)
@@ -363,24 +374,29 @@ def responder_stream(
         else None
     )
 
-    conversacion_repo.agregar_mensaje(
-        db, conversacion.id, role="user", contenido=pregunta
-    )
-    asistente_msg = conversacion_repo.agregar_mensaje(
-        db,
-        conversacion.id,
-        role="assistant",
-        contenido=texto_final,
-        fuentes_json=fuentes_json,
-        tools_json=json.dumps(tools_usadas, ensure_ascii=False),
-    )
-    conversacion.updated_at = datetime.now()
-    # Flush para poblar los ids ANTES del commit: tras el commit las instancias
-    # quedan expiradas y leerlas dispararía otra query.
-    db.flush()
-    conversacion_id_final = conversacion.id
-    mensaje_id_final = asistente_msg.id
-    db.commit()
+    # La respuesta del asistente se guarda al final, protegida: si el commit
+    # falla (típicamente la conexión a Neon caída tras el turno largo), hacemos
+    # rollback y avisamos con un `error` en vez de cortar el stream a lo bruto
+    # —que dejaba al frontend navegando a una conversación sin respuesta—. La
+    # pregunta ya está persistida desde el `inicio`, así que no se pierde.
+    try:
+        asistente_msg = conversacion_repo.agregar_mensaje(
+            db,
+            conv_id,
+            role="assistant",
+            contenido=texto_final,
+            fuentes_json=fuentes_json,
+            tools_json=json.dumps(tools_usadas, ensure_ascii=False),
+        )
+        conversacion.updated_at = datetime.now()
+        db.flush()
+        mensaje_id_final = asistente_msg.id
+        db.commit()
+    except Exception:
+        logger.exception("Fallo al persistir la respuesta del chat (stream)")
+        db.rollback()
+        yield _sse("error", {"mensaje": _ERROR_LLM, "conversacion_id": conv_id})
+        return
 
     yield _sse(
         "fin",
@@ -388,7 +404,7 @@ def responder_stream(
             "respuesta": texto_final,
             "fuentes": [asdict(f) for f in fuentes],
             "fichas": _dedup_fichas(recolector_fichas),
-            "conversacion_id": conversacion_id_final,
+            "conversacion_id": conv_id,
             "mensaje_id": mensaje_id_final,
         },
     )
