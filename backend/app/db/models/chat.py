@@ -65,6 +65,10 @@ class Mensaje(Base):
     # {titulo, fuente, url, fecha}). Se guardan por mensaje para poder mostrarlas
     # al retomar la conversación, no sólo en vivo.
     fuentes_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Nombres de las tools que el agente usó para esta respuesta, serializados
+    # como JSON (lista de strings). NULL o "[]" = no usó ninguna → señal de que
+    # el chatbot no pudo apoyar la respuesta en datos reales (feedback loop).
+    tools_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime | None] = mapped_column(
         DateTime, server_default=func.now()
     )
@@ -82,6 +86,17 @@ class Mensaje(Base):
         try:
             data = json.loads(self.fuentes_json)
             return data if isinstance(data, list) else []
+        except ValueError:
+            return []
+
+    @property
+    def tools_usadas(self) -> list[str]:
+        """Tools usadas por el asistente, parseadas desde ``tools_json``."""
+        if not self.tools_json:
+            return []
+        try:
+            data = json.loads(self.tools_json)
+            return [str(t) for t in data] if isinstance(data, list) else []
         except ValueError:
             return []
 
