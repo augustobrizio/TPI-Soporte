@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Iterator
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
 
@@ -36,6 +37,30 @@ _ERROR_LLM = (
     "El asistente está sobrecargado en este momento. Probá de nuevo en unos "
     "segundos."
 )
+
+# Etiqueta amable para cada tool, para mostrar los "pasos" del agente en vivo.
+# La clave es el nombre con el que la tool queda registrada (su ``name``), que
+# es el mismo que el LLM usa al pedirla. Si aparece una tool sin mapear, cae en
+# un texto genérico (ver ``_PASO_GENERICO``).
+_PASO_LABELS: dict[str, str] = {
+    "rag_search": "Buscando en documentos oficiales…",
+    "buscar_correlativas": "Revisando correlatividades…",
+    "buscar_horario_comision": "Consultando horarios…",
+    "buscar_profesor": "Buscando profesor…",
+    "proximos_eventos": "Revisando el calendario…",
+    "ultimas_novedades": "Mirando novedades…",
+    "ficha_materia": "Armando la ficha de materia…",
+}
+_PASO_GENERICO = "Buscando información…"
+
+
+def _sse(evento: str, payload: dict) -> str:
+    """Serializa un evento como un frame SSE (``event:`` + ``data:`` en JSON).
+
+    El doble salto de línea final es el separador que exige el protocolo: marca
+    el fin de un evento para el ``EventSource``/lector del otro lado.
+    """
+    return f"event: {evento}\ndata: {json.dumps(payload, ensure_ascii=False)}\n\n"
 
 
 @dataclass
@@ -97,6 +122,47 @@ def _titulo_desde(pregunta: str, limite: int = 60) -> str:
     return limpio if len(limpio) <= limite else f"{limpio[:limite - 1]}…"
 
 
+def _construir_fuentes(recolector: list[RagChunk]) -> list[Fuente]:
+    """Fuentes citadas a partir de los fragmentos recuperados.
+
+    Dedup por ``(titulo, url)``: un documento puede aportar varios fragmentos y
+    no tiene sentido listarlo repetido (RNF-12).
+    """
+    vistas: set[tuple[str | None, str | None]] = set()
+    fuentes: list[Fuente] = []
+    for chunk in recolector:
+        clave = (chunk.titulo, chunk.url)
+        if clave in vistas:
+            continue
+        vistas.add(clave)
+        fecha = (
+            chunk.fecha_actualizacion.date().isoformat()
+            if chunk.fecha_actualizacion
+            else None
+        )
+        fuentes.append(
+            Fuente(
+                titulo=chunk.titulo,
+                fuente=chunk.fuente,
+                url=chunk.url,
+                fecha=fecha,
+            )
+        )
+    return fuentes
+
+
+def _dedup_fichas(recolector_fichas: list[dict]) -> list[dict]:
+    """Fichas de materia sin repetidos (dedup por código). No se persisten."""
+    fichas: list[dict] = []
+    codigos_vistos: set[str] = set()
+    for f in recolector_fichas:
+        if f["codigo"] in codigos_vistos:
+            continue
+        codigos_vistos.add(f["codigo"])
+        fichas.append(f)
+    return fichas
+
+
 def responder(
     db: Session,
     pregunta: str,
@@ -141,28 +207,8 @@ def responder(
             respuesta=_ERROR_LLM, conversacion_id=conversacion.id
         )
 
-    # 3. Fuentes citadas. Dedup por (titulo, url): un documento puede aportar
-    #    varios fragmentos y no tiene sentido listarlo repetido.
-    vistas: set[tuple[str | None, str | None]] = set()
-    fuentes: list[Fuente] = []
-    for chunk in recolector:
-        clave = (chunk.titulo, chunk.url)
-        if clave in vistas:
-            continue
-        vistas.add(clave)
-        fecha = (
-            chunk.fecha_actualizacion.date().isoformat()
-            if chunk.fecha_actualizacion
-            else None
-        )
-        fuentes.append(
-            Fuente(
-                titulo=chunk.titulo,
-                fuente=chunk.fuente,
-                url=chunk.url,
-                fecha=fecha,
-            )
-        )
+    # 3. Fuentes citadas (dedup por documento).
+    fuentes = _construir_fuentes(recolector)
     fuentes_json = (
         json.dumps([asdict(f) for f in fuentes], ensure_ascii=False)
         if fuentes
@@ -185,21 +231,138 @@ def responder(
     # autoflush=False: sin flush estos mensajes no se ven en la próxima lectura.
     db.flush()
 
-    # Fichas de materia dedup por código (no se persisten; son derivadas).
-    fichas: list[dict] = []
-    codigos_vistos: set[str] = set()
-    for f in recolector_fichas:
-        if f["codigo"] in codigos_vistos:
-            continue
-        codigos_vistos.add(f["codigo"])
-        fichas.append(f)
-
     return RespuestaChat(
         respuesta=texto,
         fuentes=fuentes,
         conversacion_id=conversacion.id,
         mensaje_id=asistente_msg.id,
-        fichas=fichas,
+        fichas=_dedup_fichas(recolector_fichas),
+    )
+
+
+def responder_stream(
+    db: Session,
+    pregunta: str,
+    *,
+    usuario_id: int,
+    conversacion_id: int | None = None,
+) -> Iterator[str]:
+    """Igual que :func:`responder`, pero emite la respuesta en vivo como SSE.
+
+    En vez de esperar a que el agente termine (``grafo.invoke``), consumimos
+    ``grafo.stream`` con dos modos a la vez:
+
+    * ``updates`` — un evento por nodo cuando termina. Nos sirve para detectar
+      cuándo el agente pide una tool (y emitir un "paso") y para capturar el
+      texto final de la respuesta.
+    * ``messages`` — los tokens del LLM a medida que se generan. Es lo que hace
+      que el texto aparezca de a poco.
+
+    Eventos SSE que emite, en orden:
+
+    * ``inicio`` — ``{conversacion_id}`` apenas se resuelve la conversación, para
+      que el frontend actualice la URL sin esperar la respuesta.
+    * ``paso``   — ``{tool, label}`` cada vez que el agente decide usar una tool.
+    * ``token``  — ``{texto}`` cada fragmento de la respuesta final.
+    * ``fin``    — payload completo (respuesta, fuentes, fichas, ids) una vez
+      persistido el turno.
+    * ``error``  — ``{mensaje, conversacion_id}`` si el proveedor falla.
+
+    A diferencia de :func:`responder`, este generador **hace el commit** él mismo:
+    con una ``StreamingResponse`` el endpoint retorna antes de que el cuerpo se
+    consuma, así que no podría commitear después.
+    """
+    conversacion = None
+    if conversacion_id is not None:
+        conversacion = conversacion_repo.get_conversacion(
+            db, conversacion_id, usuario_id
+        )
+    if conversacion is None:
+        conversacion = conversacion_repo.crear_conversacion(
+            db, usuario_id, titulo=_titulo_desde(pregunta)
+        )
+    yield _sse("inicio", {"conversacion_id": conversacion.id})
+
+    historial = _historial_langchain(db, conversacion.id)
+
+    recolector: list[RagChunk] = []
+    recolector_fichas: list[dict] = []
+    grafo = construir_grafo(db, usuario_id, recolector, recolector_fichas)
+
+    # El texto que persistimos sale del modo ``updates`` (el mensaje final del
+    # agente, completo y limpio), no de acumular tokens: así evitamos guardar
+    # cualquier preámbulo que el modelo escriba antes de pedir una tool.
+    texto_final = ""
+    try:
+        for modo, data in grafo.stream(
+            {"messages": [*historial, HumanMessage(content=pregunta)]},
+            {"recursion_limit": MAX_ITERACIONES * 2},
+            stream_mode=["updates", "messages"],
+        ):
+            if modo == "messages":
+                chunk, meta = data
+                # Sólo tokens del nodo del LLM; el nodo de tools no "habla".
+                if meta.get("langgraph_node") != "agente":
+                    continue
+                delta = _extraer_texto(chunk.content)
+                if delta:
+                    yield _sse("token", {"texto": delta})
+            elif modo == "updates":
+                payload = data.get("agente")
+                if not payload:
+                    continue
+                msg = payload["messages"][-1]
+                tool_calls = getattr(msg, "tool_calls", None)
+                if tool_calls:
+                    for tc in tool_calls:
+                        nombre = tc.get("name", "")
+                        yield _sse(
+                            "paso",
+                            {
+                                "tool": nombre,
+                                "label": _PASO_LABELS.get(nombre, _PASO_GENERICO),
+                            },
+                        )
+                else:
+                    # Turno del agente sin tools = la respuesta final.
+                    texto_final = _extraer_texto(msg.content)
+    except Exception:
+        logger.exception("Fallo al generar la respuesta del chat (stream)")
+        yield _sse(
+            "error",
+            {"mensaje": _ERROR_LLM, "conversacion_id": conversacion.id},
+        )
+        return
+
+    fuentes = _construir_fuentes(recolector)
+    fuentes_json = (
+        json.dumps([asdict(f) for f in fuentes], ensure_ascii=False)
+        if fuentes
+        else None
+    )
+
+    conversacion_repo.agregar_mensaje(
+        db, conversacion.id, role="user", contenido=pregunta
+    )
+    asistente_msg = conversacion_repo.agregar_mensaje(
+        db,
+        conversacion.id,
+        role="assistant",
+        contenido=texto_final,
+        fuentes_json=fuentes_json,
+    )
+    conversacion.updated_at = datetime.now()
+    db.commit()
+
+    yield _sse(
+        "fin",
+        {
+            "respuesta": texto_final,
+            "fuentes": [asdict(f) for f in fuentes],
+            "fichas": _dedup_fichas(recolector_fichas),
+            "conversacion_id": conversacion.id,
+            "mensaje_id": asistente_msg.id,
+        },
     )
 
 
