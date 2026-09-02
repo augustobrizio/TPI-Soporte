@@ -246,6 +246,7 @@ def responder_stream(
     *,
     usuario_id: int,
     conversacion_id: int | None = None,
+    regenerar: bool = False,
 ) -> Iterator[str]:
     """Igual que :func:`responder`, pero emite la respuesta en vivo como SSE.
 
@@ -281,6 +282,10 @@ def responder_stream(
         conversacion = conversacion_repo.crear_conversacion(
             db, usuario_id, titulo=_titulo_desde(pregunta)
         )
+    elif regenerar:
+        # Rehacer la última respuesta: descartamos el turno previo antes de
+        # reconstruir el historial, así no queda duplicado.
+        conversacion_repo.eliminar_ultimo_turno(db, conversacion.id)
     yield _sse("inicio", {"conversacion_id": conversacion.id})
 
     historial = _historial_langchain(db, conversacion.id)

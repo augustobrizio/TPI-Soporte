@@ -62,6 +62,24 @@ def agregar_mensaje(
     return mensaje
 
 
+def eliminar_ultimo_turno(db: Session, conversacion_id: int) -> None:
+    """Borra los últimos dos mensajes de la conversación (el turno más reciente).
+
+    Se usa al *regenerar*: el frontend vuelve a mandar la última pregunta, así
+    que primero descartamos ese turno (pregunta del usuario + respuesta del
+    asistente) para no dejarlo duplicado en el historial.
+    """
+    ultimos = db.scalars(
+        select(Mensaje)
+        .where(Mensaje.conversacion_id == conversacion_id)
+        .order_by(Mensaje.created_at.desc(), Mensaje.id.desc())
+        .limit(2)
+    ).all()
+    for m in ultimos:
+        db.delete(m)
+    db.flush()
+
+
 def listar_mensajes(db: Session, conversacion_id: int) -> Sequence[Mensaje]:
     return db.scalars(
         select(Mensaje)

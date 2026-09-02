@@ -55,6 +55,7 @@ def preguntar_stream(
         payload.pregunta,
         usuario_id=usuario.id,
         conversacion_id=payload.conversacion_id,
+        regenerar=payload.regenerar,
     )
     return StreamingResponse(
         stream,

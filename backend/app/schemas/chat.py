@@ -11,6 +11,10 @@ class ChatIn(BaseModel):
 
     pregunta: str = Field(min_length=1, max_length=1000)
     conversacion_id: int | None = None
+    # Si es True, se rehace la última respuesta: el backend descarta el último
+    # turno (pregunta + respuesta) antes de volver a responder, para no
+    # duplicarlo en el historial. Sólo aplica con conversacion_id.
+    regenerar: bool = False
 
 
 class ConversacionUpdate(BaseModel):
