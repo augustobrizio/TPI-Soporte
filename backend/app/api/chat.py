@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.api.deps import UsuarioActual
@@ -36,6 +37,36 @@ def preguntar(
     )
     db.commit()
     return ChatOut.model_validate(resultado)
+
+
+@router.post("/stream", summary="Preguntar al asistente (respuesta en streaming)")
+def preguntar_stream(
+    payload: ChatIn,
+    db: Annotated[Session, Depends(get_db)],
+    usuario: UsuarioActual,
+) -> StreamingResponse:
+    """Igual que ``POST /chat`` pero devuelve la respuesta como eventos SSE.
+
+    El generador del servicio va emitiendo pasos del agente y tokens a medida
+    que se producen, y persiste el turno al final (hace el commit él mismo).
+    """
+    stream = chat_service.responder_stream(
+        db,
+        payload.pregunta,
+        usuario_id=usuario.id,
+        conversacion_id=payload.conversacion_id,
+    )
+    return StreamingResponse(
+        stream,
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            # Evita que Nginx (u otros proxies) bufereen el stream y maten el
+            # efecto de "aparece de a poco".
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @router.post(
