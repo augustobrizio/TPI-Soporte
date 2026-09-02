@@ -6,6 +6,28 @@ UTN FRRO. NO una copia de ChatGPT. Conservar lo que ya funciona y mejorar sobre 
 
 Estados: ✅ hecho · 🟡 parcial · ❌ falta · ⏸ diferido (depende de algo externo).
 
+## Estado 2026-09-02 (rama `feat/chat-streaming`)
+
+Cerrado el grueso del roadmap y varias cosas que este plan **no** contemplaba:
+
+- ✅ **Streaming de la respuesta** (no estaba en el plan): `POST /chat/stream` con
+  SSE + `grafo.stream()` de LangGraph, tokens token a token con cursor.
+- ✅ **Pasos del agente en vivo** (§11, ampliado): "buscando en documentos…",
+  "revisando correlatividades…" con spinner→check, colapsables a "Razonó N pasos".
+- ✅ **F9 — Sugerencias post-respuesta** (§16): chips de seguimiento.
+- ✅ **F10 — Feedback** (§17): 👍/👎/copiar ya estaban; se sumó **regenerar**.
+- ✅ **Datos del alumno** (no estaba): tools `mi_progreso_academico` (troncales +
+  electivas) y `plan_de_estudio`; reglas del plan curadas en `app/core/plan.py`.
+- ✅ **Feedback loop** (no estaba, va más allá del §17): `mensaje.tools_json` +
+  `GET /chat/admin/huecos` + página `/admin/chatbot` → reporte de las preguntas que
+  el chatbot no pudo responder con datos, priorizadas por frecuencia.
+- ✅ Ya venían cerradas de fases previas: §2/§3 (home + diseño), §8 (markdown +
+  tablas), §4 (sidebar/historial), §9 (fuentes con fecha), §12 (contexto), §18
+  (errores + reintentar), §19 (fichas de materia).
+
+**Queda** (no bloqueante): §15 nivel de confianza, §21 responsive/drawer, §22
+accesibilidad fina, §23 microinteracciones, y el set de evaluación formal (RNF-13).
+
 ## Hallazgos de arquitectura (transversales)
 
 - **Dos sistemas de tokens** conviven a propósito: `--shell-*` (celeste `#1CA4DF`,
@@ -71,8 +93,9 @@ Estados: ✅ hecho · 🟡 parcial · ❌ falta · ⏸ diferido (depende de algo
   respuestas graduadas, aviso de desactualizado.
 - **F7 — Contexto** (§12): ✅ hecho; verificar/pulir.
 - **F8 — Loading / error** (§11, §18): estados diseñados con Reintentar, etc.
-- **F9 — Sugerencias contextuales** (§16): follow-ups del agente + UI.
-- **F10 — Feedback** (§17): modelo `chat_feedback` + endpoint + UI 👍👎📋.
+- ✅ **F9 — Sugerencias contextuales** (§16): chips de seguimiento post-respuesta.
+- ✅ **F10 — Feedback** (§17): modelo `chat_feedback` + endpoint + UI 👍👎📋 + regenerar.
+  Extendido con el **feedback loop** de admin (`tools_json` + reporte de huecos).
 - **F11 — Fichas académicas** (§19): tool/endpoint que devuelva ficha estructurada
   + componente de tarjeta con acciones.
 - **F12 — Responsive + accesibilidad** (§21, §22).

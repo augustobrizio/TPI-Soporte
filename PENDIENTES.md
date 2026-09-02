@@ -15,6 +15,14 @@
 > de sync abiertos que este documento no registraba** — `POST /calendario/sincronizar`
 > y `POST /novedades/sincronizar` —, así que eran cinco y no tres. Suite: **184 → 259**.
 >
+> **Actualización 2026-09-02** (rama `feat/chat-streaming`): entra el **Frente 2 —
+> Chatbot (RAG + Agente + Chat)**, la feature de Bruno, que se venía desarrollando
+> fuera de `origin/main` y aterriza en main con este merge. Cubre lo pedido y suma:
+> RAG sobre pgvector, agente LangGraph con 9 tools, chat con **streaming** y **pasos
+> del agente en vivo**, herramientas de **progreso académico del alumno** (troncales
+> + electivas) y un **feedback loop** (reporte de huecos del chatbot para admins).
+> Suite: **259 → 313**.
+>
 > Escala de esfuerzo: **S** ≤ medio día · **M** 1–2 días · **L** 3–5 días · **XL** > 1 semana.
 
 ---
@@ -28,11 +36,11 @@
 - **Calendario académico** (`calendario_service`, tests) — RF-10
 - **Novedades + pipeline de ingesta con IA** (scrapers, Lambdas, S3) — RF-09, RF-12
 - **Perfil** — RF-11
-- **Modelos de DB de auth y chat ya creados** (`usuario`, `conversacion`, `mensaje`) — falta la lógica
+- **Auth y chatbot** (`usuario`, `conversacion`, `mensaje` + RAG, agente y chat) — Frentes 1, 2 y 8 ✅
 
 ### 🔴 Pendiente (el grueso del trabajo)
 1. ~~**Autenticación & sesión**~~ — **hecho**, Google incluido (Frente 8 ✅). Queda solo la expiración por inactividad. Ver Frente 1.
-2. **Chatbot: RAG + Agente + Chat** — greenfield *(feature de Bruno)*
+2. ~~**Chatbot: RAG + Agente + Chat**~~ — ✅ **hecho** (2026-09-02, rama `feat/chat-streaming`) *(feature de Bruno)*. Ver Frente 2.
 3. ~~**Tests de reglas de negocio**~~ — ✅ **hecho** (2026-09-01): correlatividad, inscripción y promedio. Ver Frente 3.
 4. ~~**Integración multi-usuario en el frontend**~~ — **hecho**. Ver Frente 4.
 5. **Deuda técnica / housekeeping**
@@ -80,21 +88,28 @@
 
 ---
 
-## Frente 2 — Chatbot: RAG + Agente + Chat  🔴  *(feature de Bruno)*
+## ~~Frente 2 — Chatbot: RAG + Agente + Chat~~  ✅  *(cerrado — 2026-09-02, rama `feat/chat-streaming`)  (feature de Bruno)*
 **Requerimientos:** RF-04, RF-05, RF-06, RF-07, RNF-09, RNF-10, RNF-11, RNF-12, RNF-13
-**Estado:** TODO greenfield. `agent/{graph,prompts,state}.py`, las 6 tools, y todo `rag/{chunker,embeddings,ingest,retriever}.py` están en **0 líneas**. `chat_service.py` y `api/chat.py` vacíos, router no registrado. **Los modelos `Conversacion` y `Mensaje` (con campo `tokens`) ya existen.**
-**Depende de:** D2, D3.
+**Estado:** **implementado y andando.** Se desarrolló en la rama `feat/chat-streaming`, fuera de `origin/main`, y entra a main con este merge. RAG sobre pgvector (Gemini), agente LangGraph que decide entre 9 tools, chat con streaming y persistencia. El proveedor quedó en **Google Gemini** (tier gratis), no OpenAI — resuelve D2/D3 para el chat.
+**Depende de:** ~~D2, D3~~ — resueltas (Gemini free tier + `gemini-embedding-001` a 768 dims).
 
-| ID | Tarea | Área | Alcance | Esf. |
-|----|-------|------|---------|------|
-| T2.1 | Pipeline RAG | Back | `chunker.py` (chunks con solapamiento configurable), `embeddings.py` (modelo español), `ingest.py` (extracción→limpieza→chunk→embeddings→pgvector con metadata: fuente/fecha/categoría/hash), `retriever.py` (similitud en pgvector). Verificar tabla de chunks + `CREATE EXTENSION vector` en Neon (RNF-09, RNF-13). | XL |
-| T2.2 | Tools del agente | Back | Implementar las 6 tools consumiendo los `services/` existentes (respetar capas): `buscar_correlativas`, `buscar_horario_comision`, `buscar_profesor`, `proximos_eventos`, `rag_search`, `ultimas_novedades`. | L |
-| T2.3 | Agente LangGraph | Back | `state.py`, `graph.py` (arquitectura agéntica que decide tools — RNF-10), `prompts.py` (system prompt: no inventar, citar fuentes — RF-06/RF-07/RNF-12). | L |
-| T2.4 | Chat service + API | Back | `chat_service.py` + `api/chat.py`: persistir conversación/mensajes (modelos ya existen), contexto conversacional (RF-05), límite de tokens por consulta y sesión (RNF-11). Registrar router en `main.py`. | L |
-| T2.5 | Set de evaluación | Back | Consultas reales en español argentino para medir recuperación y comparar modelos de embeddings (RNF-13). Carpeta `tests/eval/` ya existe vacía. | M |
-| T2.6 | Front del chat | Front | Ya existen `chat/page.tsx` y `chat/[conversacionId]/page.tsx`: conectarlos al `api/chat` real, streaming de respuesta, y **mostrar las fuentes citadas** (RF-06). | L |
+| ID | Tarea | Cómo quedó |
+|----|-------|------------|
+| ~~T2.1~~ ✅ | Pipeline RAG | `rag/{chunker,embeddings,ingest,retriever}.py` sobre **pgvector** (`rag_chunk`, `CREATE EXTENSION vector` en Neon). Ingesta idempotente por fuente con metadata (fuente/url/fecha/hash), reintentos con backoff, OCR de PDFs escaneados. Corpus real (~342 chunks): sitio FRRO, PDFs institucionales, Instagram, Drive de la carrera y notas curadas del equipo. |
+| ~~T2.2~~ ✅ | Tools del agente | **9 tools** consumiendo `services/`: `rag_search`, `buscar_correlativas`, `buscar_horario_comision`, `buscar_profesor`, `proximos_eventos`, `ultimas_novedades`, `ficha_materia`, y las nuevas `mi_progreso_academico` y `plan_de_estudio`. |
+| ~~T2.3~~ ✅ | Agente LangGraph | `state.py`, `graph.py` (ciclo `agente ⇄ tools`), `prompts.py` (no inventar, citar fuentes, fecha actual inyectada). |
+| ~~T2.4~~ ✅ | Chat service + API | `chat_service.py` + `api/chat.py`: persiste conversación/mensajes, contexto conversacional (RF-05), historial acotado (`MAX_HISTORIAL`). Router registrado. |
+| T2.5 ⚠️ | Set de evaluación | **Queda pendiente** el set formal de evaluación de recuperación en español (RNF-13). Se compensa en parte con el **feedback loop** de abajo (huecos reales de usuarios). |
+| ~~T2.6~~ ✅ | Front del chat | Chat conectado al `api/chat` real, **streaming** token a token (SSE), **pasos del agente en vivo**, historial en la sidebar (renombrar/eliminar/agrupar por fecha), fichas de materia como tarjeta y **fuentes citadas** con fecha (RF-06, RNF-12). |
 
-**Criterios de aceptación:** el usuario pregunta en lenguaje natural, el agente elige tools, responde citando fuentes, dice "no tengo esa info" cuando no la encuentra, mantiene contexto en la sesión y respeta el límite de tokens.
+### Lo que se sumó más allá del plan original
+
+- **Streaming SSE de punta a punta** (F1). `POST /chat/stream` con `grafo.stream()` de LangGraph → el proxy Next hace passthrough → el frontend renderiza tokens y **pasos del agente** ("buscando en documentos…", "revisando correlatividades…") con spinner→check.
+- **Datos del alumno en el chat.** El agente responde "cuántas materias me faltan", promedio y avance con `mi_progreso_academico`, contemplando **troncales + electivas** (las 20h del plan). Las reglas del plan (electivas, ADUSI opcional) se centralizaron en `app/core/plan.py` — datos autoritativos curados, no scrapeados.
+- **Feedback loop (RNF-12 extendido).** Columna `mensaje.tools_json` (migración `c2d3e4f5a6b7`, aplicada en Neon) que registra qué tools usó cada respuesta. `GET /chat/admin/huecos` (gateado a admin) + página `/admin/chatbot`: agrupa por frecuencia las preguntas que el chatbot no pudo responder con datos (sin tool estructurada ni fuentes) o con 👎 → lista priorizada de qué tool/documento sumar después.
+- **Acciones sobre la respuesta:** copiar, **regenerar** y chips de **sugerencias de seguimiento**.
+
+**Criterios de aceptación:** ✅ el usuario pregunta en lenguaje natural, el agente elige tools, responde citando fuentes, dice "no tengo esa info" cuando no la encuentra y mantiene contexto en la sesión. Queda T2.5 (set de evaluación formal, RNF-13).
 
 ---
 
@@ -503,13 +518,13 @@ Queda T13.6 (qué widgets agregar y cuáles achicar), que es diseño y no deuda.
 ## Orden sugerido y dependencias
 
 ```
-D2, D3        ──► destraban el chatbot
+D2, D3        ──► ✅ resueltas (Gemini free tier + pgvector). Destrababan el chatbot.
 D4            ──► lo unico que sigue bloqueando (13.A). D5 y D6 resueltas.
 
 Frente 1  (auth)            ── ✅ salvo Google, inactividad y rol
 Frente 4  (multi-usuario)   ── ✅ cerrado
 Frente 3  (tests)           ── ✅ cerrado (2026-09-01)
-Frente 2  (chatbot)         ── de Bruno; necesita D2/D3 + pgvector
+Frente 2  (chatbot)         ── ✅ cerrado (2026-09-02, rama feat/chat-streaming)
 Frente 5  (housekeeping)    ── en cualquier momento, tareas chicas
 
 Frente 12 (comisiones/profes) ── ✅ T12.1 y T12.2 cerrados; quedan T12.4/5/6,
