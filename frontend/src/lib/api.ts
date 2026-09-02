@@ -6,6 +6,7 @@
  * momento sumamos client-side fetching pesado, vemos.
  */
 import type {
+  CatedraParaCalificar,
   CategoriaNovedad,
   CentroOut,
   ConfirmarImportIn,
@@ -22,6 +23,7 @@ import type {
   PreviewImportSysacad,
   ProfesorDetalleOut,
   ProfesorListItem,
+  ResenaAlumno,
   ResultadoImportSysacad,
   ResultadoSincCalendario,
   ResultadoSincCatedras,
@@ -143,8 +145,8 @@ export function listarEventosCalendario(
   if (params.tipo) qs.set("tipo", params.tipo);
   if (params.carrera !== undefined) qs.set("carrera", params.carrera);
   const query = qs.toString();
-  // revalidate: 0 → el calendario incluye eventos personales del usuario, así
-  // que NUNCA se cachea por URL (si no, un usuario vería el de otro).
+  // `revalidate: 0`: la respuesta trae los eventos personales del usuario y el
+  // cache de Next es por URL — cachearla se los serviria al siguiente visitante.
   return request<EventoCalendarioOut[]>(`/calendario${query ? `?${query}` : ""}`, {
     revalidate: 0,
   });
@@ -202,6 +204,15 @@ export function listarCentros(): Promise<CentroOut[]> {
   return request<CentroOut[]>("/novedades/centros", { revalidate: 180 });
 }
 
+/**
+ * Una novedad puntual. La usa el deep link `/novedades?novedad=<id>` del
+ * buscador y de la campana: la portada trae sólo las últimas doce, así que
+ * una novedad más vieja no está en esa lista y hay que pedirla aparte.
+ */
+export function getNovedad(id: number): Promise<NovedadOut> {
+  return request<NovedadOut>(`/novedades/${id}`, { revalidate: 180 });
+}
+
 // Las mutaciones se enrutan via /api/backend (proxy Next.js) para evitar CORS en browser.
 const MUTATION_BASE = "/api/backend";
 
@@ -219,6 +230,35 @@ export async function registrarEstado(
     try { body = await res.json(); } catch { /* ignorar */ }
     throw new ApiError(res.status, body);
   }
+  return res.json();
+}
+
+// ---------------------------------------------------------------------------
+// Suscripcion al calendario (.ics)
+// ---------------------------------------------------------------------------
+
+/** URL de suscripcion del alumno, creandola si es la primera vez.
+ *
+ * Va por el proxy autenticado: PEDIR la URL exige sesion. La URL que devuelve,
+ * en cambio, apunta directo al backend y no lleva credenciales de sesion — es
+ * el token de la propia URL el que autentica, porque Google Calendar refresca
+ * sin poder mandar headers.
+ */
+export async function getSuscripcionCalendario(): Promise<{ url: string }> {
+  const res = await fetch(`${MUTATION_BASE}/calendario/suscripcion`, {
+    headers: { Accept: "application/json" },
+  });
+  if (!res.ok) throw new ApiError(res.status, null);
+  return res.json();
+}
+
+/** Rota el token: la URL anterior deja de funcionar en el acto. */
+export async function regenerarSuscripcionCalendario(): Promise<{ url: string }> {
+  const res = await fetch(`${MUTATION_BASE}/calendario/suscripcion/regenerar`, {
+    method: "POST",
+    headers: { Accept: "application/json" },
+  });
+  if (!res.ok) throw new ApiError(res.status, null);
   return res.json();
 }
 
@@ -242,6 +282,70 @@ export async function resetearTodosRegistros(): Promise<{ eliminados: number }> 
     throw new ApiError(res.status, null);
   }
   return res.json() as Promise<{ eliminados: number }>;
+}
+
+// --- Reseñas de alumnos (feature 004) --------------------------------------
+
+/** Mis reseñas (para prellenar la UI). Sin sesión devuelve lista vacía. */
+export async function listarMisResenas(): Promise<ResenaAlumno[]> {
+  const res = await fetch(`${MUTATION_BASE}/mi/resenas`, {
+    headers: { Accept: "application/json" },
+  });
+  if (res.status === 401) return [];
+  if (!res.ok) {
+    throw new ApiError(res.status, null);
+  }
+  return res.json() as Promise<ResenaAlumno[]>;
+}
+
+/** Crea o actualiza mi reseña sobre una cátedra (una por materia+profesor). */
+export async function guardarResena(payload: {
+  materia_codigo: string;
+  profesor_id: number;
+  nivel: number;
+  comentario?: string | null;
+}): Promise<ResenaAlumno> {
+  const res = await fetch(`${MUTATION_BASE}/mi/resenas`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    let body: unknown = null;
+    try { body = await res.json(); } catch { /* ignorar */ }
+    throw new ApiError(res.status, body);
+  }
+  return res.json() as Promise<ResenaAlumno>;
+}
+
+/** Cátedras que cursé/curso (con sus profesores), para calificar desde el perfil. */
+export async function listarCatedrasParaCalificar(): Promise<CatedraParaCalificar[]> {
+  const res = await fetch(`${MUTATION_BASE}/mi/resenas/catedras`, {
+    headers: { Accept: "application/json" },
+  });
+  if (res.status === 401) return [];
+  if (!res.ok) {
+    throw new ApiError(res.status, null);
+  }
+  return res.json() as Promise<CatedraParaCalificar[]>;
+}
+
+/** Borra mi reseña sobre una cátedra. */
+export async function borrarResena(
+  materia_codigo: string,
+  profesor_id: number,
+): Promise<void> {
+  const qs = new URLSearchParams({
+    materia_codigo,
+    profesor_id: String(profesor_id),
+  });
+  const res = await fetch(`${MUTATION_BASE}/mi/resenas?${qs.toString()}`, {
+    method: "DELETE",
+    headers: { Accept: "application/json" },
+  });
+  if (!res.ok && res.status !== 404) {
+    throw new ApiError(res.status, null);
+  }
 }
 
 /**
@@ -763,6 +867,7 @@ export const api = {
   getEventosHoyCalendario,
   listarNovedades,
   listarCentros,
+  getNovedad,
   registrarEstado,
   eliminarEstado,
   resetearTodosRegistros,

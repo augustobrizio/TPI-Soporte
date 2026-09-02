@@ -35,6 +35,7 @@ from app.db.models.profesor import (  # noqa: F401
     Profesor,
 )
 from app.db.models.rag import RagChunk  # noqa: F401
+from app.db.models.resena_alumno import ResenaAlumno  # noqa: F401
 from app.db.models.review import ReviewCatedra  # noqa: F401
 from app.db.models.usuario import Usuario  # noqa: F401
 
@@ -64,6 +65,7 @@ __all__ = [
     "NovedadFuente",
     "Profesor",
     "RagChunk",
+    "ResenaAlumno",
     "ReviewCatedra",
     "TipoCorrelativa",
     "TipoEventoCalendario",

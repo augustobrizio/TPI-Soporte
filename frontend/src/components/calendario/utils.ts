@@ -1,29 +1,92 @@
+import {
+  CalendarOff,
+  ClipboardList,
+  GraduationCap,
+  Info,
+  PenLine,
+  type LucideIcon,
+} from "lucide-react";
+
 import type { EventoCalendarioOut, TipoEventoCalendario } from "@/lib/types";
 
 // ---------------------------------------------------------------------------
-// Configuración visual por tipo de evento (colores alineados con la agenda)
+// Configuración visual por tipo de evento
 // ---------------------------------------------------------------------------
+
+/**
+ * Rol del evento para el alumno. Es lo que decide el color.
+ *
+ * El color solía nombrar la categoría: cinco tipos, cinco tonos. Pero al
+ * alumno no le importa el tipo, le importa **si tiene que venir a cursar**, y
+ * en esa pregunta una mesa de examen y un feriado significan lo mismo. Así que
+ * el color pasó a decir eso y la categoría la dicen el ícono y la palabra.
+ *
+ * - `sin_cursada` — no hay clases (mesa de examen, feriado).
+ * - `propio` — lo que cargó el alumno (su examen, su TP). Celeste de marca.
+ * - `info` — institucional y sin efecto sobre la cursada (inscripciones,
+ *   inicio de cuatrimestre). Neutro a propósito: no compite por atención.
+ */
+export type RolEvento = "sin_cursada" | "propio" | "info";
 
 export interface TipoConfig {
   label: string;
   plural: string;
-  emoji: string;
-  icon: string;
-  rgb: string;
-  text: string;
-  /** prioridad para "evento importante" (mayor = más importante) */
+  Icono: LucideIcon;
+  rol: RolEvento;
+  /** Prioridad para "próximo evento importante" (mayor = más importante). */
   peso: number;
 }
 
 export const TIPO: Record<TipoEventoCalendario, TipoConfig> = {
-  examen: { label: "Examen", plural: "Exámenes", emoji: "📝", icon: "history_edu", rgb: "255,120,120", text: "rgb(var(--cat-examen))", peso: 4 },
-  mesa: { label: "Mesa", plural: "Mesas de examen", emoji: "🎓", icon: "groups", rgb: "190,150,255", text: "rgb(var(--cat-mesa))", peso: 2 },
-  trabajo_practico: { label: "TP", plural: "Trabajos prácticos", emoji: "📋", icon: "assignment", rgb: "255,160,50", text: "rgb(var(--cat-tp))", peso: 3 },
-  evento: { label: "Evento", plural: "Eventos", emoji: "🎉", icon: "celebration", rgb: "125,255,162", text: "rgb(var(--cat-evento))", peso: 1 },
-  feriado: { label: "Feriado", plural: "Feriados", emoji: "🏖️", icon: "beach_access", rgb: "255,214,92", text: "rgb(var(--cat-feriado))", peso: 0 },
+  examen: { label: "Examen", plural: "Exámenes", Icono: PenLine, rol: "propio", peso: 5 },
+  trabajo_practico: { label: "TP", plural: "Trabajos prácticos", Icono: ClipboardList, rol: "propio", peso: 4 },
+  mesa: { label: "Mesa", plural: "Mesas de examen", Icono: GraduationCap, rol: "sin_cursada", peso: 3 },
+  feriado: { label: "Feriado", plural: "Feriados", Icono: CalendarOff, rol: "sin_cursada", peso: 2 },
+  evento: { label: "Evento", plural: "Eventos", Icono: Info, rol: "info", peso: 1 },
 };
 
-export const ORDEN_TIPOS: TipoEventoCalendario[] = ["examen", "mesa", "trabajo_practico", "evento", "feriado"];
+/** Clases de cada rol. Todo sale de tokens: los dos modos salen gratis. */
+export const ROL: Record<RolEvento, { fg: string; bg: string; borde: string; punto: string }> = {
+  sin_cursada: {
+    fg: "text-[var(--cal-alerta-fg)]",
+    bg: "bg-[var(--cal-alerta-bg)]",
+    borde: "border-[var(--cal-alerta-bd)]",
+    punto: "bg-[var(--cal-alerta-solid)]",
+  },
+  propio: {
+    fg: "text-[var(--shell-accent-fg)]",
+    bg: "bg-[#1CA4DF]/10",
+    borde: "border-[#1CA4DF]/25",
+    punto: "bg-[#1CA4DF]",
+  },
+  info: {
+    fg: "text-[var(--shell-fg-muted)]",
+    bg: "bg-[var(--shell-hover)]",
+    borde: "border-[var(--shell-border)]",
+    punto: "bg-[var(--shell-fg-dim)]",
+  },
+};
+
+export function rolDe(tipo: TipoEventoCalendario) {
+  return ROL[TIPO[tipo].rol];
+}
+
+/** ¿Este evento implica que ese día no se cursa? */
+export function impideCursada(e: EventoCalendarioOut): boolean {
+  return TIPO[e.tipo].rol === "sin_cursada";
+}
+
+/**
+ * Orden de los tipos en filtros y leyendas: primero lo que suspende la
+ * cursada, después lo del alumno, al final lo informativo.
+ */
+export const ORDEN_TIPOS: TipoEventoCalendario[] = [
+  "mesa",
+  "feriado",
+  "examen",
+  "trabajo_practico",
+  "evento",
+];
 
 // ---------------------------------------------------------------------------
 // Fechas

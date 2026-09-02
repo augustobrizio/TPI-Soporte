@@ -3,7 +3,7 @@ import { esComisionElectiva } from "@/lib/comision";
 import { DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ElectivaBadge } from "./ElectivaBadge";
 import { MateriaComisionRow } from "./MateriaComisionRow";
-import { ScoreMock } from "./ScoreMock";
+import { ComisionScore } from "./Score";
 
 /**
  * Cuerpo del modal de una comisión: header (nombre + año + score) y el detalle
@@ -70,12 +70,17 @@ export function ComisionModal({ comision }: { comision: ComisionConProfesores })
           </DialogDescription>
         </div>
         <div className="shrink-0">
-          <ScoreMock comisionId={comision.id} size="lg" />
+          <ComisionScore
+            score={comision.score}
+            conReview={comision.score_con_review}
+            total={comision.score_total}
+            size="lg"
+          />
         </div>
       </header>
 
-      {/* Materias, agrupadas por cuatrimestre */}
-      <div className="flex-1 space-y-6 overflow-y-auto px-6 py-5">
+      {/* Materias, agrupadas por cuatrimestre (único contenedor scrolleable) */}
+      <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-6 py-5">
         {comision.cursadas.length > 0 ? (
           grupos.map(([cuat, cursadas]) => (
             <section key={cuat ?? "sin"}>
@@ -99,12 +104,13 @@ export function ComisionModal({ comision }: { comision: ComisionConProfesores })
         )}
       </div>
 
-      {/* Footer: nota del score mock */}
+      {/* Footer: origen del puntaje */}
       <footer className="border-t border-outline-variant/10 px-6 py-3">
         <p className="flex items-center gap-1.5 text-[11px] text-outline">
           <span className="material-symbols-outlined text-[14px]">info</span>
-          El puntaje es provisorio (mock). Se calculará desde las reviews de UTNTAC en una feature
-          futura.
+          {comision.score !== null
+            ? `Puntaje: promedio de las notas de ${comision.score_con_review} de ${comision.score_total} cátedras con reseña en UTNTAC.`
+            : "Todavía no hay reseñas de las cátedras de esta comisión en UTNTAC."}
         </p>
       </footer>
     </div>

@@ -72,11 +72,18 @@ function isActive(currentPath: string, href: string) {
   return currentPath === href || currentPath.startsWith(`${href}/`);
 }
 
-/** Tooltip flotante que aparece a la derecha del ícono cuando la sidebar está colapsada. */
+/** Tooltip flotante que aparece a la derecha del ícono cuando la sidebar está colapsada.
+ *
+ * Aparece con el mouse **y con el foco de teclado**: colapsada, el único
+ * texto de cada item es este tooltip, así que si sólo respondiera al hover,
+ * quien navega con Tab recorría diez íconos sin nombre. El `aria-label` ya
+ * cubría al lector de pantalla; esto cubre al que ve la pantalla y no usa
+ * mouse. `group-focus-visible` y no `group-focus`: al hacer click el item
+ * también queda enfocado, y el tooltip se quedaba pegado después de navegar. */
 function Tooltip({ label }: { label: string }) {
   return (
     <span
-      className="pointer-events-none absolute left-full ml-3 top-1/2 -translate-y-1/2 z-50 whitespace-nowrap rounded-lg bg-[var(--shell-panel)] border border-[var(--shell-border)] px-2.5 py-1.5 text-xs font-medium text-[var(--shell-fg)] opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100"
+      className="pointer-events-none absolute left-full ml-3 top-1/2 -translate-y-1/2 z-50 whitespace-nowrap rounded-lg bg-[var(--shell-panel)] border border-[var(--shell-border)] px-2.5 py-1.5 text-xs font-medium text-[var(--shell-fg)] opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100"
       style={{ boxShadow: "0 4px 16px rgba(0,0,0,0.4)" }}
     >
       {label}

@@ -119,6 +119,13 @@ export interface ItemImportMapeado {
   condicion: CondicionMateria;
   nota: number | null;
   anio_cursada: number | null;
+  /**
+   * Comision detectada en el estado ("Cursa en 4K02" -> "4K02"), solo para
+   * condicion "cursando". Al confirmar, el backend la usa para dejar elegida
+   * la cursada y que la materia aparezca en la grilla de Horarios. Ponerla en
+   * null desactiva esa seleccion automatica para esa fila.
+   */
+  comision_nombre: string | null;
   importar: boolean;
 }
 
@@ -140,6 +147,8 @@ export interface ResultadoImportSysacad {
   importadas: number;
   omitidas: number;
   eliminadas: number;
+  /** Materias "cursando" a las que ademas se les dejo elegida la comision. */
+  comisiones_asignadas: number;
   errores: string[];
 }
 
@@ -319,6 +328,10 @@ export interface CursadaConProfesor {
   docente: string | null;
   /** Profesor real resuelto; null si ambiguo/sin match (se cae al docente). */
   profesor: ProfesorMini | null;
+  /** Reseña (profesor×materia) desde UTNTAC. null si no hay reseña. */
+  nota: number | null;
+  clasificacion: string | null;
+  cantidad_respuestas: number | null;
   horarios: HorarioOut[];
 }
 
@@ -326,7 +339,33 @@ export interface ComisionConProfesores {
   id: number;
   nombre: string | null;
   anio: number | null;
+  /** Promedio de las notas de las cátedras con reseña. null si ninguna la tiene. */
+  score: number | null;
+  /** Cobertura: cátedras con reseña / total de cátedras. */
+  score_con_review: number;
+  score_total: number;
   cursadas: CursadaConProfesor[];
+}
+
+// ---------------------------------------------------------------------------
+// Reseñas de alumnos — refleja `app/schemas/resena.py` (feature 004)
+// ---------------------------------------------------------------------------
+
+/** Reseña propia del alumno sobre una cátedra (profesor × materia). */
+export interface ResenaAlumno {
+  id: number;
+  materia_codigo: string;
+  profesor_id: number;
+  /** 1 = súper evitaría … 5 = súper recomiendo (misma escala que UTNTAC). */
+  nivel: number;
+  comentario: string | null;
+}
+
+/** Una materia que el alumno cursó/cursa + los profesores a calificar. */
+export interface CatedraParaCalificar {
+  materia_codigo: string;
+  materia_nombre: string | null;
+  profesores: ProfesorMini[];
 }
 
 // ---------------------------------------------------------------------------
@@ -362,4 +401,67 @@ export interface NovedadOut {
   fecha_publicacion: string | null;
   created_at: string | null;
   fuentes: FuenteOut[];
+}
+
+// ---------------------------------------------------------------------------
+// Buscador global - refleja `app/schemas/busqueda.py`
+// ---------------------------------------------------------------------------
+
+export type TipoResultado = "materia" | "profesor" | "comision" | "novedad";
+
+/**
+ * Un resultado del buscador. El backend **no manda la URL**: no conoce el
+ * ruteo del frontend. El link lo arma `hrefDeResultado()` en el propio
+ * command palette, que es donde vive ese conocimiento.
+ */
+export interface ItemBusqueda {
+  tipo: TipoResultado;
+  /** Código de materia, id de profesor/novedad o nombre de comisión. */
+  id: string;
+  titulo: string;
+  detalle: string | null;
+  /**
+   * Sólo para materias. El grafo se abre por tipo, así que sin esto el link
+   * a una electiva caería en el grafo de troncales, donde no existe.
+   */
+  tipo_materia: TipoMateria | null;
+}
+
+export interface RespuestaBusqueda {
+  query: string;
+  total: number;
+  materias: ItemBusqueda[];
+  profesores: ItemBusqueda[];
+  comisiones: ItemBusqueda[];
+  novedades: ItemBusqueda[];
+}
+
+// ---------------------------------------------------------------------------
+// Notificaciones - refleja `app/schemas/notificacion.py`
+// ---------------------------------------------------------------------------
+
+export interface NovedadNotificacion {
+  id: number;
+  titulo: string;
+  fecha: string | null;
+  /** Publicada después de la última vez que se abrió el panel. */
+  nueva: boolean;
+}
+
+export interface MesaNotificacion {
+  id: number;
+  titulo: string;
+  fecha_inicio: string;
+  tipo: TipoEventoCalendario;
+  /** 0 = hoy. El panel lo escribe como "hoy", no como "en 0 días". */
+  dias_restantes: number;
+  nueva: boolean;
+}
+
+export interface NotificacionesOut {
+  /** Lo que enciende el puntito. Si es 0, la campana no avisa nada. */
+  nuevas: number;
+  novedades: NovedadNotificacion[];
+  mesas: MesaNotificacion[];
+  vistas_at: string | null;
 }

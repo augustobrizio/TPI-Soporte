@@ -22,6 +22,17 @@
   --shell-fg-dim: #a1a1aa;
   --shell-accent-fg: #0e7fb0;
   color-scheme: light;
+
+  /* Calendario — roles semanticos, no categorias.
+   * Lo que le importa al alumno de un dia no es de que tipo es el evento,
+   * es si tiene que venir a cursar. Mesa de examen y feriado significan lo
+   * mismo (no hay cursada) y comparten el ambar; lo suyo (examen, TP) va en
+   * el celeste de marca; lo institucional es neutro. Ver `ROL` en
+   * components/calendario/utils.ts. */
+  --cal-alerta-fg: #a16207;
+  --cal-alerta-bg: rgba(161, 98, 7, 0.09);
+  --cal-alerta-bd: rgba(161, 98, 7, 0.28);
+  --cal-alerta-solid: #b45309;
   /* Panel translucido para la topbar (glass + backdrop-blur). El alpha va
    * horneado en la variable: Tailwind no puede aplicar `/90` sobre un var()
    * crudo (descarta la regla y la barra queda transparente). */
@@ -110,6 +121,12 @@
   --shell-accent-fg: #4ec0ec;
   --shell-panel-blur: rgba(12, 12, 14, 0.9);
   color-scheme: dark;
+
+  /* Calendario — el ambar clarea sobre negro para no perder contraste. */
+  --cal-alerta-fg: #f0c454;
+  --cal-alerta-bg: rgba(240, 196, 84, 0.10);
+  --cal-alerta-bd: rgba(240, 196, 84, 0.24);
+  --cal-alerta-solid: #f0c454;
 
   /* Kinetic Blueprint — valores OSCUROS (identicos a los hex originales de
    * tailwind.config.ts, ahora como canales para conservar el look dark). */

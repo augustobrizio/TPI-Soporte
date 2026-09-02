@@ -1,4 +1,5 @@
 import { RequiereCuenta } from "@/components/RequiereCuenta";
+import { MisCatedrasCalificar } from "@/components/resenas/MisCatedrasCalificar";
 import { PanelPersonal } from "@/features/panel/PanelPersonal";
 import { getUsuarioActual, iniciales, nombreVisible } from "@/lib/auth";
 
@@ -103,6 +104,13 @@ export default async function PerfilPage() {
           portada; ahora la portada es publica y esto es lo tuyo. */}
       <div className="mt-10 border-t border-[var(--shell-border)] pt-2">
         <PanelPersonal />
+      </div>
+
+      {/* Calificar va ultimo: es lo secundario de esta pantalla —no son datos
+          tuyos, es una contribucion al resto— y arriba de todo empujaba el
+          progreso y la agenda fuera de la vista. */}
+      <div className="mt-10">
+        <MisCatedrasCalificar />
       </div>
     </div>
   );

@@ -21,6 +21,11 @@ export interface UsuarioSesion {
   apellido: string | null;
   legajo: string | null;
   rol: string | null;
+  /** Foto de perfil de Google, si la cuenta entro por ahi. */
+  avatar_url: string | null;
+  /** Cohorte del alumno. NULL en toda cuenta creada hasta hoy: el registro
+   *  todavia no lo pide, asi que quien lo muestre tiene que tolerar el null. */
+  anio_ingresado: number | null;
 }
 
 /** Token crudo de la cookie, o null. Solo para Server Components / handlers. */

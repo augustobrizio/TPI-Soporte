@@ -11,9 +11,15 @@
  * Sin APIs externas ni archivos — todo es texto plano.
  */
 
-import { useRef, useState } from "react";
-import type { ItemImportMapeado, PreviewImportSysacad, ResultadoImportSysacad } from "@/lib/types";
-import { ApiError, confirmarImportarSysacad, previewImportarSysacad, resetearTodosRegistros } from "@/lib/api";
+import { useEffect, useRef, useState } from "react";
+import type { ItemImportMapeado, MateriaOut, PreviewImportSysacad, ResultadoImportSysacad } from "@/lib/types";
+import {
+  ApiError,
+  confirmarImportarSysacad,
+  listarMaterias,
+  previewImportarSysacad,
+  resetearTodosRegistros,
+} from "@/lib/api";
 
 interface Props {
   onClose: () => void;
@@ -21,6 +27,11 @@ interface Props {
 }
 
 type Paso = "pegar" | "analizando" | "preview" | "confirmando" | "exito";
+
+// Mismo umbral que `CONFIANZA_MINIMA` en el backend
+// (`services/sysacad_paste_service.py`). Debajo de esto la fila arranca con el
+// selector abierto: el match propuesto no es confiable y conviene revisarlo.
+const CONFIANZA_MINIMA = 0.72;
 
 const CONDICION_LABEL: Record<string, string> = {
   aprobado: "Aprobada",
@@ -50,7 +61,23 @@ export function ImportarSysacadModal({ onClose, onImportado }: Props) {
   // Por defecto el pegado reemplaza el historial completo (es "tu estado académico actual").
   // Evita que se acumulen materias de importaciones previas (ej: electivas distintas).
   const [reemplazar, setReemplazar] = useState(true);
+  // Plan completo para el selector manual: se pide una sola vez al abrir.
+  const [materias, setMaterias] = useState<MateriaOut[]>([]);
+  // Filas cuyo mapeo eligio el alumno a mano (para no mostrarles un % inventado).
+  const [manuales, setManuales] = useState<Set<number>>(new Set());
+  // Comision detectada por fila, para poder volver a activarla si la apagan.
+  const [comisionesDetectadas, setComisionesDetectadas] = useState<(string | null)[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // El selector manual necesita el plan. Es publico y chico (~56 materias),
+  // asi que se pide al montar y queda listo antes de llegar al preview.
+  useEffect(() => {
+    let vigente = true;
+    listarMaterias()
+      .then((lista) => { if (vigente) setMaterias(lista); })
+      .catch(() => { /* sin plan el selector no aparece; el resto del flujo sigue */ });
+    return () => { vigente = false; };
+  }, []);
 
   // -------------------------------------------------------------------------
   // Paso 1 → 2: analizar texto
@@ -63,6 +90,8 @@ export function ImportarSysacadModal({ onClose, onImportado }: Props) {
       const prev = await previewImportarSysacad(texto);
       setPreview(prev);
       setItems(prev.items);
+      setComisionesDetectadas(prev.items.map((i) => i.comision_nombre));
+      setManuales(new Set());
       setPaso("preview");
     } catch (err) {
       if (err instanceof ApiError) {
@@ -91,6 +120,46 @@ export function ImportarSysacadModal({ onClose, onImportado }: Props) {
   };
 
   // -------------------------------------------------------------------------
+  // Mapeo manual: el fuzzy matching no siempre acierta (nombres abreviados,
+  // materias que cambiaron de nombre entre planes). Sin esto una fila mal
+  // mapeada no tenia salida.
+  // -------------------------------------------------------------------------
+  const elegirMateria = (idx: number, codigo: string) => {
+    const materia = materias.find((m) => m.codigo === codigo) ?? null;
+    setItems((prev) =>
+      prev.map((item, i) =>
+        i === idx
+          ? {
+              ...item,
+              materia_codigo: materia?.codigo ?? null,
+              materia_nombre: materia?.nombre ?? null,
+              // Elegida a mano: no hay score que mostrar. La UI lo dice.
+              confianza: materia ? 1 : 0,
+              importar: materia !== null,
+            }
+          : item,
+      ),
+    );
+    setManuales((prev) => {
+      const next = new Set(prev);
+      if (materia) next.add(idx); else next.delete(idx);
+      return next;
+    });
+  };
+
+  // Apagar la comision detectada = importar la materia sin tocarle la grilla
+  // de Horarios. El backend solo autoselecciona si `comision_nombre` viene.
+  const toggleComision = (idx: number) => {
+    setItems((prev) =>
+      prev.map((item, i) =>
+        i === idx
+          ? { ...item, comision_nombre: item.comision_nombre ? null : comisionesDetectadas[idx] }
+          : item,
+      ),
+    );
+  };
+
+  // -------------------------------------------------------------------------
   // Paso 2 → 3: confirmar
   // -------------------------------------------------------------------------
   const confirmarImport = async () => {
@@ -115,6 +184,7 @@ export function ImportarSysacadModal({ onClose, onImportado }: Props) {
   const itemsSeleccionados = items.filter((i) => i.importar).length;
   const totalConMatch = items.filter((i) => i.materia_codigo !== null).length;
   const sinMatch = items.filter((i) => !i.materia_codigo).length;
+  const conComision = items.filter((i) => i.importar && i.comision_nombre).length;
 
   // -------------------------------------------------------------------------
   // Render
@@ -270,6 +340,13 @@ export function ImportarSysacadModal({ onClose, onImportado }: Props) {
                 {sinMatch > 0 && (
                   <StatChip icono="warning" label={`${sinMatch} sin match`} cls="text-tertiary" />
                 )}
+                {conComision > 0 && (
+                  <StatChip
+                    icono="event_available"
+                    label={`${conComision} con comisión`}
+                    cls="text-primary"
+                  />
+                )}
               </div>
 
               {/* Advertencias */}
@@ -366,20 +443,24 @@ export function ImportarSysacadModal({ onClose, onImportado }: Props) {
                           {item.nombre_original}
                         </td>
                         <td className="px-4 py-2.5 max-w-0">
-                          {item.materia_codigo ? (
-                            <div className="truncate" title={item.materia_nombre ?? ""}>
-                              <span className="text-on-surface">{item.materia_nombre}</span>
-                              <br />
-                              <ConfianzaBadge valor={item.confianza} />
-                            </div>
-                          ) : (
-                            <span className="text-outline italic">Sin coincidencia</span>
-                          )}
+                          <MateriaCell
+                            item={item}
+                            materias={materias}
+                            manual={manuales.has(idx)}
+                            onElegir={(codigo) => elegirMateria(idx, codigo)}
+                          />
                         </td>
                         <td className="px-4 py-2.5 whitespace-nowrap">
                           <span className={`font-semibold ${CONDICION_CLS[item.condicion] ?? "text-outline"}`}>
                             {CONDICION_LABEL[item.condicion] ?? item.condicion}
                           </span>
+                          {comisionesDetectadas[idx] && (
+                            <ComisionChip
+                              nombre={comisionesDetectadas[idx]!}
+                              activa={item.comision_nombre !== null}
+                              onToggle={() => toggleComision(idx)}
+                            />
+                          )}
                         </td>
                         <td className="px-4 py-2.5 whitespace-nowrap">
                           {item.nota != null
@@ -429,6 +510,14 @@ export function ImportarSysacadModal({ onClose, onImportado }: Props) {
                 {resultado.omitidas > 0 && (
                   <p className="text-sm text-on-surface-variant mt-1">
                     {resultado.omitidas} omitida{resultado.omitidas !== 1 ? "s" : ""} (deseleccionadas o sin match)
+                  </p>
+                )}
+                {resultado.comisiones_asignadas > 0 && (
+                  <p className="text-sm text-primary mt-1 flex items-center justify-center gap-1.5">
+                    <span className="material-symbols-outlined text-[16px]">event_available</span>
+                    {resultado.comisiones_asignadas} materia
+                    {resultado.comisiones_asignadas !== 1 ? "s" : ""} ya
+                    {resultado.comisiones_asignadas !== 1 ? " quedaron" : " quedó"} en tu grilla de Horarios.
                   </p>
                 )}
                 {resultado.eliminadas > 0 && (
@@ -548,6 +637,116 @@ function StatChip({
       <span className="material-symbols-outlined text-[14px]">{icono}</span>
       {label}
     </span>
+  );
+}
+
+/**
+ * Celda de mapeo. Muestra el match propuesto, o el selector del plan cuando no
+ * hay match / la confianza es baja. Cualquier fila se puede corregir a mano.
+ */
+function MateriaCell({
+  item,
+  materias,
+  manual,
+  onElegir,
+}: {
+  item: ItemImportMapeado;
+  materias: MateriaOut[];
+  manual: boolean;
+  onElegir: (codigo: string) => void;
+}) {
+  const dudoso = !item.materia_codigo || item.confianza < CONFIANZA_MINIMA;
+  // Las dudosas arrancan con el selector a la vista; las buenas, sólo si el
+  // alumno pide cambiarlas.
+  const [abierto, setAbierto] = useState(false);
+  const mostrarSelector = (abierto || dudoso) && materias.length > 0;
+
+  if (mostrarSelector) {
+    return (
+      <div className="space-y-1">
+        <select
+          value={item.materia_codigo ?? ""}
+          onChange={(e) => onElegir(e.target.value)}
+          className="
+            w-full rounded-lg bg-surface-container-low border border-outline-variant/40
+            focus:border-primary/60 focus:outline-none focus:ring-1 focus:ring-primary/30
+            px-2 py-1.5 text-xs text-on-surface transition-colors
+          "
+        >
+          <option value="">— Elegir materia —</option>
+          {materias.map((m) => (
+            <option key={m.codigo} value={m.codigo}>
+              {m.anio_carrera ? `${m.anio_carrera}° · ` : ""}{m.nombre}
+            </option>
+          ))}
+        </select>
+        {item.materia_codigo && !manual && (
+          <span className="block text-[10px] text-tertiary">
+            Sugerencia con {Math.round(item.confianza * 100)}% — revisala
+          </span>
+        )}
+      </div>
+    );
+  }
+
+  if (!item.materia_codigo) {
+    return <span className="text-outline italic">Sin coincidencia</span>;
+  }
+
+  return (
+    <div className="truncate" title={item.materia_nombre ?? ""}>
+      <span className="text-on-surface">{item.materia_nombre}</span>
+      <br />
+      {manual ? (
+        <span className="text-[10px] font-bold text-primary">elegida a mano</span>
+      ) : (
+        <ConfianzaBadge valor={item.confianza} />
+      )}
+      <button
+        type="button"
+        onClick={() => setAbierto(true)}
+        className="ml-2 text-[10px] font-semibold text-on-surface-variant hover:text-primary transition-colors"
+      >
+        cambiar
+      </button>
+    </div>
+  );
+}
+
+/**
+ * Comision que venia en el estado ("Cursa en 4K02"). Encendida, al importar se
+ * deja elegida esa comision y la materia aparece en la grilla de Horarios.
+ * Se puede apagar: la materia se importa igual, sin tocar la grilla.
+ */
+function ComisionChip({
+  nombre,
+  activa,
+  onToggle,
+}: {
+  nombre: string;
+  activa: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      title={
+        activa
+          ? `Se va a elegir la comisión ${nombre} en Horarios. Click para no hacerlo.`
+          : `No se va a tocar tu horario. Click para elegir ${nombre}.`
+      }
+      className={`ml-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold border transition-colors ${
+        activa
+          ? "bg-primary/12 border-primary/30 text-primary hover:bg-primary/20"
+          : "bg-transparent border-outline-variant/40 text-outline line-through hover:text-on-surface-variant"
+      }`}
+    >
+      <span className="material-symbols-outlined text-[12px] no-underline">
+        {activa ? "event_available" : "event_busy"}
+      </span>
+      {nombre}
+    </button>
   );
 }
 

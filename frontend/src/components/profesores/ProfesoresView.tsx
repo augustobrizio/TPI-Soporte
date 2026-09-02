@@ -47,7 +47,7 @@ export function ProfesoresView({ profesores }: { profesores: ProfesorListItem[] 
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
-      <header className="glow-band glow-secondary bg-surface-container border border-outline-variant/10 rounded-3xl p-6 md:p-7 mb-8 space-y-2">
+      <header className="mb-8 space-y-2">
         <h1 className="text-4xl font-extrabold tracking-tight font-headline text-on-surface">
           Profesores
         </h1>

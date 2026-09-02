@@ -8,6 +8,9 @@ Expone:
   publica de UTNTAC.
 - ``POST /profesores/sincronizar-catedras-utntac`` — crea catedras desde la
   sheet de recomendaciones de UTNTAC.
+
+Las lecturas son publicas —el directorio se navega sin cuenta— y las tres
+sincronizaciones piden **rol admin** (RNF-06): reescriben tablas compartidas.
 """
 from __future__ import annotations
 
@@ -18,6 +21,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from sqlalchemy import func, select
+from app.api.deps import requerir_admin
 from app.db.models.academico import Materia
 from app.db.models.profesor import HorarioConsulta, MateriaProfesor, Profesor
 from app.db.session import get_db
@@ -118,6 +122,7 @@ def get_profesor(
     "/sincronizar-horarios",
     response_model=ResultadoSincHorarios,
     summary="Scrapea horarios de consulta desde FRRO y reemplaza los actuales",
+    dependencies=[Depends(requerir_admin)],
 )
 def sincronizar_horarios(
     db: Annotated[Session, Depends(get_db)],
@@ -125,6 +130,11 @@ def sincronizar_horarios(
     """Full refresh de ``horario_consulta`` y ``materia_profesor`` desde el
     sitio del Dpto. ISI. Los profesores se upsertean para preservar IDs.
 
+    Restringido a rol admin (RNF-06): es destructivo —borra las filas actuales
+    antes de reescribirlas— y sale a scrapear un sitio de terceros, asi que
+    abierto servia igual como boton de borrado y como ariete contra FRRO.
+
+    - 401/403 si no hay sesion de admin.
     - 422 si el scraper no devuelve filas (cambio la pagina o el formato).
     - 502 si falla la descarga del sitio externo.
     """
@@ -148,6 +158,7 @@ def sincronizar_horarios(
     "/sincronizar-mails",
     response_model=ResultadoSincMails,
     summary="Enriquece emails de profesores desde la sheet UTNTAC",
+    dependencies=[Depends(requerir_admin)],
 )
 def sincronizar_mails(
     db: Annotated[Session, Depends(get_db)],
@@ -158,6 +169,9 @@ def sincronizar_mails(
     tiene email, se lo seteamos; si no existe lo creamos. Nunca sobreescribe
     un email previo.
 
+    Restringido a rol admin (RNF-06): crea profesores en el padron.
+
+    - 401/403 si no hay sesion de admin.
     - 502 si falla la descarga del Google Sheet.
     """
     try:
@@ -176,6 +190,7 @@ def sincronizar_mails(
     "/sincronizar-catedras-utntac",
     response_model=ResultadoSincCatedras,
     summary="Crea catedras (profesor<->materia) desde la sheet de recomendaciones UTNTAC",
+    dependencies=[Depends(requerir_admin)],
 )
 def sincronizar_catedras_utntac(
     db: Annotated[Session, Depends(get_db)],
@@ -190,6 +205,9 @@ def sincronizar_catedras_utntac(
     Los puntajes/popularidad/recomendaciones de la sheet NO se capturan por
     ahora (requieren un modelo nuevo).
 
+    Restringido a rol admin (RNF-06): crea profesores y reescribe catedras.
+
+    - 401/403 si no hay sesion de admin.
     - 502 si falla la descarga del Google Sheet.
     """
     try:

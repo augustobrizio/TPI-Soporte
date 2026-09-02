@@ -9,11 +9,23 @@ futuro; esa discusión sigue abierta.
 
 | | **Kinetic Blueprint** | **Sistema de tokens `--shell-*`** |
 |---|---|---|
-| Dónde se usa | Grafo de correlativas, Materias, Calendario, Horarios | Sidebar, TopNav, Novedades |
+| Dónde se usa | Grafo de correlativas, Materias, Horarios | Sidebar, TopNav, Novedades, portada, **Calendario** |
 | Paleta | Navy/MD3 (`surface`, `on-surface`, `primary`, etc. en `tailwind.config.ts`) | Canvas neutro (blanco/negro según modo), acento celeste institucional (`#1CA4DF`) |
-| Dark/Light | Dark-only, `color-scheme: dark` fijo en `globals.css` | Ambos modos, toggle en el TopNav (`next-themes`) |
+| Dark/Light | **Los dos modos** desde 2026-08 (`:root` claro / `.dark` oscuro en `globals.css`), pero varios componentes todavía tienen el color dark hardcodeado | Ambos modos, toggle en el TopNav (`next-themes`) |
 | Bordes | "No-Line Rule" (comentario en `globals.css`): nada de `border 1px solid gris`, se usa tonal layering / glow | Hairline borders explícitos vía `border-[var(--shell-border)]` |
 | Nombre en el código | Comentario "Kinetic Blueprint" en `tailwind.config.ts` y `globals.css` | Sin nombre propio en el código; identificado acá por el prefijo de sus variables CSS |
+
+**El Calendario se migró a `--shell-*` (2026-09-01).** Era la página con más
+deuda de las dos listas: colores dark-only hardcodeados, Material Symbols y
+emojis como identidad de categoría. Hoy usa los tokens del shell, lucide y
+—esto es lo que cambió de fondo— **el color dejó de nombrar la categoría y pasó
+a nombrar el rol**: qué significa ese evento para la cursada del alumno. Ver
+`components/calendario/utils.ts` (`RolEvento`, `ROL`, `impideCursada`) y los
+tokens `--cal-alerta-*` de `globals.css`. Los tres roles son `sin_cursada`
+(mesa de examen y feriado: en FRRO las dos cosas suspenden la cursada, así que
+comparten el ámbar), `propio` (lo que carga el alumno, en el celeste de marca)
+e `info` (institucional sin efecto sobre la cursada, en neutro). Cinco tonos
+saturados que competían entre sí pasaron a tres con significado.
 
 **No mezclar los dos sistemas en el mismo componente.** Cada página usa uno
 u otro completo. Si una página usa `surface`/`on-surface`/etc., seguir con
@@ -79,20 +91,40 @@ compartidas por ambos sistemas.
 ### Iconos
 
 Material Symbols Outlined (`<span className="material-symbols-outlined">nombre_del_icono</span>`),
-cargado globalmente en `app/layout.tsx`. No se usa ninguna librería de
-iconos de React (lucide, heroicons, etc.).
+cargado globalmente en `app/layout.tsx`.
+
+**La decisión está tomada: `lucide-react`.** Es lo que declara
+`components.json` (`iconLibrary: "lucide"`) desde que se configuró shadcn. Ya
+están migrados el shell (`TopNav`, `Sidebar`, `MenuCuenta`,
+`CampanaNotificaciones`, `BuscadorGlobal`), la portada, el `Dialog` compartido
+y el Calendario. Lo que queda con Material Symbols es deuda: **al tocar un
+archivo que los use, migralo**, no agregues más.
+
+Y nada de emojis como iconografía. Se ven distintos en cada sistema operativo,
+no toman el color del tema y a 10px son manchas.
 
 ### Componentes base (`components/ui/`)
 
 Primitivas estilo shadcn/ui, usadas por las páginas que siguen el sistema
 `--shell-*`: `Card`/`CardContent`/`CardFooter` (`card.tsx`), `Badge`
 (`badge.tsx`, variantes `celeste`/`neutral`/`outline`), `Dialog`
-(`dialog.tsx`, wrapper de `@radix-ui/react-dialog`). Todas usan
+(`dialog.tsx`, wrapper de `@radix-ui/react-dialog`), `DropdownMenu`
+(`dropdown-menu.tsx`) y `Popover` (`popover.tsx`). Todas usan
 `React.forwardRef` + `cn()` (`lib/utils.ts`, clsx + tailwind-merge) para
-aceptar `className` adicional desde el caller. Un primitivo nuevo (dropdown,
-tooltip, sheet) sigue el mismo patrón: Radix headless + wrapper con los
+aceptar `className` adicional desde el caller. Un primitivo nuevo (tooltip,
+sheet) sigue el mismo patrón: Radix headless + wrapper con los
 tokens `--shell-*`, sin librería de componentes con estilos propios
 (Chakra, MUI, etc.).
+
+`DropdownMenu` y `Popover` no son intercambiables: el menú es para **acciones**
+(navegación con flechas entre items, semántica `menu`) y el popover para
+**contenido arbitrario**. Usar el menú para una lista de texto le promete a un
+lector de pantalla items navegables que no existen.
+
+Un caso que **no** usa el `DialogContent` compartido es el command palette
+(`components/buscador/BuscadorGlobal.tsx`): el wrapper centra el panel en la
+pantalla y le pone una ✕ en la esquina, que ahí caería sobre el campo de texto.
+Se arma sobre las primitivas de Radix con los mismos tokens.
 
 ### Dark/Light mode
 
@@ -100,9 +132,18 @@ tokens `--shell-*`, sin librería de componentes con estilos propios
 provider en `components/ThemeProvider.tsx` envolviendo todo en
 `app/layout.tsx`. El toggle vive en `TopNav.tsx` (`useTheme()`).
 
-**El toggle no afecta a las páginas de Kinetic Blueprint** — su
-`color-scheme: dark` en `globals.css` es fijo, independiente de la clase
-`.dark`/`.light` del `<html>`.
+**Actualizado 2026-08-26.** Kinetic Blueprint dejó de ser dark-only:
+`globals.css` define la escala completa en claro (`:root`, con
+`color-scheme: light`) y en oscuro (`.dark`), incluidos `--surface`,
+`--on-surface`, `--outline`, las categorías del calendario, los glows y las
+sombras de card. El toggle **sí** afecta a esas páginas.
+
+Lo que sigue roto en claro son los **colores hardcodeados** que quedaron de
+la época dark-only — sobre todo en Horarios, Calendario, el grafo y
+`AuthCard`. Está relevado con conteo por archivo en el **Frente 9** de
+[`PENDIENTES.md`](../PENDIENTES.md). Al tocar cualquiera de esos
+componentes, usar los tokens (tabla de equivalencias más arriba) en vez de
+agregar otro hex.
 
 ## Layout / composición (sistema `--shell-*`)
 

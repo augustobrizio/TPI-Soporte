@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { BotonSubmit, Campo, ErrorGeneral } from "./AuthCard";
+import { BotonGoogle, SeparadorO } from "./BotonGoogle";
 
 // Espejo de las reglas del backend (`schemas/usuario.RegistroIn`). Se validan
 // tambien aca solo para dar feedback inmediato: la fuente de verdad es el
@@ -21,7 +22,7 @@ function validarPassword(password: string): string | null {
   return null;
 }
 
-export function RegisterForm() {
+export function RegisterForm({ google = false }: { google?: boolean }) {
   const router = useRouter();
 
   const [nombre, setNombre] = useState("");
@@ -160,6 +161,14 @@ export function RegisterForm() {
       <BotonSubmit cargando={cargando}>
         {cargando ? "Creando cuenta..." : "Crear cuenta"}
       </BotonSubmit>
+
+      {google && (
+        <>
+          <SeparadorO />
+          {/* Mismo boton que en login: si la cuenta no existe, Google la crea. */}
+          <BotonGoogle />
+        </>
+      )}
     </form>
   );
 }

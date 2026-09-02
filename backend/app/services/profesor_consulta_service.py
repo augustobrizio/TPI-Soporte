@@ -1,8 +1,9 @@
 """Service que sincroniza horarios de consulta y catedras desde FRRO.
 
 Hace full refresh de ``horario_consulta`` y ``materia_profesor`` (las dos
-tablas que administra este scraper). Los profesores se upsertean por
-(nombre, email) para preservar sus IDs ante re-corridas.
+tablas que administra este scraper). Los profesores se resuelven contra el
+padron con ``services/profesor_matching``, que preserva sus IDs ante
+re-corridas aunque la pagina cambie la grafia del nombre.
 
 El nombre de materia que viene del sitio se matchea por fuzzy contra el
 plan de estudios usando el mismo umbral que SYSACAD (0.72). Profesores
@@ -19,6 +20,7 @@ from sqlalchemy.orm import Session
 from app.repositories import materia_repo, profesor_repo
 from app.schemas.profesor import ResultadoSincHorarios
 from app.scrapers import profesores as profesores_scraper
+from app.services import profesor_matching as matching
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +73,7 @@ def sincronizar_horarios_consulta(db: Session) -> ResultadoSincHorarios:
 
     materias = materia_repo.list_materias(db)
     opciones = {m.nombre: m.codigo for m in materias}
+    indice = matching.IndicePadron.cargar(db)
 
     profesores_tocados: set[int] = set()
     pares_mp_vistos: set[tuple[str, int]] = set()
@@ -81,8 +84,8 @@ def sincronizar_horarios_consulta(db: Session) -> ResultadoSincHorarios:
 
     for item in items:
         try:
-            prof = profesor_repo.get_or_create_profesor(
-                db, nombre=item.nombre_profesor, email=item.email
+            prof, _ = matching.obtener_o_crear(
+                db, indice, nombre=item.nombre_profesor, email=item.email
             )
             profesores_tocados.add(prof.id)
 

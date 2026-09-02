@@ -17,7 +17,7 @@
       "langchain-openai>=0.3",
       "langgraph>=0.3",
       "apscheduler>=3.11",
-      "instagrapi>=2.1",
+      "curl_cffi>=0.7",
       "beautifulsoup4>=4.13",
       "pandas>=2.2",
       "pymupdf>=1.25",

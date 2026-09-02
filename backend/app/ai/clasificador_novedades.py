@@ -7,6 +7,7 @@ from __future__ import annotations
 import base64
 import logging
 from collections.abc import Sequence
+from datetime import UTC, datetime
 from functools import lru_cache
 
 from app.ai import placeholders
@@ -49,6 +50,11 @@ def _get_llm():
     )
 
 
+def _hoy() -> datetime:
+    """Ahora en UTC. Aparte para poder fijarlo desde los tests."""
+    return datetime.now(UTC)
+
+
 def _build_message(
     item: NovedadCruda, recientes: Sequence[tuple[int, str]]
 ) -> dict:
@@ -57,6 +63,20 @@ def _build_message(
     instruccion = "Clasificá la siguiente publicación.\n"
     if item.origen:
         instruccion += f"Cuenta / fuente: {item.origen}\n"
+    # Sin estas dos fechas el modelo no tiene forma de saber que una
+    # publicación está vencida: veía "Inscripción al Ciclo Lectivo 2024" como
+    # un aviso perfectamente accionable y lo publicaba con confianza 1.0.
+    instruccion += f"Fecha de hoy: {_hoy():%Y-%m-%d}\n"
+    if item.fecha_publicacion:
+        publicada = item.fecha_publicacion
+        if publicada.tzinfo is None:
+            publicada = publicada.replace(tzinfo=UTC)
+        dias = (_hoy() - publicada).days
+        instruccion += (
+            f"Fecha de publicación: {publicada:%Y-%m-%d} (hace {dias} días)\n"
+        )
+    else:
+        instruccion += "Fecha de publicación: desconocida\n"
     if item.texto:
         instruccion += f"Texto de la publicación:\n{item.texto}\n"
     if usar_imagen:

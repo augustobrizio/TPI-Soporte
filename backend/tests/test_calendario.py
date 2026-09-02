@@ -17,7 +17,7 @@ os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.api import calendario as calendario_api  # noqa: E402
-from app.api.deps import get_current_user  # noqa: E402
+from app.api.deps import get_current_user_opcional  # noqa: E402
 from app.db.models.calendario import EventoCalendario  # noqa: E402
 from app.db.session import get_db  # noqa: E402
 from app.repositories import calendario_repo  # noqa: E402
@@ -167,8 +167,8 @@ def test_proximos_endpoint_limita_y_ordena() -> None:
         yield db
 
     app.dependency_overrides[get_db] = override_db
-    # El endpoint ahora requiere usuario autenticado; simulamos uno.
-    app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(id=1)
+    # La lectura es publica, pero suma los eventos propios si hay sesion.
+    app.dependency_overrides[get_current_user_opcional] = lambda: SimpleNamespace(id=1)
     client = TestClient(app)
 
     res = client.get("/calendario/proximos?limite=5&carrera=ISI")
@@ -177,3 +177,106 @@ def test_proximos_endpoint_limita_y_ordena() -> None:
     data = res.json()
     assert len(data) == 5
     assert [item["titulo"] for item in data] == [f"Evento {idx}" for idx in range(5)]
+
+
+def _app_calendario(db: Session, usuario_id: int | None) -> TestClient:
+    """App minima con el router del calendario y la sesion que se le indique."""
+    app = FastAPI()
+    app.include_router(calendario_api.router)
+
+    def override_db():
+        yield db
+
+    app.dependency_overrides[get_db] = override_db
+    app.dependency_overrides[get_current_user_opcional] = (
+        lambda: SimpleNamespace(id=usuario_id) if usuario_id is not None else None
+    )
+    return TestClient(app)
+
+
+def test_listar_eventos_es_publico_y_esconde_los_personales() -> None:
+    """Sin sesion: 200 con el calendario de la facultad, sin lo de nadie mas.
+
+    El middleware del frontend declara el calendario como seccion publica; si
+    el backend pide token, el visitante se come un 401 y ve la pantalla vacia.
+    """
+    db = _session()
+    calendario_repo.upsert_evento(
+        db,
+        titulo="Inicio de clases",
+        descripcion=None,
+        fecha_inicio=datetime.now() + timedelta(days=3),
+        fecha_fin=None,
+        tipo="evento",
+        carrera="ISI",
+        fuente_url=None,
+        content_hash="compartido-1",
+    )
+    calendario_repo.crear_evento_usuario(
+        db,
+        usuario_id=7,
+        titulo="Parcial de Analisis",
+        descripcion=None,
+        fecha_inicio=datetime.now() + timedelta(days=4),
+        fecha_fin=None,
+        tipo="examen",
+    )
+    db.commit()
+
+    anonimo = _app_calendario(db, usuario_id=None).get("/calendario")
+
+    assert anonimo.status_code == 200
+    assert [e["titulo"] for e in anonimo.json()] == ["Inicio de clases"]
+
+
+def test_listar_eventos_con_sesion_suma_los_propios() -> None:
+    db = _session()
+    calendario_repo.upsert_evento(
+        db,
+        titulo="Inicio de clases",
+        descripcion=None,
+        fecha_inicio=datetime.now() + timedelta(days=3),
+        fecha_fin=None,
+        tipo="evento",
+        carrera="ISI",
+        fuente_url=None,
+        content_hash="compartido-1",
+    )
+    calendario_repo.crear_evento_usuario(
+        db,
+        usuario_id=7,
+        titulo="Parcial de Analisis",
+        descripcion=None,
+        fecha_inicio=datetime.now() + timedelta(days=4),
+        fecha_fin=None,
+        tipo="examen",
+    )
+    db.commit()
+
+    propios = _app_calendario(db, usuario_id=7).get("/calendario").json()
+    ajenos = _app_calendario(db, usuario_id=8).get("/calendario").json()
+
+    assert [e["titulo"] for e in propios] == ["Inicio de clases", "Parcial de Analisis"]
+    assert [e["titulo"] for e in ajenos] == ["Inicio de clases"]
+
+
+def test_crear_evento_sigue_exigiendo_sesion() -> None:
+    """Lo publico es leer. Agendar algo propio necesita cuenta (401, no 200)."""
+    db = _session()
+    app = FastAPI()
+    app.include_router(calendario_api.router)
+
+    def override_db():
+        yield db
+
+    app.dependency_overrides[get_db] = override_db
+    res = TestClient(app).post(
+        "/calendario/eventos",
+        json={
+            "titulo": "Parcial",
+            "fecha_inicio": datetime.now().isoformat(),
+            "tipo": "examen",
+        },
+    )
+
+    assert res.status_code == 401

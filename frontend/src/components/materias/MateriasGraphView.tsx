@@ -370,6 +370,24 @@ export function MateriasGraphView({ grafo, tipo }: Props) {
     [todosLosNodos, modalCodigo],
   );
 
+  // Deep link del buscador global: `/materias?tipo=...&codigo=XXX` abre el
+  // grafo con esa materia ya seleccionada — nodo resaltado y panel de detalle
+  // abajo. Se valida contra los nodos cargados: un codigo que no esta en este
+  // grafo se ignora, en vez de dejar la seleccion apuntando a la nada.
+  //
+  // El ref hace que se aplique una sola vez por codigo. `todosLosNodos` cambia
+  // de identidad cada vez que el alumno toca un estado, y sin esto el efecto
+  // volveria a seleccionar la materia del link despues de que el usuario
+  // cerro el panel o eligio otra.
+  const codigoDeepLink = searchParams.get("codigo");
+  const deepLinkAplicado = useRef<string | null>(null);
+  useEffect(() => {
+    if (!codigoDeepLink || deepLinkAplicado.current === codigoDeepLink) return;
+    if (!todosLosNodos.some((n) => n.codigo === codigoDeepLink)) return;
+    deepLinkAplicado.current = codigoDeepLink;
+    setSeleccionado(codigoDeepLink);
+  }, [codigoDeepLink, todosLosNodos]);
+
   return (
     <div className="p-6 md:p-8 max-w-[1600px] mx-auto">
 

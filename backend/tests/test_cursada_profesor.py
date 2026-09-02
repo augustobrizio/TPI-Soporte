@@ -22,6 +22,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from app.api import comisiones as comisiones_api  # noqa: E402
 from app.db.models.academico import Comision, Cursada, Horario, Materia  # noqa: E402
 from app.db.models.profesor import MateriaProfesor, Profesor  # noqa: E402
+from app.db.models.resena_alumno import ResenaAlumno  # noqa: E402
 from app.db.models.review import ReviewCatedra  # noqa: E402
 from app.db.session import get_db  # noqa: E402
 from app.services import cursada_profesor_service as svc  # noqa: E402
@@ -34,7 +35,7 @@ def _session() -> Session:
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
     )
-    for model in (Materia, Profesor, Comision, MateriaProfesor, Cursada, Horario, ReviewCatedra):
+    for model in (Materia, Profesor, Comision, MateriaProfesor, Cursada, Horario, ReviewCatedra, ResenaAlumno):
         model.__table__.create(engine)
     maker = sessionmaker(bind=engine, class_=Session, expire_on_commit=False)
     return maker()
@@ -46,9 +47,9 @@ def _setup(db: Session) -> None:
             Materia(codigo="M1", nombre="Analisis"),
             Materia(codigo="M2", nombre="Fisica"),
             Materia(codigo="M3", nombre="Quimica"),
-            Profesor(id=1, nombre="ASCOLANI, Federico"),
-            Profesor(id=2, nombre="PEREZ, Juan"),
-            Profesor(id=3, nombre="PEREZ, Ana"),
+            Profesor(id=1, nombre="ASCOLANI, Federico", nombre_key="ascolani|federico"),
+            Profesor(id=2, nombre="PEREZ, Juan", nombre_key="perez|juan"),
+            Profesor(id=3, nombre="PEREZ, Ana", nombre_key="perez|ana"),
             # Catedras: quien dicta cada materia
             MateriaProfesor(materia_codigo="M1", profesor_id=1),  # Ascolani -> M1
             MateriaProfesor(materia_codigo="M2", profesor_id=2),  # Perez Juan -> M2

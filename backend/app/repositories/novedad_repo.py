@@ -77,6 +77,9 @@ def crear_novedad(
         imagen_url=imagen_url,
         imagen_path=imagen_path,
         estado=estado,
+        # Se congela lo que decidio el clasificador: la moderacion manual pisa
+        # 'estado' pero no esto, asi queda el registro del error del LLM.
+        estado_llm=estado,
         confianza=confianza,
         motivo_descarte=motivo_descarte,
         fecha_publicacion=fecha_publicacion,
@@ -195,12 +198,14 @@ def get(db: Session, novedad_id: int) -> Novedad | None:
 
 
 def actualizar_estado(
-    db: Session, novedad_id: int, estado: str
+    db: Session, novedad_id: int, estado: str, *, manual: bool = False
 ) -> Novedad | None:
     novedad = db.get(Novedad, novedad_id)
     if novedad is None:
         return None
     novedad.estado = estado
+    if manual:
+        novedad.moderado_manual = True
     db.flush()
     return novedad
 
@@ -234,3 +239,27 @@ def crear_ingesta_log(
     db.add(log)
     db.flush()
     return log
+
+
+def listar_recientes(db: Session, *, limite: int = 300) -> Sequence[Novedad]:
+    """Novedades publicadas más recientes, sin eager-loads.
+
+    La usan el buscador global y el panel de notificaciones: los dos necesitan
+    título, descripción y fecha, y ninguno pinta las fuentes ni los centros —
+    que es lo que precarga ``listar`` y lo que la vuelve cara.
+
+    Ventana acotada a propósito. El buscador filtra en Python (hace falta para
+    ignorar acentos, ver ``busqueda_service``), así que la cantidad de filas
+    que se traen es el costo real de cada búsqueda. Si algún día hay miles de
+    novedades esto tiene que pasar a full-text search de Postgres; con las
+    decenas que maneja hoy la ingesta, escanear las últimas 300 es más barato
+    que mantener un índice.
+    """
+    orden = func.coalesce(Novedad.fecha_publicacion, Novedad.created_at)
+    stmt = (
+        select(Novedad)
+        .where(Novedad.estado == "publicada")
+        .order_by(orden.desc().nullslast(), Novedad.id.desc())
+        .limit(limite)
+    )
+    return db.execute(stmt).scalars().all()

@@ -16,10 +16,28 @@ nuevas sin tocar el pipeline.
 Fuentes actuales:
 - **`utn_web.py`**: home de FRRO. Notas (`div.blog-post-content`) + sección
   "Fechas Importantes". Contenido de texto, `usar_vision=False`.
-- **`instagram.py`**: posts + stories vía `instagrapi`. Descarga la imagen,
-  `usar_vision=True` (el LLM clasifica leyendo el flyer). Login por
-  `sessionid` de un browser (recomendado) o usuario/password (fallback
-  frágil); sesión se persiste en disco (`INSTAGRAM_SESSION_PATH`) y se reusa.
+- **`instagram.py`**: posts de los centros, **sin credenciales**. Descarga la
+  imagen, `usar_vision=True` (el LLM clasifica leyendo el flyer).
+
+  Lee el endpoint web público `/api/v1/feed/user/<handle>/username/`. La única
+  condición para que responda es **presentar un handshake TLS de browser
+  real**: Instagram clasifica por fingerprint (JA3/HTTP2), no solo por IP, y a
+  `requests`/`httpx` los corta con 401/429 al primer request incluso desde una
+  IP residencial. Por eso el módulo usa `curl_cffi` con
+  `impersonate="chrome"` — con eso los mismos endpoints devuelven 200 desde
+  una Lambda, sin login, sin sesión y sin rate-limit observable.
+
+  **No usar `requests`/`httpx`/`instagrapi` contra Instagram**: el problema no
+  es la IP ni la reputación de la cuenta, es el fingerprint del cliente TLS.
+
+  Detalles que importan:
+  - El endpoint es *por username*, así que no hace falta resolver el `user_id`
+    antes (ese lookup era justo el que más rate-limit comía).
+  - `web_profile_info` sirve para lo mismo pero **rompe con 400** en cuentas
+    business (le pasa a `@sauutnrosario`); el endpoint de feed no.
+  - Las **stories** son lo único que sigue detrás del login. Se traen
+    best-effort si hay `INSTAGRAM_SESSIONID`; si falta o vence, se saltean y
+    la ingesta sigue con los posts. Nunca son camino crítico.
 
 ## Pipeline (`novedad_service.run_ingesta_novedades`)
 

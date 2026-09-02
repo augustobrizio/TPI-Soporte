@@ -3,12 +3,15 @@ import type { Metadata } from "next";
 
 import { AuthShell, EnlaceAuth } from "@/features/auth/AuthCard";
 import { RegisterForm } from "@/features/auth/RegisterForm";
+import { googleHabilitado } from "@/lib/googleOAuth";
 
 export const metadata: Metadata = {
   title: "Crear cuenta",
 };
 
-export default function RegisterPage() {
+export default async function RegisterPage() {
+  const google = await googleHabilitado();
+
   return (
     <AuthShell
       titulo="Creá tu cuenta"
@@ -19,7 +22,7 @@ export default function RegisterPage() {
         </>
       }
     >
-      <RegisterForm />
+      <RegisterForm google={google} />
     </AuthShell>
   );
 }

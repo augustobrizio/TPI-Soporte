@@ -6,6 +6,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
+from app.api.deps import requerir_admin
 from app.db.session import get_db
 from app.schemas.novedad import (
     CategoriaNovedadLiteral,
@@ -73,13 +74,22 @@ def get_novedad(
     return NovedadOut.model_validate(novedad)
 
 
-@router.patch("/{novedad_id}/moderar", response_model=NovedadOut)
+@router.patch(
+    "/{novedad_id}/moderar",
+    response_model=NovedadOut,
+    dependencies=[Depends(requerir_admin)],
+)
 def moderar_novedad(
     novedad_id: int,
     body: ModerarNovedadIn,
     db: Annotated[Session, Depends(get_db)],
 ) -> NovedadOut:
-    """Aprueba (publica) o descarta una novedad pendiente de moderación."""
+    """Corrige a mano el estado de una novedad (rol admin, RNF-06).
+
+    Sirve tanto para aprobar una pendiente como para revertir al clasificador:
+    republicar algo que descarto mal, o bajar algo que publico de mas. Queda
+    marcada como ``moderado_manual`` y se conserva ``estado_llm``.
+    """
     novedad = novedad_service.moderar(db, novedad_id, body.estado)
     if novedad is None:
         raise HTTPException(
@@ -93,9 +103,16 @@ def moderar_novedad(
     "/sincronizar",
     response_model=ResultadoIngesta,
     summary="Dispara la ingesta de novedades desde las fuentes configuradas",
+    dependencies=[Depends(requerir_admin)],
 )
 def sincronizar_novedades(
     db: Annotated[Session, Depends(get_db)],
 ) -> ResultadoIngesta:
-    """Ejecuta el pipeline de ingesta on-demand (mismo callable que el scheduler)."""
+    """Ejecuta el pipeline de ingesta on-demand (mismo callable que el scheduler).
+
+    Restringido a rol admin (RNF-06). Es el mas caro de los cinco de
+    sincronizacion: cada corrida scrapea las fuentes y pasa cada post por el
+    clasificador LLM, o sea que abierto era una factura de API que cualquiera
+    podia disparar en loop desde afuera.
+    """
     return novedad_service.run_ingesta_novedades(db)

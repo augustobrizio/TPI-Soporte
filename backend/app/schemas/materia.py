@@ -205,6 +205,14 @@ class ItemImportMapeado(BaseModel):
     condicion: CondicionMateria
     nota: float | None = None
     anio_cursada: int | None = None
+    comision_nombre: str | None = Field(
+        None,
+        description=(
+            "Comision detectada en el texto de estado ('Cursa en 4K02' -> '4K02'). "
+            "Solo para condicion='cursando'; al confirmar se usa para seleccionar "
+            "la cursada y que la materia aparezca en la grilla de Horarios."
+        ),
+    )
     importar: bool = Field(True, description="El alumno puede deseleccionar individualmente")
 
 
@@ -241,4 +249,8 @@ class ResultadoImportSysacad(BaseModel):
     importadas: int
     omitidas: int
     eliminadas: int = 0
+    comisiones_asignadas: int = Field(
+        0,
+        description="Materias 'cursando' a las que ademas se les selecciono la comision.",
+    )
     errores: list[str] = Field(default_factory=list)

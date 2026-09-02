@@ -1,17 +1,22 @@
 """Scraper de horarios de consulta del Dpto. ISI de FRRO.
 
-Fuente: https://www.frro.utn.edu.ar/horarios_consulta_dptoisi2023.php?cont=349&subc=26
+Fuente: https://www.frro.utn.edu.ar/horarios-consulta
 
 La pagina entrega los datos a traves de un POST al mismo endpoint con el
 form de busqueda vacio (devuelve todos los registros). El HTML resultante
-tiene una unica tabla de datos con 5 columnas:
+tiene una unica tabla de datos:
 
-    Dia | Docente | Materia | Lugar | Inicio
+    Día | Docente | Materia | Lugar | Hora de Inicio | Hora de Fin
 
 - ``Lugar`` puede ser fisico (ej: "5to Piso Dpto Sistemas") o un link
   (Zoom/Meet/Calendar/Forms). En el segundo caso clasificamos modalidad
   como "Virtual"; en el primero, "Presencial".
-- La pagina NO publica hora_fin ni email del docente: ambos quedan ``None``.
+- La pagina NO publica el email del docente: queda ``None``.
+
+Las columnas se ubican leyendo el header, no por posicion fija: el sitio ya
+cambio una vez (el endpoint viejo, ``horarios_consulta_dptoisi2023.php``,
+devolvia 404 y no traia "Hora de Fin") y conviene que sumar o reordenar una
+columna no rompa el parseo.
 
 Este modulo solo hace fetch + parseo. La persistencia y el matching de
 materias contra la DB viven en ``services/profesor_consulta_service.py``.
@@ -20,6 +25,7 @@ from __future__ import annotations
 
 import logging
 import re
+import unicodedata
 from dataclasses import dataclass
 from datetime import time
 
@@ -28,10 +34,20 @@ from bs4 import BeautifulSoup
 
 logger = logging.getLogger(__name__)
 
-URL_HORARIOS_CONSULTA = (
-    "https://www.frro.utn.edu.ar/horarios_consulta_dptoisi2023.php?cont=349&subc=26"
-)
+URL_HORARIOS_CONSULTA = "https://www.frro.utn.edu.ar/horarios-consulta"
 HTTP_TIMEOUT_SECONDS = 30
+
+# Header de la tabla -> campo de ``HorarioParseado``. La clave se busca como
+# substring del encabezado normalizado, para tolerar "Inicio" / "Hora de Inicio".
+COLUMNAS: dict[str, str] = {
+    "dia": "dia",
+    "docente": "docente",
+    "materia": "materia",
+    "lugar": "lugar",
+    "inicio": "hora_inicio",
+    "fin": "hora_fin",
+}
+COLUMNAS_REQUERIDAS = ("docente", "materia")
 
 # Sustrings que indican que el "Lugar" es un link en vez de un aula fisica.
 _INDICADORES_VIRTUAL: tuple[str, ...] = (
@@ -54,12 +70,13 @@ class HorarioParseado:
 
 
 def fetch_html(url: str = URL_HORARIOS_CONSULTA) -> str:
-    """Descarga el HTML hace POST al form vacio. Levanta ``httpx.HTTPError`` si falla.
+    """Descarga el HTML: hace POST al form vacio. Levanta ``httpx.HTTPError`` si falla.
 
     El sitio renderiza solo el formulario si se hace GET; hay que enviar el form
-    para que devuelva la tabla con todos los registros.
+    —con los dos filtros vacios— para que devuelva la tabla con todos los
+    registros.
     """
-    data = {"subc": "26", "cont": "349", "docente": "", "materia": "", "buscar": "Buscar"}
+    data = {"docente": "", "materia": "", "buscar": "Buscar"}
     with httpx.Client(timeout=HTTP_TIMEOUT_SECONDS, follow_redirects=True) as client:
         resp = client.post(url, data=data)
         resp.raise_for_status()
@@ -96,49 +113,78 @@ def _clasificar_lugar(lugar: str) -> tuple[str, str | None]:
     return ("Presencial", lugar)
 
 
+def _normalizar_encabezado(texto: str) -> str:
+    """'Hora de Inicio' -> 'hora de inicio' (sin acentos), para ubicar columnas."""
+    nfkd = unicodedata.normalize("NFKD", _clean(texto))
+    return "".join(c for c in nfkd if not unicodedata.combining(c)).lower()
+
+
+def _mapear_columnas(fila_header) -> dict[str, int]:  # noqa: ANN001
+    """``{campo: indice_de_columna}`` a partir de la fila de encabezados."""
+    mapa: dict[str, int] = {}
+    for i, celda in enumerate(fila_header.find_all(["th", "td"])):
+        encabezado = _normalizar_encabezado(celda.get_text())
+        for token, campo in COLUMNAS.items():
+            if token in encabezado and campo not in mapa:
+                mapa[campo] = i
+    return mapa
+
+
 def parsear_html(html: str) -> list[HorarioParseado]:
     """Extrae las filas de la tabla de horarios de consulta.
 
-    Identificamos la tabla de datos por presencia de un ``<td>`` con texto
-    "Docente" en el header. Cada fila siguiente con 5 ``<td>`` se mapea a un
-    ``HorarioParseado``.
+    Busca la tabla cuyo header nombra "Docente" y "Materia", mapea las columnas
+    por nombre (ver ``COLUMNAS``) y convierte cada fila de datos en un
+    ``HorarioParseado``. Filas sin docente se descartan.
     """
     soup = BeautifulSoup(html, "html.parser")
     items: list[HorarioParseado] = []
 
     tabla = None
+    fila_header = None
+    columnas: dict[str, int] = {}
     for t in soup.find_all("table"):
-        encabezados = [_clean(td.get_text()) for td in t.find_all("td")[:8]]
-        if "Docente" in encabezados and "Materia" in encabezados:
-            tabla = t
+        for fila in t.find_all("tr")[:3]:  # el header esta arriba de todo
+            mapa = _mapear_columnas(fila)
+            if all(campo in mapa for campo in COLUMNAS_REQUERIDAS):
+                tabla, fila_header, columnas = t, fila, mapa
+                break
+        if tabla is not None:
             break
 
     if tabla is None:
         logger.warning("No se encontro la tabla de horarios en el HTML")
         return items
 
+    faltantes = sorted(set(COLUMNAS.values()) - set(columnas))
+    if faltantes:
+        logger.warning("La tabla de horarios no trae las columnas %s", faltantes)
+
+    def celda(celdas: list, campo: str) -> str:
+        i = columnas.get(campo)
+        return _clean(celdas[i].get_text()) if i is not None and i < len(celdas) else ""
+
     for fila in tabla.find_all("tr"):
+        if fila is fila_header:
+            continue  # el header tambien puede venir en <td> y parecer una fila
         celdas = fila.find_all("td")
-        if len(celdas) != 5:
-            continue  # header u otra fila
-        dia_raw, docente_raw, materia_raw, lugar_raw, hora_raw = (
-            _clean(c.get_text()) for c in celdas
-        )
-        # Skip la fila de header (estilo_titulo)
-        if dia_raw == "Dia" and docente_raw == "Docente":
-            continue
-        if not docente_raw:
+        if len(celdas) <= max(columnas.values()):
+            continue  # fila que no es de datos
+
+        docente = celda(celdas, "docente")
+        if not docente:
             continue
 
-        modalidad, aula = _clasificar_lugar(lugar_raw)
+        lugar = celda(celdas, "lugar")
+        modalidad, aula = _clasificar_lugar(lugar)
         items.append(
             HorarioParseado(
-                nombre_profesor=docente_raw,
+                nombre_profesor=docente,
                 email=None,
-                materia_nombre=materia_raw or None,
-                dia=dia_raw or None,
-                hora_inicio=_parsear_hora(hora_raw),
-                hora_fin=None,
+                materia_nombre=celda(celdas, "materia") or None,
+                dia=celda(celdas, "dia") or None,
+                hora_inicio=_parsear_hora(celda(celdas, "hora_inicio")),
+                hora_fin=_parsear_hora(celda(celdas, "hora_fin")),
                 modalidad=modalidad,
                 aula=aula,
             )

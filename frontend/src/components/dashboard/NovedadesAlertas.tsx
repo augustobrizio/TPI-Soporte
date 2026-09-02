@@ -41,10 +41,12 @@ const STYLES: Record<
 };
 
 /**
- * Cards de novedades agrupadas por severidad: paro/aviso urgente
- * (rojo), inscripciones/admin (ambar), info general (azul). El feed
- * real va a venir del scraper de novedades; mientras tanto el caller
- * puede pasar items mock con la misma forma.
+ * Cards de novedades por severidad: urgente (rojo), aviso (ambar), info
+ * general (azul). El feed sale del pipeline de ingesta; el mapeo
+ * categoria -> severidad lo hace el caller (`PanelPersonal.severidadDe`).
+ *
+ * `esMock` sigue existiendo aunque ya nadie lo pase en true: es el cartel de
+ * "datos de ejemplo" para cuando la card se reuse en una pantalla sin feed.
  */
 export function NovedadesAlertas({ novedades, esMock = false }: Props) {
   return (
@@ -112,17 +114,27 @@ function NovedadCard({ novedad }: { novedad: NovedadAlerta }) {
     </div>
   );
 
-  if (novedad.url) {
+  if (!novedad.url) return Inner;
+
+  // Un deep link nuestro (`/novedades?novedad=12`) se navega con Link: abrirlo
+  // en pestaña nueva sacaria al alumno de la app para mostrarle otra pantalla
+  // de la misma app. Una URL externa (la fuente en Instagram) si va afuera.
+  if (novedad.url.startsWith("/")) {
     return (
-      <a
-        href={novedad.url}
-        target="_blank"
-        rel="noreferrer"
-        className="block hover:brightness-110 transition"
-      >
+      <Link href={novedad.url} className="block hover:brightness-110 transition">
         {Inner}
-      </a>
+      </Link>
     );
   }
-  return Inner;
+
+  return (
+    <a
+      href={novedad.url}
+      target="_blank"
+      rel="noreferrer"
+      className="block hover:brightness-110 transition"
+    >
+      {Inner}
+    </a>
+  );
 }

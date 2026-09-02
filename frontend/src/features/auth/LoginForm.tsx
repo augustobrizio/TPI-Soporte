@@ -4,9 +4,28 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 
 import { BotonSubmit, Campo, ErrorGeneral } from "./AuthCard";
+import { BotonGoogle, SeparadorO } from "./BotonGoogle";
 import { destinoSeguro } from "./destino";
 
-export function LoginForm() {
+/**
+ * Mensajes de los errores que vuelven del flow de Google.
+ *
+ * El callback redirige aca con `?error=<codigo>` y el texto sale de esta
+ * tabla, no de la URL: un `?error=` con texto libre dejaria mostrar un
+ * mensaje inventado dentro de nuestro propio dominio (ver `lib/googleOAuth`).
+ */
+const ERRORES_GOOGLE: Record<string, string> = {
+  google_cancelado: "Cancelaste el ingreso con Google.",
+  google_estado:
+    "El intento de ingreso venció o se abrió en otra pestaña. Probá de nuevo.",
+  google_no_disponible:
+    "El ingreso con Google no está disponible en este momento. Podés entrar con tu email.",
+  google_email_no_verificado:
+    "Tu cuenta de Google no tiene el email verificado, así que no podemos usarla para ingresar.",
+  google_fallo: "No pudimos completar el ingreso con Google. Probá de nuevo.",
+};
+
+export function LoginForm({ google = false }: { google?: boolean }) {
   const router = useRouter();
   const params = useSearchParams();
 
@@ -15,6 +34,12 @@ export function LoginForm() {
   const [verPassword, setVerPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cargando, setCargando] = useState(false);
+
+  const next = params.get("next");
+  // El error del form pisa al de la URL: si el usuario ya reintento con email,
+  // el mensaje viejo de Google no tiene por que seguir ahi.
+  const errorGoogle = ERRORES_GOOGLE[params.get("error") ?? ""] ?? null;
+  const errorVisible = error ?? errorGoogle;
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -34,7 +59,7 @@ export function LoginForm() {
         return;
       }
 
-      const destino = destinoSeguro(params.get("next"));
+      const destino = destinoSeguro(next);
       // `refresh()` ademas de `push()`: los Server Components tienen cacheado
       // el render de deslogueado y sin esto se veria la pagina vieja.
       router.push(destino);
@@ -48,7 +73,7 @@ export function LoginForm() {
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-4">
-      {error && <ErrorGeneral mensaje={error} />}
+      {errorVisible && <ErrorGeneral mensaje={errorVisible} />}
 
       <Campo
         id="email"
@@ -91,6 +116,13 @@ export function LoginForm() {
       <BotonSubmit cargando={cargando}>
         {cargando ? "Ingresando..." : "Ingresar"}
       </BotonSubmit>
+
+      {google && (
+        <>
+          <SeparadorO />
+          <BotonGoogle next={next} />
+        </>
+      )}
     </form>
   );
 }

@@ -1,10 +1,18 @@
 import { ApiError, listarComisionesConProfesores } from "@/lib/api";
+import { getUsuarioActual } from "@/lib/auth";
 import type { ComisionConProfesores } from "@/lib/types";
 import { ComisionesView } from "@/components/comisiones/ComisionesView";
 
 // Esta pantalla pega a `/comisiones/con-profesores`, que no pide token: es la
 // oferta de comisiones de la facultad, igual para todos. Queda publica.
-export default async function ComisionesPage() {
+export default async function ComisionesPage({
+  searchParams,
+}: {
+  // `?comision=<id>` es el deep link del buscador global: abre esa comisión
+  // con el detalle desplegado.
+  searchParams: Promise<{ comision?: string }>;
+}) {
+  const { comision: comisionParam } = await searchParams;
   let comisiones: ComisionConProfesores[] | null = null;
   let errorMsg: string | null = null;
 
@@ -43,5 +51,15 @@ export default async function ComisionesPage() {
     );
   }
 
-  return <ComisionesView comisiones={comisiones} />;
+  const usuario = await getUsuarioActual();
+  // Un `?comision=` que no sea un número (link editado a mano, o viejo) se
+  // trata como si no estuviera: la página se ve igual, sin nada abierto.
+  const comisionAbierta = Number(comisionParam);
+  return (
+    <ComisionesView
+      comisiones={comisiones}
+      loggedIn={usuario != null}
+      comisionAbierta={Number.isInteger(comisionAbierta) ? comisionAbierta : null}
+    />
+  );
 }

@@ -34,6 +34,27 @@ class Settings(BaseSettings):
     # default: cubre una jornada sin obligar a re-loguearse a mitad de cursada.
     jwt_expire_minutes: int = Field(default=720, alias="JWT_EXPIRE_MINUTES")
 
+    # --- Login con Google (OAuth 2.0 / OpenID Connect, RF-01) ---
+    # Credenciales del cliente OAuth tipo "Aplicacion web" de Google Cloud
+    # Console. Si falta cualquiera de las dos, el login con Google queda
+    # apagado: el boton no se renderiza y el endpoint responde 503. El resto
+    # de la autenticacion (email + password) sigue funcionando igual, asi que
+    # el proyecto arranca sin configurar nada de Google.
+    google_client_id: str | None = Field(default=None, alias="GOOGLE_CLIENT_ID")
+    google_client_secret: str | None = Field(
+        default=None, alias="GOOGLE_CLIENT_SECRET"
+    )
+    # Dominios de email aceptados al entrar con Google, separados por coma.
+    # **Vacio por default: entra cualquier cuenta de Google.** El mecanismo
+    # existe porque RNF-04 habla de restringir a @frro.utn.edu.ar, pero se
+    # decidio no aplicarlo: muchos alumnos usan su cuenta personal, y dejar
+    # afuera a quien no tenga la institucional a mano es peor que el riesgo
+    # que evita. Si alguna vez se quiere activar, alcanza con setear la
+    # variable — el chequeo ya esta implementado y testeado.
+    google_dominios_permitidos: str = Field(
+        default="", alias="GOOGLE_DOMINIOS_PERMITIDOS"
+    )
+
     # Clasificador IA de novedades (OpenAI). gpt-4o-mini: barato y suficiente.
     openai_api_key: str | None = Field(default=None, alias="OPENAI_API_KEY")
     novedades_llm_model: str = Field(
@@ -68,13 +89,17 @@ class Settings(BaseSettings):
     # Cuántos fragmentos recupera el retriever por pregunta.
     rag_top_k: int = Field(default=5, alias="RAG_TOP_K")
 
-    # Instagram: sessionid de un browser (recomendado); usuario/password fallback.
-    instagram_sessionid: str | None = Field(default=None, alias="INSTAGRAM_SESSIONID")
-    instagram_usuario: str | None = Field(default=None, alias="INSTAGRAM_USUARIO")
-    instagram_password: str | None = Field(default=None, alias="INSTAGRAM_PASSWORD")
-    instagram_session_path: str = Field(
-        default="/data/instagram_session.json", alias="INSTAGRAM_SESSION_PATH"
+    # Antigüedad máxima de un item para que valga clasificarlo. El feed de un
+    # perfil trae sus 12 últimos posts, que en cuentas poco activas se remontan
+    # años: sin este corte gastábamos una llamada de visión (~28k tokens, el
+    # motivo de los 429 de TPM) en saludos navideños de 2024. 0 = sin límite.
+    novedades_antiguedad_max_dias: int = Field(
+        default=90, alias="NOVEDADES_ANTIGUEDAD_MAX_DIAS"
     )
+
+    # Instagram: los posts se leen sin credenciales. El sessionid es opcional
+    # y sirve solo para las stories, que siguen detrás del login.
+    instagram_sessionid: str | None = Field(default=None, alias="INSTAGRAM_SESSIONID")
     instagram_handles: str = Field(default="", alias="INSTAGRAM_HANDLES")
     novedades_media_dir: str = Field(
         default="/data/novedades_media", alias="NOVEDADES_MEDIA_DIR"
@@ -108,6 +133,16 @@ class Settings(BaseSettings):
         alias="CORS_ORIGINS",
     )
 
+    # Origen publico de ESTA API (sin barra final), p.ej.
+    # "https://api.utnhub.ar". Se usa para armar la URL de suscripcion al
+    # calendario, que tiene que ser alcanzable por Google Calendar desde
+    # afuera: es la unica URL que el backend necesita saber de si mismo.
+    #
+    # Vacio = se deduce del request entrante, que alcanza en desarrollo. En
+    # produccion hay que setearlo: detras de un proxy el request trae el host
+    # interno y la URL que se le copia al alumno no resolveria desde Google.
+    public_api_url: str | None = Field(default=None, alias="PUBLIC_API_URL")
+
     @model_validator(mode="after")
     def _exigir_jwt_secret_propio_en_prod(self) -> "Settings":
         """Falla el arranque si prod quedo con el secreto de desarrollo.
@@ -123,6 +158,20 @@ class Settings(BaseSettings):
                 "y cargalo como secreto del servicio."
             )
         return self
+
+    @property
+    def google_dominios_permitidos_list(self) -> list[str]:
+        """Dominios normalizados (minuscula, sin ``@``). Vacio = sin restriccion."""
+        return [
+            d.strip().lstrip("@").lower()
+            for d in self.google_dominios_permitidos.split(",")
+            if d.strip()
+        ]
+
+    @property
+    def google_oauth_configurado(self) -> bool:
+        """Hay client id y secret cargados, o sea que el flow puede correr."""
+        return bool(self.google_client_id and self.google_client_secret)
 
     @property
     def cors_origins_list(self) -> list[str]:
