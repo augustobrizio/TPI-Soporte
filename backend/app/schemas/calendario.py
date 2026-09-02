@@ -55,3 +55,15 @@ class ResultadoSincCalendario(BaseModel):
     eventos_sin_cambios: int = 0
     advertencias: list[str] = Field(default_factory=list)
     errores: list[str] = Field(default_factory=list)
+
+
+class SuscripcionCalendarioOut(BaseModel):
+    """URL de suscripcion al calendario del alumno (T11.2).
+
+    Se devuelve la URL entera y no solo el token porque el alumno la va a
+    copiar y pegar tal cual en Google Calendar: armarla en el front obligaria
+    a que el front sepa el origen publico de la API, que es justo lo que el
+    backend ya resuelve aca.
+    """
+
+    url: str

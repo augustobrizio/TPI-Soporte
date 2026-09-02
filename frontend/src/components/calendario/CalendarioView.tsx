@@ -4,6 +4,7 @@ import { useMemo, useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   CalendarOff,
+  CalendarPlus,
   ChevronLeft,
   ChevronRight,
   Pencil,
@@ -24,6 +25,7 @@ import {
   diffDias, countdown, mesLargo, diaMes, fechaLarga, rangoEvento, capitalizar,
 } from "./utils";
 import { EventoModal } from "./EventoModal";
+import { SuscribirseModal } from "./SuscribirseModal";
 
 type Vista = "mes" | "semana" | "agenda";
 
@@ -73,6 +75,7 @@ export function CalendarioView({
   const [ancla, setAncla] = useState<Date>(() => inicioMes(HOY));
   const [diaSel, setDiaSel] = useState<string | null>(null);
   const [modal, setModal] = useState<{ modo: "crear" | "editar"; evento?: EventoCalendarioOut; fecha?: string; plantilla?: { titulo?: string; tipo?: TipoEventoCalendario } } | null>(null);
+  const [suscribirseAbierto, setSuscribirseAbierto] = useState(false);
 
   // Mobile → Agenda por defecto
   useEffect(() => {
@@ -185,6 +188,15 @@ export function CalendarioView({
 
         <div className="flex flex-wrap items-center gap-2">
           <BuscadorEventos value={query} onChange={handleSearch} />
+          {/* Secundario respecto de "Nuevo evento": exportar es algo que se
+              hace una vez, agendar es lo de todos los días. */}
+          <button
+            onClick={() => setSuscribirseAbierto(true)}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-[var(--shell-border)] px-3.5 py-2 font-body text-sm font-medium text-[var(--shell-fg)] transition-colors duration-150 hover:bg-[var(--shell-panel)]"
+          >
+            <CalendarPlus className="h-4 w-4" strokeWidth={2} />
+            Agregar a mi calendario
+          </button>
           <button
             onClick={() => abrirCrear({ fecha: diaSel ?? toISODate(HOY) })}
             className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-[#1CA4DF] px-4 py-2 font-body text-sm font-semibold text-white transition-opacity duration-150 hover:opacity-90"
@@ -194,6 +206,12 @@ export function CalendarioView({
           </button>
         </div>
       </header>
+
+      <SuscribirseModal
+        abierto={suscribirseAbierto}
+        onCerrar={() => setSuscribirseAbierto(false)}
+        autenticado={autenticado}
+      />
 
       {/* ── Controles: vistas · navegación · filtros ────────────────── */}
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-b border-[var(--shell-border)] pb-4">

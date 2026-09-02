@@ -42,7 +42,7 @@
 7. ~~**Login con Google**~~ — ✅ **hecho** (Frente 8). Único paso manual pendiente: crear el cliente OAuth en Google Cloud y pegar las credenciales en `backend/.env`.
 8. **Modo claro** — los tokens ya están; faltan los hardcodeos — Frente 9
 9. ~~**Importación de SYSACAD**~~ — ✅ **hecho** (Frente 10): marca la comisión al importar y deja corregir el mapeo a mano.
-10. **Calendario ↔ Google** — greenfield — Frente 11
+10. ~~**Calendario ↔ Google**~~ — ✅ exportar y suscribirse hechos (2026-09-02); falta importar desde Google — Frente 11
 11. ~~**Comisiones y profesores**~~ — la punta de **seguridad cerrada** ✅ (T12.1, 2026-09-01). Quedan las puntas sin riesgo — Frente 12
 12. **Inicio / dashboard / panel personal** — ruteo por sesión + mocks a reemplazar — Frente 13
 
@@ -57,7 +57,7 @@
 | D3 | **Modelo de embeddings en español** | RNF-13 exige evaluar la calidad de recuperación en español argentino antes de fijar el modelo. Definir candidatos (p.ej. OpenAI `text-embedding-3`, multilingual-e5). |
 | D4 | **¿Qué pasa con la portada cuando hay sesión?** | Si al loguearse `/` pasa a ser el dashboard, la portada pública (hero + secciones + novedades) deja de ser alcanzable para el usuario logueado. Definir si se pierde o se mueve a otra URL (`/inicio`, `/about`). Es la pantalla que explica el proyecto: para la defensa conviene que siga estando. **Afecta al Frente 13.A.** |
 | ~~D5~~ ✅ | **¿Google reemplaza al login por contraseña o convive?** → **Conviven, sin filtro de dominio.** | Concreta a D1 ahora que el login por password ya está hecho y andando. Si conviven, hay que definir el vínculo entre una cuenta con contraseña y la misma persona entrando por Google (T8.5). Y si se aplica el dominio `@frro.utn.edu.ar` de RNF-04, decidir si también corta el registro por contraseña, que hoy acepta cualquier mail. **Afecta al Frente 8.** |
-| D6 | **Calendario: ICS o API de Google** | Exportar `.ics` (o una URL suscribible) no necesita credenciales y cubre Google, Apple y Outlook. La API de Google Calendar permite sync bidireccional pero arrastra OAuth con scopes de Calendar. **Afecta al Frente 11.** |
+| ~~D6~~ ✅ | **Calendario: ICS o API de Google** → **ICS primero.** Hecho (2026-09-02): export + suscripción. La API de Google queda para T11.4. | Exportar `.ics` (o una URL suscribible) no necesita credenciales y cubre Google, Apple y Outlook. La API de Google Calendar permite sync bidireccional pero arrastra OAuth con scopes de Calendar. **Afecta al Frente 11.** |
 
 ---
 
@@ -199,7 +199,7 @@ por archivo sobre `f43c415` + el árbol de trabajo actual.
 | Revisar el modo claro | **Frente 9** |
 | Las materias que estás cursando no se ponen solas en Horarios | **Frente 10 (10.A)** ✅ |
 | La electiva de Soporte no matchea al importar de SYSACAD | **Frente 10 (10.B)** ✅ |
-| Exportar/importar el calendario a Google | **Frente 11** |
+| ~~Exportar el calendario a Google~~ ✅ (importar sigue pendiente) | **Frente 11** |
 | Revisar si está todo lo de comisiones y profesores | **Frente 12** |
 | Inicio si no está logueado / dashboard si sí | **Frente 13 (13.A)** |
 | Que el dashboard esté conectado de verdad | **Frente 13 (13.B)** |
@@ -332,8 +332,10 @@ La normalización quedó en `app/core/texto.py::normalizar_texto` (movida desde 
 
 ---
 
-## Frente 11 — Calendario ↔ Google  🟢
-**Estado:** no existe nada. Ni exportación `.ics` ni integración con Google Calendar — `grep -rn "ics\|google" backend/app/services/calendario_service.py backend/app/api/calendario.py frontend/src/components/calendario/` no devuelve nada.
+## Frente 11 — Calendario ↔ Google  🟢  *(ICS cerrado — 2026-09-02)*
+**Estado:** ~~no existe nada~~ — T11.1–T11.3 hechos; queda T11.4 (import desde Google), que depende del Frente 8. El estado de abajo describe el punto de partida.
+
+**Punto de partida:** no existía nada. Ni exportación `.ics` ni integración con Google Calendar — `grep -rn "ics\|google" backend/app/services/calendario_service.py backend/app/api/calendario.py frontend/src/components/calendario/` no devuelve nada.
 
 Lo que sí está y alcanza para empezar: el modelo `EventoCalendario` con `fecha_inicio`, `fecha_fin`, `tipo`, `descripcion` y `usuario_id` (NULL = evento institucional compartido; con valor = evento personal del alumno), el CRUD completo de eventos personales y un `content_hash` único que sirve de `UID` estable.
 
@@ -346,12 +348,46 @@ Recomendación: ICS primero; el import desde Google, atado al Frente 8.
 
 | ID | Tarea | Área | Alcance | Esf. |
 |----|-------|------|---------|------|
-| T11.1 | Export ICS | Back | `GET /calendario/export.ics`: un `VEVENT` por evento (institucionales + los personales del usuario), `UID` estable desde `content_hash`, `DTSTART`/`DTEND` con timezone `America/Argentina/Buenos_Aires`. La lógica va en `calendario_service`, no en el endpoint. | M |
-| T11.2 | URL de suscripción | Back | Token opaco por usuario para que la URL se pueda pegar en Google Calendar sin exponer el JWT (Google no manda headers). Poder revocarlo. | M |
-| T11.3 | Botón en la UI | Front | "Agregar a mi calendario" en `/calendario`, con la URL copiable y el paso a paso de Google/Apple. | S |
+| ~~T11.1~~ ✅ | Export ICS | Back | `GET /calendario/export.ics` (sesión opcional) + `app/core/ics.py` (RFC 5545) + `calendario_service.generar_ics()`. 34 tests. | M |
+| ~~T11.2~~ ✅ | URL de suscripción | Back | `calendario_token` por alumno (migración `c8d3f2a91e57`, **aplicada en Neon**), `GET /calendario/suscripcion`, `POST /calendario/suscripcion/regenerar` y `GET /calendario/suscripcion/{token}.ics` sin sesión. 20 tests. | M |
+| ~~T11.3~~ ✅ | Botón en la UI | Front | `SuscribirseModal` desde "Agregar a mi calendario" en `/calendario`: URL copiable, paso a paso de Google, botón de regenerar y descarga directa del `.ics`. | S |
 | T11.4 | Import desde Google | Back+Front | Leer el calendario del alumno y mostrarlo junto a lo académico. Scope `calendar.readonly` — **depende del Frente 8**. | L |
 
-**Criterio de aceptación:** el alumno se suscribe una vez y las mesas, feriados y sus TPs aparecen en su Google Calendar; los cambios del calendario académico se propagan solos.
+### Decisiones que quedaron tomadas
+
+- **El `.ics` se escribe a mano** (`app/core/ics.py`) en vez de sumar `icalendar`
+  como dependencia: lo que se necesita es un subconjunto chico y estable, y la
+  parte difícil del RFC no es el modelo de datos sino tres detalles de formato
+  —CRLF, plegado a 75 **octetos** (bytes, no caracteres) y escapado de `; , \`—
+  que hay que entender igual para testear. La salida se validó contra la
+  librería `icalendar` real: parsea limpio, 64 VEVENT, UIDs únicos.
+- **Día completo vs horario, decidido por el dato.** Todos los eventos
+  institucionales están a medianoche en la DB: son *fechas*, no horarios.
+  Emitidos como evento con hora, un feriado le aparece al alumno como una cita
+  a las 00:00. La regla es: medianoche → `VALUE=DATE`; con hora → instante UTC.
+- **`DTEND` es exclusivo.** Un feriado del 1/9 va `DTSTART:20260901` /
+  `DTEND:20260902`. Es el bug clásico del `.ics` a mano y hace que todo aparezca
+  un día corto.
+- **Los naive datetime de la DB son hora de Rosario**, y se convierten a UTC.
+  Pegarles una `Z` sin convertir corre todo tres horas.
+- **La URL de suscripción *es* la credencial.** Google refresca sin headers y
+  sin cookies, así que no hay forma de pedirle un JWT — y meterlo ahí sería
+  peor: vence en 12 h y quedaría pegado en la config del calendario de Google,
+  donde no lo podemos caducar. De ahí el token propio de 32 bytes, revocable,
+  y el 404 (no 401) para un token inválido: uno revocado no debe distinguirse
+  de uno que nunca existió.
+- **La descarga NO va por `/api/backend/*`.** Ese proxy corta con 401 sin
+  cookie, y el modal le ofrece la descarga también al visitante sin cuenta.
+  Va por un route handler propio (`app/api/calendario/export.ics/route.ts`)
+  que adjunta el token **si existe** — mismo criterio que el buscador global,
+  con el agregado de que acá el token sí mejora la respuesta.
+- **`PUBLIC_API_URL`** (nuevo, en `.env.example`): la URL de suscripción tiene
+  que resolver desde afuera. Vacío se deduce del request y alcanza en dev; en
+  producción, detrás de un proxy, hay que setearlo.
+
+**Criterio de aceptación:** ✅ el alumno se suscribe una vez y las mesas,
+feriados y sus TPs aparecen en su calendario; los cambios se propagan solos
+(Google relee cada varias horas). Falta T11.4, que depende del Frente 8.
 
 ---
 
@@ -468,7 +504,7 @@ Queda T13.6 (qué widgets agregar y cuáles achicar), que es diseño y no deuda.
 
 ```
 D2, D3        ──► destraban el chatbot
-D4, D5, D6    ──► destraban los frentes 13.A, 8 y 11
+D4            ──► lo unico que sigue bloqueando (13.A). D5 y D6 resueltas.
 
 Frente 1  (auth)            ── ✅ salvo Google, inactividad y rol
 Frente 4  (multi-usuario)   ── ✅ cerrado
@@ -483,21 +519,23 @@ Frente 9  (modo claro)      ── independiente; se reparte por pantalla entre 
 Frente 7  (shell/topbar)    ── ✅ hecho (2026-08-26)
 Frente 13 (inicio/dashboard)── 13.B se puede hacer ya; 13.A necesita D4
 Frente 8  (Google OAuth)    ── sólo falta T8.1 (credenciales de Google Cloud)
-Frente 11 (calendario ICS)  ── T11.1–T11.3 independientes; T11.4 después del Frente 8
+Frente 11 (calendario ICS)  ── ✅ T11.1–T11.3 hechos; T11.4 después del Frente 8
 ```
 
-**Recomendación (actualizada 2026-09-01).** Cerrados el Frente 3 y T12.1, no queda
-ninguna falla de seguridad abierta ni nada bloqueante para la materia. Lo que sigue,
-por valor y no por tamaño:
+**Recomendación (actualizada 2026-09-02).** No queda ninguna falla de seguridad
+abierta ni nada bloqueante para la materia. De la lista del repaso de UX quedan
+tres cosas, en este orden:
 
 1. ~~**Frente 13.B**~~ ✅ hecho (2026-09-01): el panel ya no inventa novedades ni
    la cohorte del alumno. Queda T13.6, que es diseño.
-2. **Frente 11, T11.1–T11.3** (M) — exportar `.ics` es el único frente grande que
-   no depende de credenciales de nadie, así que no choca con quien esté con T8.1.
+2. ~~**Frente 11, T11.1–T11.3**~~ ✅ hecho (2026-09-02): exportar y suscribirse al
+   calendario. Queda T11.4 (traer eventos *desde* Google), atado al Frente 8.
 3. **Frente 9** (M) — el modo claro se reparte por pantalla entre varios. El 60%
    de la deuda son dos archivos: `HorariosBuilder` (49 hardcodeos) y
-   `OptimizadorModal` (42).
-4. **T5.7** (M) — faltan 4 de los 6 `agent_docs/` que `CLAUDE.md` manda leer.
+   `OptimizadorModal` (42). **Es lo más grande que queda de la lista original.**
+4. **Frente 13.A** (M) — inicio vs dashboard según sesión. Sigue esperando **D4**,
+   que es una charla de cinco minutos y no código.
+5. **T5.7** (M) — faltan 4 de los 6 `agent_docs/` que `CLAUDE.md` manda leer.
    Cuanto más crece el proyecto, más caro es escribirlos después.
 
 **Frente 13.A** sigue esperando **D4**, que es una charla de 5 minutos y no código.

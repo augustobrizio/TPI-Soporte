@@ -41,6 +41,14 @@ class Usuario(Base):
     notificaciones_vistas_at: Mapped[datetime | None] = mapped_column(
         DateTime, nullable=True
     )
+    # Token opaco de la URL de suscripcion al calendario (.ics). Google no
+    # manda headers al refrescar una suscripcion, asi que la URL tiene que
+    # autenticar por si sola y no puede llevar el JWT: el JWT vence, y sobre
+    # todo, quedaria pegado en la config del calendario de Google para siempre.
+    # NULL = el alumno nunca genero su URL. Unique porque es la credencial.
+    calendario_token: Mapped[str | None] = mapped_column(
+        Text, unique=True, index=True, nullable=True
+    )
     anio_ingresado: Mapped[int | None] = mapped_column(Integer, nullable=True)
     rol: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime | None] = mapped_column(

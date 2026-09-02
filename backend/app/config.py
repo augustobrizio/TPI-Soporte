@@ -111,6 +111,16 @@ class Settings(BaseSettings):
         alias="CORS_ORIGINS",
     )
 
+    # Origen publico de ESTA API (sin barra final), p.ej.
+    # "https://api.utnhub.ar". Se usa para armar la URL de suscripcion al
+    # calendario, que tiene que ser alcanzable por Google Calendar desde
+    # afuera: es la unica URL que el backend necesita saber de si mismo.
+    #
+    # Vacio = se deduce del request entrante, que alcanza en desarrollo. En
+    # produccion hay que setearlo: detras de un proxy el request trae el host
+    # interno y la URL que se le copia al alumno no resolveria desde Google.
+    public_api_url: str | None = Field(default=None, alias="PUBLIC_API_URL")
+
     @model_validator(mode="after")
     def _exigir_jwt_secret_propio_en_prod(self) -> "Settings":
         """Falla el arranque si prod quedo con el secreto de desarrollo.

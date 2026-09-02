@@ -231,6 +231,35 @@ export async function registrarEstado(
   return res.json();
 }
 
+// ---------------------------------------------------------------------------
+// Suscripcion al calendario (.ics)
+// ---------------------------------------------------------------------------
+
+/** URL de suscripcion del alumno, creandola si es la primera vez.
+ *
+ * Va por el proxy autenticado: PEDIR la URL exige sesion. La URL que devuelve,
+ * en cambio, apunta directo al backend y no lleva credenciales de sesion — es
+ * el token de la propia URL el que autentica, porque Google Calendar refresca
+ * sin poder mandar headers.
+ */
+export async function getSuscripcionCalendario(): Promise<{ url: string }> {
+  const res = await fetch(`${MUTATION_BASE}/calendario/suscripcion`, {
+    headers: { Accept: "application/json" },
+  });
+  if (!res.ok) throw new ApiError(res.status, null);
+  return res.json();
+}
+
+/** Rota el token: la URL anterior deja de funcionar en el acto. */
+export async function regenerarSuscripcionCalendario(): Promise<{ url: string }> {
+  const res = await fetch(`${MUTATION_BASE}/calendario/suscripcion/regenerar`, {
+    method: "POST",
+    headers: { Accept: "application/json" },
+  });
+  if (!res.ok) throw new ApiError(res.status, null);
+  return res.json();
+}
+
 export async function eliminarEstado(codigo: string): Promise<void> {
   const res = await fetch(`${MUTATION_BASE}/mi/materias/${codigo}`, {
     method: "DELETE",
