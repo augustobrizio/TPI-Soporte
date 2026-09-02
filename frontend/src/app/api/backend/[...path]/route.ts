@@ -60,6 +60,22 @@ async function proxy(
     return new NextResponse(null, { status: res.status });
   }
 
+  // Respuestas en streaming (SSE): pasamos el cuerpo tal cual, sin bufferear.
+  // Si acá hiciéramos `await res.text()` esperaríamos a que el backend termine
+  // y perderíamos todo el efecto de "aparece de a poco".
+  const tipo = res.headers.get("content-type") ?? "";
+  if (tipo.includes("text/event-stream")) {
+    return new NextResponse(res.body, {
+      status: res.status,
+      headers: {
+        "Content-Type": tipo,
+        "Cache-Control": "no-cache, no-transform",
+        Connection: "keep-alive",
+        "X-Accel-Buffering": "no",
+      },
+    });
+  }
+
   const texto = await res.text();
   return new NextResponse(texto, {
     status: res.status,
