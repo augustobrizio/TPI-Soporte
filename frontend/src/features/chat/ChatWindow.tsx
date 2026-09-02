@@ -123,13 +123,23 @@ export function ChatWindow({ conversacionId = null, inicial = [] }: Props) {
 
   // Al crear una conversación nueva (empezamos sin id y el backend nos dio uno),
   // reflejamos la URL y refrescamos el historial del panel lateral.
+  //
+  // Clave: esperamos a que el stream TERMINE (`!cargando`). El backend recién
+  // commitea la conversación al final del stream, así que navegar antes llevaría
+  // a `/chat/{id}` cuando la fila todavía no existe para otra transacción → 404.
   useEffect(() => {
-    if (conversacionId == null && convActivo != null && !yaNavego.current) {
+    if (
+      conversacionId == null &&
+      convActivo != null &&
+      !cargando &&
+      !error &&
+      !yaNavego.current
+    ) {
       yaNavego.current = true;
       router.replace(`/chat/${convActivo}`);
       router.refresh();
     }
-  }, [conversacionId, convActivo, router]);
+  }, [conversacionId, convActivo, cargando, error, router]);
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
