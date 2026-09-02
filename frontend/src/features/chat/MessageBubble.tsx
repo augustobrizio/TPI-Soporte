@@ -1,5 +1,6 @@
 "use client";
 
+import { AgentSteps } from "./AgentSteps";
 import { FeedbackBar } from "./FeedbackBar";
 import { FichaMateriaCard } from "./FichaMateriaCard";
 import { Markdown } from "./Markdown";
@@ -26,9 +27,11 @@ export function MessageBubble({
     );
   }
 
-  // Antes del primer token no hay texto que mostrar: dejamos un indicador de
-  // "escribiendo" para que la burbuja no aparezca vacía.
-  const escribiendoSinTexto = mensaje.streaming && mensaje.texto.length === 0;
+  const tieneTexto = mensaje.texto.length > 0;
+  const tienePasos = (mensaje.pasos?.length ?? 0) > 0;
+  // Puntos de "escribiendo" sólo cuando no hay nada más que mostrar: sin texto y
+  // sin pasos (si hay pasos, el spinner de AgentSteps ya indica la actividad).
+  const escribiendoSinTexto = mensaje.streaming && !tieneTexto && !tienePasos;
 
   return (
     <div className="flex justify-start gap-3">
@@ -36,13 +39,20 @@ export function MessageBubble({
         <span className="material-symbols-outlined text-[18px]">smart_toy</span>
       </div>
       <div className="card-3d chat-bubble max-w-[85%] rounded-2xl rounded-tl-sm border border-outline-variant/10 bg-surface-container px-4 py-3">
-        {escribiendoSinTexto ? (
-          <PuntosEscribiendo />
-        ) : (
+        {tienePasos && (
+          <AgentSteps
+            pasos={mensaje.pasos ?? []}
+            streaming={!!mensaje.streaming}
+            tieneTexto={tieneTexto}
+          />
+        )}
+        {tieneTexto ? (
           <div className="text-sm text-on-surface">
             <Markdown>{mensaje.texto}</Markdown>
             {mensaje.streaming && <Cursor />}
           </div>
+        ) : (
+          escribiendoSinTexto && <PuntosEscribiendo />
         )}
         {/* Fichas, fuentes y feedback sólo cuando la respuesta terminó. */}
         {!mensaje.streaming &&
