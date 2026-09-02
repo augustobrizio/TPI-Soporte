@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { MessageBubble } from "./MessageBubble";
+import { SugerenciasSeguimiento } from "./SugerenciasSeguimiento";
 import { useChat, type MensajeChat } from "./useChat";
 
 type Acento = "primary" | "secondary" | "tertiary";
@@ -138,6 +139,14 @@ export function ChatWindow({ conversacionId = null, inicial = [] }: Props) {
   };
 
   const vacio = mensajes.length === 0;
+  const ultimo = mensajes[mensajes.length - 1];
+  // Chips de seguimiento: sólo con el chat en reposo y una respuesta ya cerrada.
+  const mostrarSeguimiento =
+    !vacio &&
+    !cargando &&
+    ultimo?.rol === "assistant" &&
+    !ultimo.streaming &&
+    ultimo.mensajeId !== undefined;
 
   return (
     <div className="flex h-full w-full flex-col">
@@ -234,6 +243,9 @@ export function ChatWindow({ conversacionId = null, inicial = [] }: Props) {
                 />
               );
             })}
+            {mostrarSeguimiento && (
+              <SugerenciasSeguimiento onElegir={enviar} />
+            )}
           </>
         )}
 
