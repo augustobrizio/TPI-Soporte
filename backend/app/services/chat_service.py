@@ -89,6 +89,8 @@ def _extraer_texto(content: object) -> str:
     nuevos, como lista de bloques (``{"type": "text", "text": ...}`` + una
     "firma" interna que no nos interesa). Unificamos ambos casos a un string.
     """
+    if content is None:
+        return ""
     if isinstance(content, str):
         return content
     if isinstance(content, list):
@@ -357,6 +359,11 @@ def responder_stream(
         fuentes_json=fuentes_json,
     )
     conversacion.updated_at = datetime.now()
+    # Flush para poblar los ids ANTES del commit: tras el commit las instancias
+    # quedan expiradas y leerlas dispararía otra query.
+    db.flush()
+    conversacion_id_final = conversacion.id
+    mensaje_id_final = asistente_msg.id
     db.commit()
 
     yield _sse(
@@ -365,8 +372,8 @@ def responder_stream(
             "respuesta": texto_final,
             "fuentes": [asdict(f) for f in fuentes],
             "fichas": _dedup_fichas(recolector_fichas),
-            "conversacion_id": conversacion.id,
-            "mensaje_id": asistente_msg.id,
+            "conversacion_id": conversacion_id_final,
+            "mensaje_id": mensaje_id_final,
         },
     )
 
