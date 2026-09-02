@@ -209,6 +209,14 @@ def responder(
             respuesta=_ERROR_LLM, conversacion_id=conversacion.id
         )
 
+    # Tools que el agente usó (para el feedback loop): salen de los tool_calls
+    # que quedaron en los mensajes del grafo.
+    tools_usadas = [
+        tc["name"]
+        for m in resultado["messages"]
+        for tc in (getattr(m, "tool_calls", None) or [])
+    ]
+
     # 3. Fuentes citadas (dedup por documento).
     fuentes = _construir_fuentes(recolector)
     fuentes_json = (
@@ -227,6 +235,7 @@ def responder(
         role="assistant",
         contenido=texto,
         fuentes_json=fuentes_json,
+        tools_json=json.dumps(tools_usadas, ensure_ascii=False),
     )
     # updated_at no tiene onupdate; la lista del historial ordena por ese campo.
     conversacion.updated_at = datetime.now()
@@ -300,6 +309,9 @@ def responder_stream(
     # agente, completo y limpio), no de acumular tokens: así evitamos guardar
     # cualquier preámbulo que el modelo escriba antes de pedir una tool.
     texto_final = ""
+    # Tools que el agente fue usando (para el feedback loop): lista vacía = no
+    # usó ninguna, señal de que no pudo apoyar la respuesta en datos reales.
+    tools_usadas: list[str] = []
     try:
         for modo, data in grafo.stream(
             {"messages": [*historial, HumanMessage(content=pregunta)]},
@@ -323,6 +335,7 @@ def responder_stream(
                 if tool_calls:
                     for tc in tool_calls:
                         nombre = tc.get("name", "")
+                        tools_usadas.append(nombre)
                         yield _sse(
                             "paso",
                             {
@@ -357,6 +370,7 @@ def responder_stream(
         role="assistant",
         contenido=texto_final,
         fuentes_json=fuentes_json,
+        tools_json=json.dumps(tools_usadas, ensure_ascii=False),
     )
     conversacion.updated_at = datetime.now()
     # Flush para poblar los ids ANTES del commit: tras el commit las instancias

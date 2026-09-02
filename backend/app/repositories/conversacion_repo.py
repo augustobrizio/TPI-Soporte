@@ -51,12 +51,14 @@ def agregar_mensaje(
     role: str,
     contenido: str,
     fuentes_json: str | None = None,
+    tools_json: str | None = None,
 ) -> Mensaje:
     mensaje = Mensaje(
         conversacion_id=conversacion_id,
         role=role,
         contenido=contenido,
         fuentes_json=fuentes_json,
+        tools_json=tools_json,
     )
     db.add(mensaje)
     return mensaje
