@@ -103,9 +103,16 @@ def moderar_novedad(
     "/sincronizar",
     response_model=ResultadoIngesta,
     summary="Dispara la ingesta de novedades desde las fuentes configuradas",
+    dependencies=[Depends(requerir_admin)],
 )
 def sincronizar_novedades(
     db: Annotated[Session, Depends(get_db)],
 ) -> ResultadoIngesta:
-    """Ejecuta el pipeline de ingesta on-demand (mismo callable que el scheduler)."""
+    """Ejecuta el pipeline de ingesta on-demand (mismo callable que el scheduler).
+
+    Restringido a rol admin (RNF-06). Es el mas caro de los cinco de
+    sincronizacion: cada corrida scrapea las fuentes y pasa cada post por el
+    clasificador LLM, o sea que abierto era una factura de API que cualquiera
+    podia disparar en loop desde afuera.
+    """
     return novedad_service.run_ingesta_novedades(db)

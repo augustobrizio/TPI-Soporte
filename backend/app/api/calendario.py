@@ -7,7 +7,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import UsuarioActual, UsuarioOpcional
+from app.api.deps import UsuarioActual, UsuarioOpcional, requerir_admin
 from app.db.session import get_db
 from app.schemas.calendario import (
     EventoCalendarioCreate,
@@ -175,11 +175,18 @@ def get_evento(
     "/sincronizar",
     response_model=ResultadoSincCalendario,
     summary="Ingesta eventos desde fuentes FRRO configuradas",
+    dependencies=[Depends(requerir_admin)],
 )
 def sincronizar_calendario(
     db: Annotated[Session, Depends(get_db)],
 ) -> ResultadoSincCalendario:
-    """Scrapea FRRO y persiste eventos de forma idempotente."""
+    """Scrapea FRRO y persiste eventos de forma idempotente.
+
+    Restringido a rol admin (RNF-06): escribe los eventos institucionales
+    —los que ve *todo* el mundo, con ``usuario_id`` NULL—, no los personales
+    de quien llama. La idempotencia evita duplicados, no evita que un tercero
+    dispare scrapeos en loop contra FRRO.
+    """
     resultado = calendario_service.sincronizar_calendario(db)
     if resultado.errores and resultado.eventos_detectados == 0:
         raise HTTPException(
