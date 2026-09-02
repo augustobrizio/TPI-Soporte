@@ -50,7 +50,7 @@ export function useChat({ conversacionId = null, inicial = [] }: Opciones = {}) 
   const pendiente = useRef<string | null>(null);
 
   const consultar = useCallback(
-    async (pregunta: string) => {
+    async (pregunta: string, opts: { regenerar?: boolean } = {}) => {
       setError(null);
       setCargando(true);
 
@@ -68,33 +68,38 @@ export function useChat({ conversacionId = null, inicial = [] }: Opciones = {}) 
 
       let ok = true;
       try {
-        await preguntarChatStream(pregunta, convId, {
-          onInicio: (cid) => setConvId(cid),
-          onPaso: (p) =>
-            parche((m) => ({ ...m, pasos: [...(m.pasos ?? []), p] })),
-          onToken: (t) => parche((m) => ({ ...m, texto: m.texto + t })),
-          onFin: (fin) => {
-            if (fin.conversacion_id) setConvId(fin.conversacion_id);
-            // El `fin` trae la respuesta autoritativa (completa y persistida):
-            // la usamos como texto final por si el stream de tokens se ensució.
-            parche((m) => ({
-              ...m,
-              texto: fin.respuesta,
-              fuentes: fin.fuentes,
-              fichas: fin.fichas,
-              mensajeId: fin.mensaje_id ?? undefined,
-              streaming: false,
-            }));
+        await preguntarChatStream(
+          pregunta,
+          convId,
+          {
+            onInicio: (cid) => setConvId(cid),
+            onPaso: (p) =>
+              parche((m) => ({ ...m, pasos: [...(m.pasos ?? []), p] })),
+            onToken: (t) => parche((m) => ({ ...m, texto: m.texto + t })),
+            onFin: (fin) => {
+              if (fin.conversacion_id) setConvId(fin.conversacion_id);
+              // El `fin` trae la respuesta autoritativa (completa, persistida):
+              // la usamos como texto final por si el stream de tokens se ensució.
+              parche((m) => ({
+                ...m,
+                texto: fin.respuesta,
+                fuentes: fin.fuentes,
+                fichas: fin.fichas,
+                mensajeId: fin.mensaje_id ?? undefined,
+                streaming: false,
+              }));
+            },
+            onError: (msg) => {
+              // Error controlado del backend (proveedor sobrecargado): sacamos
+              // el placeholder y mostramos el error con botón de reintento.
+              ok = false;
+              pendiente.current = pregunta;
+              setMensajes((prev) => prev.filter((m) => m.id !== idAsist));
+              setError(msg);
+            },
           },
-          onError: (msg) => {
-            // Error controlado del backend (proveedor sobrecargado): sacamos el
-            // placeholder y mostramos el error con botón de reintento.
-            ok = false;
-            pendiente.current = pregunta;
-            setMensajes((prev) => prev.filter((m) => m.id !== idAsist));
-            setError(msg);
-          },
-        });
+          { regenerar: opts.regenerar },
+        );
         if (ok) pendiente.current = null;
       } catch (e) {
         pendiente.current = pregunta;
@@ -129,12 +134,38 @@ export function useChat({ conversacionId = null, inicial = [] }: Opciones = {}) 
     if (pendiente.current && !cargando) consultar(pendiente.current);
   }, [cargando, consultar]);
 
+  /**
+   * Rehace la última respuesta del asistente: saca la última respuesta del hilo
+   * y vuelve a preguntar la última consulta del usuario con `regenerar=true`
+   * (el backend descarta ese turno para no duplicarlo).
+   */
+  const regenerar = useCallback(() => {
+    if (cargando) return;
+    // Buscamos, desde el final, la última pregunta del usuario y la última
+    // respuesta del asistente.
+    let idxUser = -1;
+    let idxAsist = -1;
+    for (let i = mensajes.length - 1; i >= 0; i--) {
+      if (idxAsist === -1 && mensajes[i].rol === "assistant") idxAsist = i;
+      if (idxUser === -1 && mensajes[i].rol === "user") idxUser = i;
+      if (idxUser !== -1 && idxAsist !== -1) break;
+    }
+    if (idxUser === -1) return;
+
+    // Sacamos esa respuesta del hilo y re-preguntamos con regenerar=true.
+    if (idxAsist !== -1) {
+      setMensajes((prev) => prev.filter((_, i) => i !== idxAsist));
+    }
+    void consultar(mensajes[idxUser].texto, { regenerar: true });
+  }, [cargando, mensajes, consultar]);
+
   return {
     mensajes,
     cargando,
     error,
     enviar,
     reintentar,
+    regenerar,
     conversacionId: convId,
   };
 }

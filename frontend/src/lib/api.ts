@@ -645,13 +645,17 @@ export async function preguntarChatStream(
   pregunta: string,
   conversacionId: number | null | undefined,
   handlers: ChatStreamHandlers,
-  signal?: AbortSignal,
+  opts: { regenerar?: boolean; signal?: AbortSignal } = {},
 ): Promise<void> {
   const res = await fetch(`${MUTATION_BASE}/chat/stream`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
-    body: JSON.stringify({ pregunta, conversacion_id: conversacionId ?? null }),
-    signal,
+    body: JSON.stringify({
+      pregunta,
+      conversacion_id: conversacionId ?? null,
+      regenerar: opts.regenerar ?? false,
+    }),
+    signal: opts.signal,
   });
   if (!res.ok || !res.body) {
     let body: unknown = null;

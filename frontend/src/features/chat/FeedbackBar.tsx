@@ -12,15 +12,20 @@ const MOTIVOS = [
 ] as const;
 
 /**
- * Acciones bajo una respuesta: 👍 útil / 👎 no útil / 📋 copiar.
+ * Acciones bajo una respuesta: 👍 útil / 👎 no útil / 📋 copiar / 🔄 regenerar.
  * En 👎 se pide el motivo. El voto se guarda en el backend por mensaje.
+ *
+ * `onRegenerar` es opcional: sólo se pasa en la última respuesta del hilo (no
+ * tiene sentido regenerar una del medio).
  */
 export function FeedbackBar({
   mensajeId,
   texto,
+  onRegenerar,
 }: {
   mensajeId: number;
   texto: string;
+  onRegenerar?: () => void;
 }) {
   const [voto, setVoto] = useState<"util" | "no-util" | null>(null);
   const [pidiendoMotivo, setPidiendoMotivo] = useState(false);
@@ -86,6 +91,17 @@ export function FeedbackBar({
             {copiado ? "check" : "content_copy"}
           </span>
         </button>
+        {onRegenerar && (
+          <button
+            type="button"
+            onClick={onRegenerar}
+            className={btn}
+            aria-label="Regenerar respuesta"
+            title="Regenerar"
+          >
+            <span className="material-symbols-outlined text-[16px]">refresh</span>
+          </button>
+        )}
         {voto === "util" && (
           <span className="ml-1 text-xs text-outline/70">¡Gracias!</span>
         )}

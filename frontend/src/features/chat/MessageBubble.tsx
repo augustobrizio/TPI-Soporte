@@ -11,9 +11,12 @@ import { SourcesPopover } from "./SourcesPopover";
 export function MessageBubble({
   mensaje,
   onAccion,
+  onRegenerar,
 }: {
   mensaje: MensajeChat;
   onAccion: (pregunta: string) => void;
+  /** Sólo se pasa en la última respuesta del hilo, para habilitar "regenerar". */
+  onRegenerar?: () => void;
 }) {
   const esUsuario = mensaje.rol === "user";
 
@@ -63,7 +66,11 @@ export function MessageBubble({
           <SourcesPopover fuentes={mensaje.fuentes} />
         )}
         {!mensaje.streaming && mensaje.mensajeId !== undefined && (
-          <FeedbackBar mensajeId={mensaje.mensajeId} texto={mensaje.texto} />
+          <FeedbackBar
+            mensajeId={mensaje.mensajeId}
+            texto={mensaje.texto}
+            onRegenerar={onRegenerar}
+          />
         )}
       </div>
     </div>

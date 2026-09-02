@@ -78,6 +78,7 @@ export function ChatWindow({ conversacionId = null, inicial = [] }: Props) {
     error,
     enviar,
     reintentar,
+    regenerar,
     conversacionId: convActivo,
   } = useChat({ conversacionId, inicial });
   const [texto, setTexto] = useState("");
@@ -218,9 +219,21 @@ export function ChatWindow({ conversacionId = null, inicial = [] }: Props) {
           </div>
         ) : (
           <>
-            {mensajes.map((m) => (
-              <MessageBubble key={m.id} mensaje={m} onAccion={enviar} />
-            ))}
+            {mensajes.map((m, i) => {
+              // "Regenerar" sólo en la última respuesta del hilo y con el chat
+              // en reposo.
+              const esUltimo = i === mensajes.length - 1;
+              return (
+                <MessageBubble
+                  key={m.id}
+                  mensaje={m}
+                  onAccion={enviar}
+                  onRegenerar={
+                    esUltimo && !cargando ? regenerar : undefined
+                  }
+                />
+              );
+            })}
           </>
         )}
 
