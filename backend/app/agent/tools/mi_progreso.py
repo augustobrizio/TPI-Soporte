@@ -51,34 +51,59 @@ def crear_mi_progreso(db: Session, usuario_id: int | None):
                 "registre las materias que ya aprobó."
             )
 
-        faltan = c.total - c.aprobadas
+        faltan_troncales = c.total - c.aprobadas
+        faltan_horas_elec = max(0, c.meta_creditos_electivas - c.creditos_electivas)
         cursables = [n.nombre for n in grafo.nodos if n.estado == "cursable"]
 
         partes = [
-            "Avance del estudiante en las materias troncales del plan de ISI "
-            "(Plan 2023):",
-            f"- Materias troncales obligatorias del plan: {c.total}",
-            f"- Aprobadas: {c.aprobadas} ({c.porcentaje_aprobadas}%)",
-            f"- Le faltan aprobar: {faltan}",
+            "Avance del estudiante en el plan de ISI (Plan 2023):",
+            "",
+            "TRONCALES (obligatorias):",
+            f"- Aprobadas: {c.aprobadas} de {c.total} ({c.porcentaje_aprobadas}%)",
+            f"- Le faltan aprobar: {faltan_troncales}",
         ]
         if c.regulares:
             partes.append(f"- Regularizadas (falta rendir el final): {c.regulares}")
         if c.cursando:
             partes.append(f"- Cursando actualmente: {c.cursando}")
+
+        partes += [
+            "",
+            "ELECTIVAS (por créditos):",
+            f"- Lleva {c.creditos_electivas} de {c.meta_creditos_electivas} horas "
+            "requeridas",
+            f"- Le faltan {faltan_horas_elec} horas de electivas",
+        ]
+
         if c.promedio_general is not None:
-            partes.append(f"- Promedio general (materias aprobadas): {c.promedio_general}")
+            partes += ["", f"Promedio general (aprobadas): {c.promedio_general}"]
+
         if cursables:
             listado = ", ".join(cursables[:8])
             extra = "" if len(cursables) <= 8 else f" (y {len(cursables) - 8} más)"
             partes.append(
-                f"- Materias que ya puede cursar ({len(cursables)}): {listado}{extra}"
+                f"Materias troncales que ya puede cursar ({len(cursables)}): "
+                f"{listado}{extra}"
             )
 
-        partes.append(
-            "IMPORTANTE: este avance cubre sólo las materias troncales. Para "
-            "recibirse, el plan además exige créditos de materias electivas y el "
-            "proyecto final, que no están contados acá."
-        )
+        # Resumen accionable de lo que falta para el título.
+        pendientes = []
+        if faltan_troncales:
+            pendientes.append(f"{faltan_troncales} materias troncales")
+        if faltan_horas_elec:
+            pendientes.append(f"{faltan_horas_elec} horas de electivas")
+        if pendientes:
+            partes += [
+                "",
+                "PARA RECIBIRSE le falta: " + " + ".join(pendientes)
+                + ", más el proyecto final.",
+            ]
+        else:
+            partes += [
+                "",
+                "Ya tiene las troncales y las electivas cubiertas; le queda el "
+                "proyecto final.",
+            ]
         return "\n".join(partes)
 
     return mi_progreso_academico

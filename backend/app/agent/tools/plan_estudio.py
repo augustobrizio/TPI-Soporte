@@ -10,12 +10,9 @@ from __future__ import annotations
 from langchain_core.tools import tool
 from sqlalchemy.orm import Session
 
+from app.core.plan import HORAS_ELECTIVAS_REQUERIDAS, MATERIAS_OPCIONALES
 from app.db.models.academico import TipoMateria
 from app.services import materia_service
-
-# ADUSI (Seminario Integrador) no es obligatoria para graduarse: se excluye del
-# conteo de obligatorias, igual que en materia_service.
-_OPCIONALES: frozenset[str] = frozenset({"ADUSI"})
 
 
 def crear_plan_de_estudio(db: Session):
@@ -33,7 +30,7 @@ def crear_plan_de_estudio(db: Session):
         """
         troncales = materia_service.listar_materias(db, tipo=TipoMateria.TRONCAL)
         electivas = materia_service.listar_materias(db, tipo=TipoMateria.ELECTIVA)
-        obligatorias = [m for m in troncales if m.codigo not in _OPCIONALES]
+        obligatorias = [m for m in troncales if m.codigo not in MATERIAS_OPCIONALES]
 
         por_anio: dict[int, int] = {}
         for m in obligatorias:
@@ -49,11 +46,13 @@ def crear_plan_de_estudio(db: Session):
             partes.append(f"  - {anio}º año: {por_anio[anio]} materias")
         partes.append(
             f"- Materias electivas disponibles: {len(electivas)} "
-            "(se cursan por créditos; no son todas obligatorias)."
+            f"(se cursan por créditos: hay que juntar {HORAS_ELECTIVAS_REQUERIDAS} "
+            "horas, no aprobarlas todas)."
         )
         partes.append(
-            "Para recibirse hay que aprobar las troncales obligatorias, juntar los "
-            "créditos de electivas que exige el plan y hacer el proyecto final."
+            "Para recibirse hay que aprobar las troncales obligatorias, juntar las "
+            f"{HORAS_ELECTIVAS_REQUERIDAS} horas de electivas y hacer el proyecto "
+            "final."
         )
         return "\n".join(partes)
 
