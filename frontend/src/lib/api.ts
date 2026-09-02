@@ -795,6 +795,38 @@ export async function preguntarChatStream(
   if (buffer.trim()) despacharEventoSSE(buffer, handlers);
 }
 
+// ---------------------------------------------------------------------------
+// Reporte de huecos del chatbot (sólo admin)
+// ---------------------------------------------------------------------------
+
+/** Una pregunta agrupada que el chatbot no pudo responder bien. */
+export interface HuecoChat {
+  pregunta: string;
+  cantidad: number;
+  /** true = no se apoyó en datos (sin tool estructurada y sin fuentes). */
+  sin_datos: boolean;
+  /** true = alguien la votó 👎. */
+  voto_negativo: boolean;
+}
+
+export interface ReporteHuecos {
+  dias: number;
+  kpis: {
+    preguntas: number;
+    con_datos_pct: number;
+    huecos: number;
+    voto_negativo: number;
+  };
+  huecos: HuecoChat[];
+}
+
+/** Reporte de huecos del chatbot (endpoint admin; el backend valida el rol). */
+export function getReporteHuecos(dias = 7): Promise<ReporteHuecos> {
+  return request<ReporteHuecos>(`/chat/admin/huecos?dias=${dias}`, {
+    revalidate: 0,
+  });
+}
+
 /** Conversaciones del usuario (historial del chat). */
 export function listarConversaciones(): Promise<ConversacionOut[]> {
   // revalidate: 0 → es por-usuario, nunca se cachea (ver FetchOptions).

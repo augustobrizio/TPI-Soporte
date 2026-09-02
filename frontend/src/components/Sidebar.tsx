@@ -10,6 +10,7 @@ import {
   Clock,
   Contact,
   FolderOpen,
+  Gauge,
   House,
   LogIn,
   Megaphone,
@@ -99,7 +100,14 @@ export interface UsuarioSidebar {
 }
 
 /** `null` = visitante sin cuenta: en vez del avatar van los accesos a entrar. */
-export function Sidebar({ usuario }: { usuario: UsuarioSidebar | null }) {
+export function Sidebar({
+  usuario,
+  esAdmin = false,
+}: {
+  usuario: UsuarioSidebar | null;
+  /** Muestra los accesos de administración (ej. huecos del chatbot). */
+  esAdmin?: boolean;
+}) {
   const pathname = usePathname();
   const { collapsed, toggle, mobileOpen, closeMobile } = useSidebar();
   const esEscritorio = useEsEscritorio();
@@ -192,6 +200,29 @@ export function Sidebar({ usuario }: { usuario: UsuarioSidebar | null }) {
             </Link>
           );
         })}
+
+        {/* Sección admin: sólo para cuentas con rol admin. */}
+        {esAdmin && (
+          <>
+            <div className={`my-2 border-t border-[var(--shell-border)] ${compacto ? "mx-2" : "mx-3"}`} />
+            <Link
+              href="/admin/chatbot"
+              className={[
+                "group relative flex items-center gap-3 rounded-lg transition-colors duration-150",
+                compacto ? "justify-center px-0 py-2" : "px-3 py-2",
+                isActive(pathname, "/admin/chatbot")
+                  ? "bg-[#1CA4DF]/10 text-[var(--shell-accent-fg)]"
+                  : "text-[var(--shell-fg-muted)] hover:bg-[var(--shell-hover)] hover:text-[var(--shell-fg)]",
+              ].join(" ")}
+            >
+              <Gauge className="h-[18px] w-[18px] shrink-0" strokeWidth={1.75} />
+              {!compacto && (
+                <span className="font-body text-sm font-medium">Huecos del chatbot</span>
+              )}
+              {compacto && <Tooltip label="Huecos del chatbot" />}
+            </Link>
+          </>
+        )}
       </nav>
 
       {/* Toggle colapsar */}
