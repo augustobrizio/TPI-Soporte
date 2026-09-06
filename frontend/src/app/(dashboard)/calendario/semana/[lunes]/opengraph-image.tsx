@@ -82,14 +82,15 @@ export default async function Image({
               display: "flex",
             }}
           />
-          <div style={{ color: "#fafafa", fontSize: 28, fontWeight: 800 }}>
+          <div style={{ display: "flex", color: "#fafafa", fontSize: 28, fontWeight: 800 }}>
             UTNHub
           </div>
-          <div style={{ color: "#71717a", fontSize: 22 }}>· ISI · UTN FRRO</div>
+          <div style={{ display: "flex", color: "#71717a", fontSize: 22 }}>· ISI · UTN FRRO</div>
         </div>
 
         <div
           style={{
+            display: "flex",
             color: "#fafafa",
             fontSize: 60,
             fontWeight: 800,
@@ -100,7 +101,7 @@ export default async function Image({
           {semana ? `Semana del ${rotulo(semana.lunes)}` : "La semana en la facultad"}
         </div>
 
-        <div style={{ color: "#a1a1aa", fontSize: 28, marginTop: 12 }}>
+        <div style={{ display: "flex", color: "#a1a1aa", fontSize: 28, marginTop: 12 }}>
           {sinCursada === 0
             ? "Se cursa normal los cinco días"
             : sinCursada === 1
@@ -123,11 +124,11 @@ export default async function Image({
                 border: `2px solid ${dia.se_cursa ? "#27272a" : "rgba(240,196,84,0.35)"}`,
               }}
             >
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <div style={{ color: "#fafafa", fontSize: 26, fontWeight: 700 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", width: "100%" }}>
+                <div style={{ display: "flex", color: "#fafafa", fontSize: 26, fontWeight: 700 }}>
                   {DIAS[i]}
                 </div>
-                <div style={{ color: "#71717a", fontSize: 24 }}>
+                <div style={{ display: "flex", color: "#71717a", fontSize: 24 }}>
                   {new Date(`${dia.fecha}T00:00:00`).getDate()}
                 </div>
               </div>
