@@ -4,19 +4,10 @@ import { useState } from "react";
 
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import type { NovedadOut } from "@/lib/types";
+import { fechaCorta } from "./formato";
 import { NovedadDetail } from "./NovedadDetail";
 
 const CELESTE = "#1CA4DF";
-
-function fechaCorta(iso: string | null): string | null {
-  if (!iso) return null;
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return null;
-  const mes = d
-    .toLocaleDateString("es-AR", { month: "short" })
-    .replace(".", "");
-  return `${d.getDate()} ${mes} ${d.getFullYear()}`;
-}
 
 export function NovedadCard({ novedad }: { novedad: NovedadOut }) {
   const [open, setOpen] = useState(false);

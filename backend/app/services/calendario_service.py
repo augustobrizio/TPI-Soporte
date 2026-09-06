@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import secrets
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta, timezone
 
 import httpx
 from sqlalchemy import select
@@ -12,7 +12,12 @@ from app.core import ics
 from app.db.models.calendario import EventoCalendario
 from app.db.models.usuario import Usuario
 from app.repositories import calendario_repo
-from app.schemas.calendario import ResultadoSincCalendario
+from app.schemas.calendario import (
+    DiaCursadaOut,
+    EventoCalendarioOut,
+    ResultadoSincCalendario,
+    SemanaCursadaOut,
+)
 from app.scrapers import calendario as calendario_scraper
 
 
@@ -84,6 +89,147 @@ def eventos_hoy(
 def get_evento(db: Session, evento_id: int):
     """Obtiene un evento por ID."""
     return calendario_repo.get_evento(db, evento_id)
+
+
+# ---------------------------------------------------------------------------
+# Estado de cursada de la semana
+# ---------------------------------------------------------------------------
+#
+# La regla vive acá, en negocio, y no en el frontend, por dos razones: es una
+# regla de la facultad (no una decisión de presentación) y es el punto donde
+# van a entrar las dos extensiones previstas —el override manual del admin y
+# lo que proponga el clasificador de novedades—. Hoy la única fuente es el
+# calendario.
+
+#: Tipos que, publicados por la facultad, suspenden la cursada. En FRRO una
+#: mesa de examen y un feriado significan lo mismo para el alumno: ese día no
+#: hay clases.
+TIPOS_SIN_CURSADA: frozenset[str] = frozenset({"feriado", "mesa"})
+
+#: Un receso puede llegar tipado como "evento" genérico: el scraper solo marca
+#: `feriado` por las palabras "feriado", "asueto" y "sin actividad". Estas
+#: rescatan el resto de los casos que igual suspenden actividad.
+PALABRAS_SIN_CURSADA: tuple[str, ...] = (
+    "receso",
+    "asueto",
+    "sin actividad",
+    "suspension de actividades",
+    "suspensión de actividades",
+)
+
+#: Con qué se queda el motivo cuando el día tiene más de una razón: el feriado
+#: manda sobre la mesa porque explica por qué tampoco hay mesa.
+_PRIORIDAD_MOTIVO: dict[str, int] = {"feriado": 2, "evento": 1, "mesa": 0}
+
+DIAS_HABILES = 5  # lunes a viernes: en FRRO no hay actividad los sábados
+
+#: Rosario, UTC-3. Fijo y no `ZoneInfo`: Argentina no usa horario de verano
+#: desde 2009, y así no dependemos de que la imagen traiga `tzdata`. Importa
+#: porque el server corre en UTC: a partir de las 21:00 de Rosario, un
+#: `date.today()` crudo ya devuelve el día siguiente.
+ZONA_FRRO = timezone(timedelta(hours=-3))
+
+
+def hoy_en_frro() -> date:
+    """El día que es en Rosario, no en el reloj del server."""
+    return datetime.now(ZONA_FRRO).date()
+
+
+def semana_a_mostrar(dia: date) -> date:
+    """Lunes de la semana que le sirve al alumno ese día.
+
+    El fin de semana no se devuelve la semana que termina —ya pasó y en FRRO
+    no hay actividad sábado ni domingo— sino la que arranca el lunes.
+    """
+    lunes = lunes_de(dia)
+    return lunes + timedelta(days=7) if dia.weekday() >= 5 else lunes
+
+
+def suspende_cursada(evento: EventoCalendario) -> bool:
+    """¿Este evento implica que ese día no se cursa?
+
+    Solo cuentan los eventos publicados por la facultad: que el alumno se haya
+    anotado un parcial no cambia si hay clases.
+    """
+    if evento.origen != "sistema":
+        return False
+    if evento.tipo in TIPOS_SIN_CURSADA:
+        return True
+    texto = f"{evento.titulo} {evento.descripcion or ''}".lower()
+    return any(palabra in texto for palabra in PALABRAS_SIN_CURSADA)
+
+
+def _dias_que_ocupa(evento: EventoCalendario) -> list[date]:
+    """Días que abarca el evento (los feriados y recesos pueden ser rango)."""
+    inicio = evento.fecha_inicio.date()
+    fin = evento.fecha_fin.date() if evento.fecha_fin else inicio
+    if fin < inicio:
+        return [inicio]
+    return [inicio + timedelta(days=n) for n in range((fin - inicio).days + 1)]
+
+
+def lunes_de(dia: date) -> date:
+    """Lunes de la semana que contiene ``dia``."""
+    return dia - timedelta(days=dia.weekday())
+
+
+def estado_semana(
+    db: Session,
+    *,
+    lunes: date | None = None,
+    carrera: str | None = "ISI",
+    usuario_id: int | None = None,
+) -> SemanaCursadaOut:
+    """Lunes a viernes con el estado de cursada de cada día.
+
+    Los eventos devueltos son los que ve quien consulta (compartidos y, con
+    sesión, los propios), pero ``se_cursa`` se decide **solo** con los de la
+    facultad.
+    """
+    # Con `lunes` explícito (el usuario navegando) se respeta esa semana; sin
+    # él, la que corresponde mostrar hoy.
+    inicio = lunes_de(lunes) if lunes else semana_a_mostrar(hoy_en_frro())
+    fin = inicio + timedelta(days=DIAS_HABILES - 1)
+
+    eventos = calendario_repo.listar_eventos(
+        db,
+        desde=datetime.combine(inicio, time.min),
+        hasta=datetime.combine(fin, time.max),
+        carrera=carrera,
+        usuario_id=usuario_id,
+    )
+
+    por_dia: dict[date, list[EventoCalendario]] = {
+        inicio + timedelta(days=n): [] for n in range(DIAS_HABILES)
+    }
+    for evento in eventos:
+        for dia in _dias_que_ocupa(evento):
+            if dia in por_dia:
+                por_dia[dia].append(evento)
+
+    dias: list[DiaCursadaOut] = []
+    for dia in sorted(por_dia):
+        del_dia = por_dia[dia]
+        bloqueantes = [e for e in del_dia if suspende_cursada(e)]
+        # El de mayor prioridad da el motivo; a igual prioridad, el más viejo,
+        # que es el que la facultad publicó primero.
+        motivo = None
+        if bloqueantes:
+            principal = max(
+                bloqueantes,
+                key=lambda e: (_PRIORIDAD_MOTIVO.get(e.tipo, 0), -e.id),
+            )
+            motivo = principal.titulo
+        dias.append(
+            DiaCursadaOut(
+                fecha=dia,
+                se_cursa=not bloqueantes,
+                motivo=motivo,
+                eventos=[EventoCalendarioOut.model_validate(e) for e in del_dia],
+            )
+        )
+
+    return SemanaCursadaOut(lunes=inicio, hoy=hoy_en_frro(), dias=dias)
 
 
 # ---------------------------------------------------------------------------

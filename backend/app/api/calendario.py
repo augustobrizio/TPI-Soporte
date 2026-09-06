@@ -15,6 +15,7 @@ from app.schemas.calendario import (
     EventoCalendarioOut,
     EventoCalendarioUpdate,
     ResultadoSincCalendario,
+    SemanaCursadaOut,
     SuscripcionCalendarioOut,
     TipoEventoLiteral,
 )
@@ -278,6 +279,28 @@ def suscripcion_ics(
             # deja de ver los cambios que es justo lo que vino a buscar.
             "Cache-Control": "no-cache, must-revalidate",
         },
+    )
+
+
+@router.get(
+    "/semana",
+    response_model=SemanaCursadaOut,
+    summary="Estado de cursada de la semana (lunes a viernes)",
+)
+def semana_de_cursada(
+    db: Annotated[Session, Depends(get_db)],
+    usuario: UsuarioOpcional,
+    lunes: date | None = Query(
+        None, description="Cualquier día de la semana buscada. Por defecto, hoy."
+    ),
+    carrera: str | None = Query("ISI"),
+) -> SemanaCursadaOut:
+    """Dice, día por día, si hay cursada y por qué no cuando no la hay."""
+    return calendario_service.estado_semana(
+        db,
+        lunes=lunes,
+        carrera=carrera,
+        usuario_id=usuario.id if usuario else None,
     )
 
 

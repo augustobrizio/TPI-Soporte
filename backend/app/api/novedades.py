@@ -64,14 +64,22 @@ def get_novedad(
     novedad_id: int,
     db: Annotated[Session, Depends(get_db)],
 ) -> NovedadOut:
-    """Detalle de una novedad por ID."""
+    """Detalle de una novedad por ID.
+
+    Resuelve la imagen de portada igual que el feed. Antes no lo hacia, y la
+    misma novedad se veia con flyer en la lista y sin nada al abrirla por su
+    id. Ahora ademas es lo que alimenta la preview del link compartido: si el
+    detalle contesta sin imagen, la tarjeta de WhatsApp sale sin imagen.
+    """
     novedad = novedad_service.get(db, novedad_id)
     if novedad is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Novedad {novedad_id} no encontrada.",
         )
-    return NovedadOut.model_validate(novedad)
+    dto = NovedadOut.model_validate(novedad)
+    dto.imagen_url = novedad_service.resolver_imagenes_portada([novedad])[0]
+    return dto
 
 
 @router.patch(

@@ -1,13 +1,14 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { ArrowRight } from "lucide-react";
 
-import { ConvergenciaFuentes } from "@/components/frontpage/ConvergenciaFuentes";
-import { FondoFoto } from "@/components/frontpage/FondoFoto";
+import { FondoPortada } from "@/components/frontpage/FondoPortada";
 import { SeccionesIndex } from "@/components/frontpage/SeccionesIndex";
+import { InicioPortada } from "@/features/portada/InicioPortada";
 import { NovedadCard } from "@/features/novedades/NovedadCard";
-import { listarNovedades } from "@/lib/api";
+import { getSemanaCursada, listarNovedades } from "@/lib/api";
 import { getUsuarioActual } from "@/lib/auth";
-import type { NovedadOut } from "@/lib/types";
+import type { NovedadOut, SemanaCursada } from "@/lib/types";
 
 /**
  * Portada publica de UTNHub.
@@ -16,9 +17,16 @@ import type { NovedadOut } from "@/lib/types";
  * redirigia a /novedades. Ahora es una portada propia: que es UTNHub, que
  * secciones tiene y las ultimas novedades reales. El dashboard se mudo a
  * /perfil, que es donde tiene sentido lo personal.
+ *
+ * Arriba de todo, lo que cambia segun quien entra: la bienvenida la primera
+ * vez, y de ahi en mas la semana de cursada, que es a lo que el alumno vuelve
+ * todos los dias. Ver `features/portada/InicioPortada.tsx`.
  */
 
 const NOVEDADES_EN_PORTADA = 3;
+
+/** Cookie de "ya vi la bienvenida". No es httpOnly: es preferencia de vista. */
+const COOKIE_BIENVENIDA = "utnhub_bienvenida";
 
 async function ultimasNovedades(): Promise<NovedadOut[]> {
   try {
@@ -30,87 +38,46 @@ async function ultimasNovedades(): Promise<NovedadOut[]> {
   }
 }
 
+async function semanaDeCursada(): Promise<SemanaCursada | null> {
+  try {
+    return await getSemanaCursada();
+  } catch {
+    // La portada no se cae por el calendario: el panel muestra su propio
+    // aviso y el resto de la pagina sigue en pie.
+    return null;
+  }
+}
+
 export default async function Portada() {
-  const [novedades, usuario] = await Promise.all([
+  const [novedades, usuario, semana, galletas] = await Promise.all([
     ultimasNovedades(),
     getUsuarioActual(),
+    semanaDeCursada(),
+    cookies(),
   ]);
+  const yaVioBienvenida = galletas.get(COOKIE_BIENVENIDA)?.value === "1";
 
   return (
-    <div className="mx-auto max-w-[1200px] px-6 py-14 md:px-10 md:py-20">
-      {/* ── Hero ─────────────────────────────────────────────────────── */}
-      {/* El visual pesa mas que el texto en la grilla: con los nombres de las
-          fuentes adentro, una columna angosta los vuelve ilegibles. */}
-      <section className="grid grid-cols-1 items-center gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)] lg:gap-14">
-        <div>
-          <p className="font-label text-[11px] uppercase tracking-[0.18em] text-[var(--shell-fg-dim)]">
-            ISI · UTN FRRO
-          </p>
-
-          {/* clamp() en vez de breakpoints: el titular escala con el viewport
-              en vez de saltar de un tamaño a otro. */}
-          <h1
-            className="mt-4 font-headline font-extrabold leading-[1.05] tracking-[-0.02em] text-[var(--shell-fg)]"
-            style={{ fontSize: "clamp(2.25rem, 5vw, 3.75rem)" }}
-          >
-            Todo lo de la facultad,
-            <br />
-            en un solo lugar.
-          </h1>
-
-          <p className="mt-6 max-w-xl text-lg leading-relaxed text-[var(--shell-fg-muted)]">
-            La información de la UTN FRRO vive desparramada entre el sitio de la
-            facultad y las cuentas de los centros de estudiantes. UTNHub la
-            reúne y la ordena: novedades, profesores, comisiones, calendario y
-            material.
-          </p>
-
-          <div className="mt-9 flex flex-wrap items-center gap-3">
-            <Link
-              href="/novedades"
-              className="inline-flex items-center gap-2 rounded-lg bg-[#1CA4DF] px-5 py-2.5 font-body text-sm font-semibold text-white transition-opacity duration-150 hover:opacity-90"
-            >
-              Ver novedades
-              <ArrowRight className="h-[18px] w-[18px]" strokeWidth={2} />
-            </Link>
-
-            {usuario ? (
-              <Link
-                href="/perfil"
-                className="inline-flex items-center gap-2 rounded-lg border border-[var(--shell-border)] px-5 py-2.5 font-body text-sm font-semibold text-[var(--shell-fg)] transition-colors duration-150 hover:bg-[var(--shell-hover)]"
-              >
-                Ir a mi panel
-              </Link>
-            ) : (
-              <Link
-                href="/register"
-                className="inline-flex items-center gap-2 rounded-lg border border-[var(--shell-border)] px-5 py-2.5 font-body text-sm font-semibold text-[var(--shell-fg)] transition-colors duration-150 hover:bg-[var(--shell-hover)]"
-              >
-                Crear cuenta
-              </Link>
-            )}
-          </div>
-
-        </div>
-
-        <ConvergenciaFuentes className="order-first lg:order-none" />
-      </section>
-
-      {/* ── Secciones, sobre el frente de la facultad ────────────────── */}
-      <FondoFoto
+    <div className="relative mx-auto max-w-[1200px] px-6 py-14 md:px-10 md:py-20">
+      <FondoPortada
         src="/novedades/placeholder/utn-frro-generica.jpg"
         alt="Frente de la Facultad Regional Rosario, con la fachada azul y el isotipo de la UTN"
-        className="mt-24 py-16 md:mt-32 md:py-24"
-      >
-        <div className="aparece">
-          <SeccionesIndex />
-        </div>
-      </FondoFoto>
+      />
+
+      {/* Todo el contenido por delante del fondo compartido. */}
+      <div className="relative z-10">
+
+      {/* ── Bienvenida (1a visita) o semana de cursada ───────────────── */}
+      <InicioPortada
+        semana={semana}
+        autenticado={usuario !== null}
+        yaVioBienvenida={yaVioBienvenida || usuario !== null}
+      />
 
       {/* ── Novedades ────────────────────────────────────────────────── */}
       {novedades.length > 0 && (
         <section
-          className="aparece mt-24 md:mt-32"
+          className="aparece mt-20 md:mt-24"
           aria-labelledby="novedades-titulo"
         >
           <div className="mb-8 flex items-baseline justify-between gap-4">
@@ -137,15 +104,14 @@ export default async function Portada() {
         </section>
       )}
 
+      {/* ── Secciones ────────────────────────────────────────────────── */}
+      <section className="aparece mt-20 md:mt-24">
+        <SeccionesIndex />
+      </section>
+
       {/* ── Cierre ───────────────────────────────────────────────────── */}
       {!usuario && (
-        <FondoFoto
-          src="/novedades/placeholder/utrnfrro.jpg"
-          alt="Entrada de la Facultad Regional Rosario en Zeballos 1341"
-          intensidad={0.22}
-          aSangre={false}
-          className="aparece mt-24 rounded-xl border border-[var(--shell-border)] p-8 md:mt-32 md:p-12"
-        >
+        <section className="aparece mt-20 rounded-xl border border-[var(--shell-border)] bg-[var(--shell-panel)] p-8 md:mt-24 md:p-12">
           <h2 className="font-headline text-2xl font-bold tracking-tight text-[var(--shell-fg)]">
             Creá tu cuenta
           </h2>
@@ -161,8 +127,9 @@ export default async function Portada() {
             Empezar
             <ArrowRight className="h-[18px] w-[18px]" strokeWidth={2} />
           </Link>
-        </FondoFoto>
+        </section>
       )}
+      </div>
     </div>
   );
 }

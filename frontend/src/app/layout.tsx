@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Manrope } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { SITIO_URL } from "@/lib/site";
 
 /**
  * Manrope (titulares — geometrico, "high-tech identity") e
@@ -37,8 +38,9 @@ const DESCRIPCION =
 
 export const metadata: Metadata = {
   // Base para resolver las URLs relativas de Open Graph. Sin esto Next avisa
-  // por consola y las previews quedan con rutas rotas.
-  metadataBase: new URL("https://utnhub.up.railway.app"),
+  // por consola y las previews quedan con rutas rotas. Sale de `APP_URL` para
+  // que un deploy en otro dominio no siga anunciando este.
+  metadataBase: new URL(SITIO_URL),
   title: {
     default: TITULO,
     // Las paginas ponen solo su nombre y el sufijo lo agrega el template.

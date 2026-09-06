@@ -224,6 +224,25 @@ export interface EventoCalendarioOut {
   origen: string; // "sistema" | "usuario"
 }
 
+/** Un día de la semana con su estado de cursada (lo calcula el backend). */
+export interface DiaCursada {
+  /** YYYY-MM-DD */
+  fecha: string;
+  se_cursa: boolean;
+  /** Título del evento que explica por qué no se cursa. */
+  motivo: string | null;
+  eventos: EventoCalendarioOut[];
+}
+
+export interface SemanaCursada {
+  /** YYYY-MM-DD del lunes. */
+  lunes: string;
+  /** Hoy en Rosario, según el backend (no el reloj del visitante). */
+  hoy: string;
+  /** Lunes a viernes. */
+  dias: DiaCursada[];
+}
+
 export interface EventoCalendarioCreate {
   titulo: string;
   descripcion?: string | null;

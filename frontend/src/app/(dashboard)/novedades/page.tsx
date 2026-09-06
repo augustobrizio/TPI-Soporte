@@ -1,3 +1,6 @@
+import { CloudOff, Inbox } from "lucide-react";
+
+import { EstadoVacio } from "@/features/novedades/EstadoVacio";
 import { FiltroFuentes } from "@/features/novedades/FiltroFuentes";
 import { NovedadCard } from "@/features/novedades/NovedadCard";
 import { NovedadDeepLink } from "@/features/novedades/NovedadDeepLink";
@@ -97,13 +100,13 @@ export default async function NovedadesPage({
 
         {error ? (
           <EstadoVacio
-            icono="cloud_off"
+            icono={CloudOff}
             titulo="No pudimos cargar las novedades"
             detalle="El servidor no respondio. Proba de nuevo en un momento."
           />
         ) : novedades.length === 0 ? (
           <EstadoVacio
-            icono="inbox"
+            icono={Inbox}
             titulo="Todavia no hay novedades"
             detalle="Cuando la facultad publique algo nuevo, va a aparecer aca."
           />
@@ -115,32 +118,6 @@ export default async function NovedadesPage({
           </div>
         )}
       </div>
-    </div>
-  );
-}
-
-function EstadoVacio({
-  icono,
-  titulo,
-  detalle,
-}: {
-  icono: string;
-  titulo: string;
-  detalle: string;
-}) {
-  return (
-    <div className="flex flex-col items-center justify-center rounded-xl border border-[var(--shell-border)] bg-[var(--shell-panel)] px-6 py-24 text-center">
-      <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#1CA4DF]/10">
-        <span className="material-symbols-outlined text-3xl text-[var(--shell-accent-fg)]">
-          {icono}
-        </span>
-      </div>
-      <h2 className="font-headline text-lg font-semibold tracking-tight text-[var(--shell-fg)]">
-        {titulo}
-      </h2>
-      <p className="mt-1.5 max-w-sm text-[13.5px] leading-relaxed text-[var(--shell-fg-dim)]">
-        {detalle}
-      </p>
     </div>
   );
 }

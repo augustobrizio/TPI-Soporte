@@ -24,6 +24,7 @@ import type {
   ProfesorDetalleOut,
   ProfesorListItem,
   ResenaAlumno,
+  SemanaCursada,
   ResultadoImportSysacad,
   ResultadoSincCalendario,
   ResultadoSincCatedras,
@@ -161,6 +162,17 @@ export function getProximosEventosCalendario(
   return request<EventoCalendarioOut[]>(`/calendario/proximos?${qs.toString()}`, {
     revalidate: 0,
   });
+}
+
+/**
+ * Estado de cursada de una semana (lunes a viernes).
+ *
+ * `revalidate: 0` como el resto del calendario: con sesión la respuesta suma
+ * los eventos propios del alumno, y el cache de Next es por URL.
+ */
+export function getSemanaCursada(lunes?: string): Promise<SemanaCursada> {
+  const qs = lunes ? `?lunes=${lunes}` : "";
+  return request<SemanaCursada>(`/calendario/semana${qs}`, { revalidate: 0 });
 }
 
 export function getEventosHoyCalendario(
@@ -897,6 +909,7 @@ export const api = {
   listarEventosCalendario,
   getProximosEventosCalendario,
   getEventosHoyCalendario,
+  getSemanaCursada,
   listarNovedades,
   listarCentros,
   getNovedad,

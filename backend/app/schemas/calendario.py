@@ -1,7 +1,7 @@
 """Schemas Pydantic del calendario academico."""
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -43,6 +43,31 @@ class EventoCalendarioUpdate(BaseModel):
     fecha_inicio: datetime | None = None
     fecha_fin: datetime | None = None
     tipo: TipoEventoLiteral | None = None
+
+
+class DiaCursadaOut(BaseModel):
+    """Un día de la semana con su estado de cursada.
+
+    ``se_cursa`` es la única pregunta que el alumno le hace al calendario
+    cuando mira la semana. ``motivo`` es el título del evento que la contesta
+    cuando la respuesta es "no".
+    """
+
+    fecha: date
+    se_cursa: bool
+    motivo: str | None = None
+    eventos: list[EventoCalendarioOut] = Field(default_factory=list)
+
+
+class SemanaCursadaOut(BaseModel):
+    """Lunes a viernes de una semana, con el estado de cada día."""
+
+    lunes: date
+    #: Hoy en Rosario. Viaja en la respuesta para que el frontend marque el día
+    #: actual y titule la semana sin depender del reloj del visitante, que
+    #: puede estar en otra zona (o mal puesto).
+    hoy: date
+    dias: list[DiaCursadaOut] = Field(default_factory=list)
 
 
 class ResultadoSincCalendario(BaseModel):

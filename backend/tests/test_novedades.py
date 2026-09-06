@@ -14,7 +14,7 @@ from sqlalchemy.pool import StaticPool
 os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from app.ai import clasificador_novedades  # noqa: E402
+from app.ai import clasificador_novedades, placeholders  # noqa: E402
 from app.api import novedades as novedades_api  # noqa: E402
 from app.db.models.novedad import (  # noqa: E402
     Centro,
@@ -222,6 +222,33 @@ def test_listar_api_solo_publicadas_por_defecto() -> None:
     assert res.status_code == 200
     titulos = [n["titulo"] for n in res.json()]
     assert titulos == ["a"]
+
+
+def test_detalle_api_resuelve_la_imagen_de_portada() -> None:
+    """El detalle devuelve imagen como el feed: propia si tiene, si no una genérica.
+
+    Es lo que mira la preview del link compartido (`og:image`): con
+    ``imagen_url`` en null la tarjeta de WhatsApp sale sin imagen, y la
+    novedad sin flyer propio es el caso comun, no el raro.
+    """
+    db = _session()
+    sin_imagen = _crear(db, external_id="a", titulo="a", estado="publicada")
+    con_imagen = _crear(db, external_id="b", titulo="b", estado="publicada")
+    con_imagen.imagen_url = "https://bucket.s3.amazonaws.com/novedades/b.jpg"
+    db.commit()
+
+    app = FastAPI()
+    app.include_router(novedades_api.router)
+    app.dependency_overrides[get_db] = lambda: (yield db)
+    client = TestClient(app)
+
+    assert placeholders.es_placeholder(
+        client.get(f"/novedades/{sin_imagen.id}").json()["imagen_url"]
+    )
+    assert (
+        client.get(f"/novedades/{con_imagen.id}").json()["imagen_url"]
+        == "https://bucket.s3.amazonaws.com/novedades/b.jpg"
+    )
 
 
 def _texto_del_prompt(item, recientes=None):

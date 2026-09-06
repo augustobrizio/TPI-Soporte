@@ -8,6 +8,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import type { NovedadOut } from "@/lib/types";
+import { CompartirNovedad } from "./CompartirNovedad";
+import { FuentesNovedad } from "./FuentesNovedad";
 
 interface NovedadDetailProps {
   novedad: NovedadOut;
@@ -47,43 +49,12 @@ export function NovedadDetail({ novedad, open, onOpenChange }: NovedadDetailProp
             {cuerpo ?? "Sin más información disponible."}
           </DialogDescription>
 
-          {novedad.fuentes.length > 0 && (
-            <div className="mt-5 space-y-1.5 border-t border-[var(--shell-border)] pt-4">
-              <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.1em] text-[var(--shell-fg-dim)]">
-                {novedad.fuentes.length > 1 ? "Publicado en" : "Fuente"}
-              </p>
-              {novedad.fuentes.map((f, i) => (
-                <a
-                  key={`${f.centro.handle}-${i}`}
-                  href={f.url ?? f.centro.url_perfil ?? undefined}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group flex items-center gap-2.5 rounded-lg px-2 py-2 -mx-2 transition-colors hover:bg-[var(--shell-hover)]"
-                >
-                  {f.centro.logo_url ? (
-                    <span className="flex h-6 w-6 shrink-0 overflow-hidden rounded-full bg-[var(--shell-hover)]">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={f.centro.logo_url}
-                        alt=""
-                        className="h-full w-full object-cover"
-                      />
-                    </span>
-                  ) : (
-                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#1CA4DF]" />
-                  )}
-                  <span className="min-w-0 flex-1 truncate text-sm font-medium text-[var(--shell-fg-muted)] group-hover:text-[var(--shell-fg)]">
-                    {f.centro.nombre}
-                  </span>
-                  {f.url && (
-                    <span className="material-symbols-outlined shrink-0 text-[16px] text-[var(--shell-fg-dim)] transition-colors group-hover:text-[var(--shell-accent-fg)]">
-                      arrow_outward
-                    </span>
-                  )}
-                </a>
-              ))}
-            </div>
-          )}
+          {/* El modal no tiene URL propia: lo que comparte este botón es
+              `/novedades/<id>`, la página de la novedad, que es la que un
+              crawler puede leer para armar la preview. */}
+          <CompartirNovedad id={novedad.id} titulo={novedad.titulo} />
+
+          <FuentesNovedad fuentes={novedad.fuentes} />
         </div>
       </DialogContent>
     </Dialog>
