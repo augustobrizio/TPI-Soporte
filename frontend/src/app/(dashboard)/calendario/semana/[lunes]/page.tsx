@@ -1,100 +1,19 @@
-import type { Metadata } from "next";
-import { notFound } from "next/navigation";
-
-import { PanelSemanal } from "@/features/panel-semanal/PanelSemanal";
-import { getSemanaCursada } from "@/lib/api";
-import { getUsuarioActual } from "@/lib/auth";
-import { SITIO_URL, urlSemana } from "@/lib/site";
-import type { SemanaCursada } from "@/lib/types";
-
-/** Sólo `YYYY-MM-DD`: lo que llega por la URL no se reenvía sin mirar. */
-const FECHA = /^\d{4}-\d{2}-\d{2}$/;
-
-const DIAS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"];
-
-async function traer(lunes: string): Promise<SemanaCursada | null> {
-  if (!FECHA.test(lunes)) return null;
-  try {
-    return await getSemanaCursada(lunes);
-  } catch {
-    return null;
-  }
-}
-
-function rotulo(lunes: string): string {
-  const ini = new Date(`${lunes}T00:00:00`);
-  const fin = new Date(ini);
-  fin.setDate(fin.getDate() + 4);
-  const mes = (d: Date) => d.toLocaleDateString("es-AR", { month: "long" });
-  return ini.getMonth() === fin.getMonth()
-    ? `${ini.getDate()} al ${fin.getDate()} de ${mes(fin)}`
-    : `${ini.getDate()} de ${mes(ini)} al ${fin.getDate()} de ${mes(fin)}`;
-}
+import { permanentRedirect } from "next/navigation";
 
 /**
- * Resumen en una línea, que es lo que se lee en la tarjeta del link.
+ * La semana ahora se comparte como `/?semana=<lunes>`: la portada anclada en
+ * esa semana, que es donde el panel vive de verdad.
  *
- * Dice los días sin cursada con su motivo, porque es la única pregunta que la
- * gente le hace a esto. "Se cursa normal" también es información: evita tener
- * que abrir el link para confirmar que no pasa nada.
+ * Esta ruta queda como redirect porque los links ya compartidos apuntan acá y
+ * un link de WhatsApp no se puede corregir después de mandado. `permanentRedirect`
+ * (308) para que los crawlers se queden con el destino y la preview se arme
+ * contra la portada, que es la que declara las meta de la semana.
  */
-function resumen(semana: SemanaCursada): string {
-  const sin = semana.dias
-    .map((d, i) => ({ d, nombre: DIAS[i] }))
-    .filter(({ d }) => !d.se_cursa);
-  if (sin.length === 0) return "Se cursa normal los cinco días.";
-  return sin
-    .map(({ d, nombre }) => `${nombre}: sin cursada${d.motivo ? ` (${d.motivo})` : ""}`)
-    .join(" · ");
-}
-
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ lunes: string }>;
-}): Promise<Metadata> {
-  const { lunes } = await params;
-  const semana = await traer(lunes);
-  if (semana === null) return { title: "Semana" };
-
-  const titulo = `Semana del ${rotulo(semana.lunes)}`;
-  const url = urlSemana(semana.lunes);
-
-  // La imagen se declara explícita y no por la convención `opengraph-image`:
-  // esa responde en chunks, sin `Content-Length`, y el WhatsApp de escritorio
-  // cae al thumbnail chico. El route handler la materializa y declara el largo.
-  const imagen = `${SITIO_URL}/api/og/semana/${semana.lunes}`;
-
-  return {
-    title: titulo,
-    description: resumen(semana),
-    openGraph: {
-      title: `${titulo} · UTNHub`,
-      description: resumen(semana),
-      url,
-      type: "article",
-      images: [{ url: imagen, width: 1080, height: 1080, type: "image/png" }],
-    },
-    twitter: { card: "summary_large_image", images: [imagen] },
-    alternates: { canonical: url },
-  };
-}
-
-export default async function SemanaCompartidaPage({
+export default async function SemanaRedirect({
   params,
 }: {
   params: Promise<{ lunes: string }>;
 }) {
   const { lunes } = await params;
-  const [semana, usuario] = await Promise.all([traer(lunes), getUsuarioActual()]);
-  if (semana === null) notFound();
-
-  return (
-    <div className="mx-auto max-w-[1200px] px-6 py-14 md:px-10 md:py-20">
-      <PanelSemanal
-        inicial={semana}
-        esAdmin={(usuario?.rol ?? "").toLowerCase() === "admin"}
-      />
-    </div>
-  );
+  permanentRedirect(`/?semana=${encodeURIComponent(lunes)}`);
 }

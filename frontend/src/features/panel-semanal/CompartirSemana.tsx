@@ -9,7 +9,12 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 const DIAS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"];
 
 /**
- * Canónica de la semana, sin query: es lo que va a leer el crawler.
+ * El link que se comparte: la portada, anclada en esa semana.
+ *
+ * Antes apuntaba a una página propia de la semana. Manda mejor a la portada: el
+ * panel vive ahí, y el que recibe el link cae en UTNHub entero —panel,
+ * novedades, secciones— en vez de en una pantalla suelta. El `?semana=` no es
+ * tracking, es lo que hace que la preview hable de esa semana y no de la actual.
  *
  * El origen sale de `window.location`, no de `SITIO_URL`: esa constante lee
  * `APP_URL`, que no es `NEXT_PUBLIC_*` y por lo tanto vale `undefined` en el
@@ -18,7 +23,7 @@ const DIAS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"];
  */
 function urlSemana(lunes: string): string {
   const origen = typeof window === "undefined" ? "" : window.location.origin;
-  return `${origen}/calendario/semana/${lunes}`;
+  return `${origen}/?semana=${lunes}`;
 }
 
 /**

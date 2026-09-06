@@ -24,7 +24,12 @@ export function urlNovedad(id: number): string {
   return `${SITIO_URL}/novedades/${id}`;
 }
 
-/** URL canónica y absoluta de una semana del calendario. */
+/**
+ * URL canónica y absoluta de una semana: la portada anclada en ella.
+ *
+ * El panel de la semana vive en la portada, así que el link compartido lleva
+ * ahí y no a una pantalla suelta.
+ */
 export function urlSemana(lunes: string): string {
-  return `${SITIO_URL}/calendario/semana/${lunes}`;
+  return `${SITIO_URL}/?semana=${lunes}`;
 }
