@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core import ics
-from app.db.models.calendario import EventoCalendario
+from app.db.models.calendario import EstadoDia, EventoCalendario
 from app.db.models.usuario import Usuario
 from app.repositories import calendario_repo
 from app.schemas.calendario import (
@@ -207,6 +207,8 @@ def estado_semana(
             if dia in por_dia:
                 por_dia[dia].append(evento)
 
+    overrides = {o.fecha: o for o in calendario_repo.listar_estados_dia(db, inicio, fin)}
+
     dias: list[DiaCursadaOut] = []
     for dia in sorted(por_dia):
         del_dia = por_dia[dia]
@@ -220,16 +222,68 @@ def estado_semana(
                 key=lambda e: (_PRIORIDAD_MOTIVO.get(e.tipo, 0), -e.id),
             )
             motivo = principal.titulo
+        se_cursa = not bloqueantes
+        detalle = None
+        intervenido = None
+
+        # El override manda sobre lo derivado del calendario: un paro no está
+        # publicado como evento, y un feriado mal detectado tiene que poder
+        # corregirse sin tocar la ingesta.
+        override = overrides.get(dia)
+        if override is not None:
+            se_cursa = override.se_cursa
+            motivo = override.motivo or motivo
+            detalle = override.detalle
+            intervenido = override.origen
+
         dias.append(
             DiaCursadaOut(
                 fecha=dia,
-                se_cursa=not bloqueantes,
+                se_cursa=se_cursa,
                 motivo=motivo,
+                detalle=detalle,
+                intervenido_por=intervenido,
                 eventos=[EventoCalendarioOut.model_validate(e) for e in del_dia],
             )
         )
 
     return SemanaCursadaOut(lunes=inicio, hoy=hoy_en_frro(), dias=dias)
+
+
+# ---------------------------------------------------------------------------
+# Override manual (admin)
+# ---------------------------------------------------------------------------
+
+
+def definir_estado_dia(
+    db: Session,
+    *,
+    fecha: date,
+    se_cursa: bool,
+    motivo: str | None,
+    detalle: str | None,
+    usuario_id: int | None,
+    origen: str = "admin",
+) -> EstadoDia:
+    """Fija a mano el estado de un día. Idempotente por fecha."""
+    return calendario_repo.upsert_estado_dia(
+        db,
+        fecha=fecha,
+        se_cursa=se_cursa,
+        motivo=motivo,
+        detalle=detalle,
+        usuario_id=usuario_id,
+        origen=origen,
+    )
+
+
+def borrar_estado_dia(db: Session, fecha: date) -> bool:
+    """Saca el override: el día vuelve a lo que diga el calendario."""
+    return calendario_repo.eliminar_estado_dia(db, fecha)
+
+
+def listar_estados_dia(db: Session, *, desde: date, hasta: date) -> list[EstadoDia]:
+    return list(calendario_repo.listar_estados_dia(db, desde, hasta))
 
 
 # ---------------------------------------------------------------------------

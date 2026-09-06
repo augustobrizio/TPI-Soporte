@@ -56,6 +56,11 @@ class DiaCursadaOut(BaseModel):
     fecha: date
     se_cursa: bool
     motivo: str | None = None
+    #: Texto largo del override, cuando hace falta explicar más que el motivo.
+    detalle: str | None = None
+    #: ``admin`` o ``agente`` si el día tiene override; ``None`` si sale del
+    #: calendario. El frontend lo usa para avisar que el dato es manual.
+    intervenido_por: str | None = None
     eventos: list[EventoCalendarioOut] = Field(default_factory=list)
 
 
@@ -68,6 +73,26 @@ class SemanaCursadaOut(BaseModel):
     #: puede estar en otra zona (o mal puesto).
     hoy: date
     dias: list[DiaCursadaOut] = Field(default_factory=list)
+
+
+class EstadoDiaIn(BaseModel):
+    """Alta o edición del override de un día (admin)."""
+
+    se_cursa: bool = False
+    motivo: str | None = Field(default=None, max_length=80)
+    detalle: str | None = Field(default=None, max_length=500)
+
+
+class EstadoDiaOut(BaseModel):
+    """Override tal como quedó guardado."""
+
+    fecha: date
+    se_cursa: bool
+    motivo: str | None = None
+    detalle: str | None = None
+    origen: str
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ResultadoSincCalendario(BaseModel):

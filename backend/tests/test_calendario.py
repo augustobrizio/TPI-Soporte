@@ -18,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.api import calendario as calendario_api  # noqa: E402
 from app.api.deps import get_current_user_opcional  # noqa: E402
-from app.db.models.calendario import EventoCalendario  # noqa: E402
+from app.db.models.calendario import EstadoDia, EventoCalendario  # noqa: E402
 from app.db.session import get_db  # noqa: E402
 from app.repositories import calendario_repo  # noqa: E402
 from app.services import calendario_service  # noqa: E402
@@ -26,6 +26,11 @@ from app.scrapers import calendario as calendario_scraper  # noqa: E402
 
 
 def _session() -> Session:
+    """Sesión con las dos tablas del calendario.
+
+    `estado_dia` va siempre, aunque el test no la use: `estado_semana` la
+    consulta para aplicar los overrides, y sin la tabla falla toda la lectura.
+    """
     engine = create_engine(
         "sqlite://",
         future=True,
@@ -33,6 +38,7 @@ def _session() -> Session:
         poolclass=StaticPool,
     )
     EventoCalendario.__table__.create(engine)
+    EstadoDia.__table__.create(engine)
     SessionLocal = sessionmaker(bind=engine, class_=Session, expire_on_commit=False)
     return SessionLocal()
 
@@ -477,3 +483,98 @@ def test_cualquier_dia_de_la_semana_ancla_en_su_lunes() -> None:
     semana = calendario_service.estado_semana(db, lunes=date(2026, 9, 10))
 
     assert semana.lunes == date(2026, 9, 7)
+
+
+# ---------------------------------------------------------------------------
+# Override manual del estado de un día (admin)
+# ---------------------------------------------------------------------------
+#
+# Lo que la facultad no publica como evento —un paro, una asamblea— igual
+# suspende la cursada, y el calendario no se entera.
+
+
+def test_el_override_suspende_un_dia_que_el_calendario_da_por_normal() -> None:
+    db = _session()
+    calendario_service.definir_estado_dia(
+        db,
+        fecha=date(2026, 9, 9),
+        se_cursa=False,
+        motivo="Paro",
+        detalle="Paro de 24 h de la federación docente.",
+        usuario_id=1,
+    )
+    db.commit()
+
+    dia = calendario_service.estado_semana(db, lunes=_LUNES).dias[2]
+
+    assert dia.se_cursa is False
+    assert dia.motivo == "Paro"
+    assert dia.detalle == "Paro de 24 h de la federación docente."
+    assert dia.intervenido_por == "admin"
+
+
+def test_el_override_puede_devolverle_la_cursada_a_un_dia() -> None:
+    """Al revés: un feriado mal detectado se corrige sin tocar la ingesta."""
+    db = _session()
+    _evento_sistema(
+        db, titulo="Feriado dudoso", dia=date(2026, 9, 8), tipo="feriado", hash_="fd"
+    )
+    calendario_service.definir_estado_dia(
+        db,
+        fecha=date(2026, 9, 8),
+        se_cursa=True,
+        motivo=None,
+        detalle=None,
+        usuario_id=1,
+    )
+    db.commit()
+
+    dia = calendario_service.estado_semana(db, lunes=_LUNES).dias[1]
+
+    assert dia.se_cursa is True
+    assert dia.intervenido_por == "admin"
+
+
+def test_borrar_el_override_devuelve_el_dia_al_calendario() -> None:
+    db = _session()
+    _evento_sistema(
+        db, titulo="Mesa de Examen", dia=date(2026, 9, 7), tipo="mesa", hash_="mm"
+    )
+    calendario_service.definir_estado_dia(
+        db, fecha=date(2026, 9, 7), se_cursa=True, motivo=None, detalle=None, usuario_id=1
+    )
+    db.commit()
+    assert calendario_service.estado_semana(db, lunes=_LUNES).dias[0].se_cursa is True
+
+    assert calendario_service.borrar_estado_dia(db, date(2026, 9, 7)) is True
+    db.commit()
+
+    dia = calendario_service.estado_semana(db, lunes=_LUNES).dias[0]
+    assert dia.se_cursa is False
+    assert dia.motivo == "Mesa de Examen"
+    assert dia.intervenido_por is None
+
+
+def test_definir_el_mismo_dia_dos_veces_pisa_en_vez_de_duplicar() -> None:
+    db = _session()
+    calendario_service.definir_estado_dia(
+        db, fecha=date(2026, 9, 10), se_cursa=False, motivo="Paro", detalle=None, usuario_id=1
+    )
+    calendario_service.definir_estado_dia(
+        db, fecha=date(2026, 9, 10), se_cursa=False, motivo="Asamblea", detalle=None, usuario_id=2
+    )
+    db.commit()
+
+    estados = calendario_service.listar_estados_dia(
+        db, desde=date(2026, 9, 7), hasta=date(2026, 9, 11)
+    )
+    assert len(estados) == 1
+    assert estados[0].motivo == "Asamblea"
+
+
+def test_el_dia_sin_override_no_dice_estar_intervenido() -> None:
+    db = _session()
+    dia = calendario_service.estado_semana(db, lunes=_LUNES).dias[0]
+
+    assert dia.intervenido_por is None
+    assert dia.detalle is None

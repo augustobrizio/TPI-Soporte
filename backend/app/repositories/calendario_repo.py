@@ -8,7 +8,7 @@ from datetime import date, datetime, time
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import Session
 
-from app.db.models.calendario import EventoCalendario
+from app.db.models.calendario import EstadoDia, EventoCalendario
 
 
 def listar_eventos(
@@ -172,3 +172,57 @@ def upsert_evento(
         db.flush()
         return evento, "actualizado"
     return evento, "sin_cambios"
+
+
+# ---------------------------------------------------------------------------
+# Override manual del estado de un día
+# ---------------------------------------------------------------------------
+
+
+def listar_estados_dia(db: Session, desde: date, hasta: date) -> Sequence[EstadoDia]:
+    """Overrides cargados para el rango, inclusive."""
+    stmt = (
+        select(EstadoDia)
+        .where(and_(EstadoDia.fecha >= desde, EstadoDia.fecha <= hasta))
+        .order_by(EstadoDia.fecha.asc())
+    )
+    return db.execute(stmt).scalars().all()
+
+
+def get_estado_dia(db: Session, fecha: date) -> EstadoDia | None:
+    return db.execute(
+        select(EstadoDia).where(EstadoDia.fecha == fecha)
+    ).scalar_one_or_none()
+
+
+def upsert_estado_dia(
+    db: Session,
+    *,
+    fecha: date,
+    se_cursa: bool,
+    motivo: str | None,
+    detalle: str | None,
+    usuario_id: int | None,
+    origen: str,
+) -> EstadoDia:
+    """Un registro por fecha: si ya hay override para ese día, se pisa."""
+    fila = get_estado_dia(db, fecha)
+    if fila is None:
+        fila = EstadoDia(fecha=fecha)
+        db.add(fila)
+    fila.se_cursa = se_cursa
+    fila.motivo = motivo
+    fila.detalle = detalle
+    fila.usuario_id = usuario_id
+    fila.origen = origen
+    db.flush()
+    return fila
+
+
+def eliminar_estado_dia(db: Session, fecha: date) -> bool:
+    fila = get_estado_dia(db, fecha)
+    if fila is None:
+        return False
+    db.delete(fila)
+    db.flush()
+    return True

@@ -11,6 +11,8 @@ from app.api.deps import UsuarioActual, UsuarioOpcional, requerir_admin
 from app.config import get_settings
 from app.db.session import get_db
 from app.schemas.calendario import (
+    EstadoDiaIn,
+    EstadoDiaOut,
     EventoCalendarioCreate,
     EventoCalendarioOut,
     EventoCalendarioUpdate,
@@ -302,6 +304,69 @@ def semana_de_cursada(
         carrera=carrera,
         usuario_id=usuario.id if usuario else None,
     )
+
+
+@router.get(
+    "/dias",
+    response_model=list[EstadoDiaOut],
+    summary="Días con el estado puesto a mano (admin)",
+)
+def listar_dias_intervenidos(
+    db: Annotated[Session, Depends(get_db)],
+    _admin: Annotated[object, Depends(requerir_admin)],
+    desde: date = Query(..., description="Fecha inicial inclusive"),
+    hasta: date = Query(..., description="Fecha final inclusive"),
+) -> list[EstadoDiaOut]:
+    estados = calendario_service.listar_estados_dia(db, desde=desde, hasta=hasta)
+    return [EstadoDiaOut.model_validate(e) for e in estados]
+
+
+@router.put(
+    "/dias/{fecha}",
+    response_model=EstadoDiaOut,
+    summary="Fijar a mano si un día se cursa (admin)",
+)
+def definir_dia(
+    fecha: date,
+    payload: EstadoDiaIn,
+    db: Annotated[Session, Depends(get_db)],
+    admin: Annotated[object, Depends(requerir_admin)],
+) -> EstadoDiaOut:
+    """Para lo que la facultad no publica como evento: un paro, una asamblea.
+
+    También sirve al revés, para devolverle la cursada a un día que el
+    calendario dio por caído.
+    """
+    estado = calendario_service.definir_estado_dia(
+        db,
+        fecha=fecha,
+        se_cursa=payload.se_cursa,
+        motivo=payload.motivo,
+        detalle=payload.detalle,
+        usuario_id=getattr(admin, "id", None),
+    )
+    db.commit()
+    db.refresh(estado)
+    return EstadoDiaOut.model_validate(estado)
+
+
+@router.delete(
+    "/dias/{fecha}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Sacar el estado manual de un día (admin)",
+)
+def borrar_dia(
+    fecha: date,
+    db: Annotated[Session, Depends(get_db)],
+    _admin: Annotated[object, Depends(requerir_admin)],
+) -> None:
+    """El día vuelve a lo que diga el calendario."""
+    if not calendario_service.borrar_estado_dia(db, fecha):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Ese día no tiene estado manual.",
+        )
+    db.commit()
 
 
 @router.get("/{evento_id}", response_model=EventoCalendarioOut)
