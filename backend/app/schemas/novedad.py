@@ -131,3 +131,11 @@ class ResultadoIngesta(BaseModel):
     @property
     def items_creados(self) -> int:
         return sum(f.items_novedad for f in self.fuentes)
+
+
+class OrdenPortadaIn(BaseModel):
+    """Qué novedades van en la portada y en qué orden."""
+
+    #: Ids en el orden deseado; la primera es la que se ve arriba. Vacío deja
+    #: la portada sin fijar, y vuelve a mostrarse lo más reciente.
+    ids: list[int] = Field(default_factory=list, max_length=10)

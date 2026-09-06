@@ -36,7 +36,7 @@ export default async function DashboardLayout({
   return (
     <SidebarProvider>
       <TopNav usuario={datos} />
-      <Sidebar usuario={datos} esAdmin={usuario?.rol === "admin"} />
+      <Sidebar usuario={datos} esAdmin={(usuario?.rol ?? "").toLowerCase() === "admin"} />
       <DashboardMain>{children}</DashboardMain>
     </SidebarProvider>
   );

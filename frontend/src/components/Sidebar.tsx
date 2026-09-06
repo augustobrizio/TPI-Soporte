@@ -17,6 +17,7 @@ import {
   Network,
   PanelLeftClose,
   PanelLeftOpen,
+  ShieldCheck,
   User,
   UserPlus,
   Users,
@@ -68,6 +69,13 @@ const NAV_ITEMS: readonly NavItem[] = [
   { label: "Perfil",       icon: User,         href: "/perfil"    },
 ] as const;
 
+/** Sólo para admin: no se muestra al resto. */
+const ITEM_ADMIN: NavItem = {
+  label: "Moderar",
+  icon: ShieldCheck,
+  href: "/admin/novedades",
+};
+
 function isActive(currentPath: string, href: string) {
   if (href === "/") return currentPath === "/";
   return currentPath === href || currentPath.startsWith(`${href}/`);
@@ -105,7 +113,7 @@ export function Sidebar({
   esAdmin = false,
 }: {
   usuario: UsuarioSidebar | null;
-  /** Muestra los accesos de administración (ej. huecos del chatbot). */
+  /** Muestra los accesos de administración (moderar novedades, huecos del chatbot). */
   esAdmin?: boolean;
 }) {
   const pathname = usePathname();
@@ -205,6 +213,22 @@ export function Sidebar({
         {esAdmin && (
           <>
             <div className={`my-2 border-t border-[var(--shell-border)] ${compacto ? "mx-2" : "mx-3"}`} />
+            <Link
+              href={ITEM_ADMIN.href}
+              className={[
+                "group relative flex items-center gap-3 rounded-lg transition-colors duration-150",
+                compacto ? "justify-center px-0 py-2" : "px-3 py-2",
+                isActive(pathname, ITEM_ADMIN.href)
+                  ? "bg-[#1CA4DF]/10 text-[var(--shell-accent-fg)]"
+                  : "text-[var(--shell-fg-muted)] hover:bg-[var(--shell-hover)] hover:text-[var(--shell-fg)]",
+              ].join(" ")}
+            >
+              <ITEM_ADMIN.icon className="h-[18px] w-[18px] shrink-0" strokeWidth={1.75} />
+              {!compacto && (
+                <span className="font-body text-sm font-medium">{ITEM_ADMIN.label}</span>
+              )}
+              {compacto && <Tooltip label={ITEM_ADMIN.label} />}
+            </Link>
             <Link
               href="/admin/chatbot"
               className={[

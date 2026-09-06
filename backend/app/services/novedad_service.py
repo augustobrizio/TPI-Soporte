@@ -218,7 +218,7 @@ def _clasificar_y_persistir(
     if not imagen_url and clf.imagen_sugerida:
         imagen_url = placeholders.path_de(clf.imagen_sugerida)
 
-    novedad_repo.crear_novedad(
+    novedad = novedad_repo.crear_novedad(
         db,
         centro=_resolver_centro(db, crudo),
         external_id=crudo.external_id,
@@ -236,6 +236,11 @@ def _clasificar_y_persistir(
         motivo_descarte=clf.motivo if not clf.es_novedad else None,
         fecha_publicacion=crudo.fecha_publicacion,
     )
+    # Lo nuevo se ve primero: entra al frente de la portada y corre al resto,
+    # con lo que la tercera sale. Sólo lo publicado — lo pendiente y lo
+    # descartado no llega a la portada.
+    if estado == EstadoNovedad.PUBLICADA.value and novedad is not None:
+        novedad_repo.promover_a_portada(db, novedad.id)
     return salida.tokens
 
 
@@ -371,5 +376,29 @@ def moderar(db: Session, novedad_id: int, estado: str):
     """
     novedad = novedad_repo.actualizar_estado(db, novedad_id, estado, manual=True)
     if novedad is not None:
+        # La portada tiene que seguir al estado: lo que se despublica sale, y
+        # lo que se publica a mano entra al frente como cualquier novedad nueva.
+        if estado == EstadoNovedad.PUBLICADA.value:
+            if novedad.orden_portada is None:
+                novedad_repo.promover_a_portada(db, novedad.id)
+        else:
+            novedad_repo.sacar_de_portada(db, novedad.id)
         db.commit()
     return novedad
+
+
+# ---------------------------------------------------------------------------
+# Portada (admin)
+# ---------------------------------------------------------------------------
+
+
+def listar_portada(db: Session, *, limite: int = novedad_repo.TOPE_PORTADA):
+    """Las de "Últimas novedades", en el orden fijado."""
+    return novedad_repo.listar_portada(db, limite=limite)
+
+
+def fijar_orden_portada(db: Session, ids: list[int]):
+    """Deja en la portada exactamente esas novedades, en ese orden."""
+    portada = novedad_repo.fijar_orden_portada(db, ids)
+    db.commit()
+    return portada

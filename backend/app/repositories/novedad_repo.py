@@ -4,7 +4,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Sequence
 from datetime import datetime
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.db.models.novedad import Centro, IngestaLog, Novedad, NovedadFuente
@@ -263,3 +263,90 @@ def listar_recientes(db: Session, *, limite: int = 300) -> Sequence[Novedad]:
         .limit(limite)
     )
     return db.execute(stmt).scalars().all()
+
+
+# ---------------------------------------------------------------------------
+# Orden de "Últimas novedades" en la portada
+# ---------------------------------------------------------------------------
+
+#: Cuántas entran en la portada. Una nueva desplaza a la última.
+TOPE_PORTADA = 3
+
+
+def listar_portada(db: Session, *, limite: int = TOPE_PORTADA) -> Sequence[Novedad]:
+    """Las novedades de la portada, en el orden que fijó el admin.
+
+    Si todavía no hay ninguna ordenada —base recién migrada, o el admin las
+    sacó a todas— cae a las más recientes publicadas, que es lo que la portada
+    mostraba antes de que el orden fuera editable.
+    """
+    stmt = (
+        select(Novedad)
+        .where(Novedad.orden_portada.is_not(None), Novedad.estado == "publicada")
+        .options(selectinload(Novedad.fuentes).joinedload(NovedadFuente.centro))
+        .order_by(Novedad.orden_portada.asc())
+        .limit(limite)
+    )
+    fijadas = db.execute(stmt).scalars().all()
+    if fijadas:
+        return fijadas
+    return listar(db, limite=limite)
+
+
+def fijar_orden_portada(db: Session, ids: list[int]) -> list[Novedad]:
+    """Deja en la portada exactamente esas novedades, en ese orden.
+
+    Las que estaban y no vienen en la lista salen (``orden_portada`` a NULL).
+    """
+    db.execute(
+        update(Novedad)
+        .where(Novedad.orden_portada.is_not(None))
+        .values(orden_portada=None)
+    )
+    for posicion, novedad_id in enumerate(ids):
+        db.execute(
+            update(Novedad)
+            .where(Novedad.id == novedad_id)
+            .values(orden_portada=posicion)
+        )
+    db.flush()
+    return list(listar_portada(db))
+
+
+def promover_a_portada(db: Session, novedad_id: int, *, tope: int = TOPE_PORTADA) -> None:
+    """Mete una novedad al frente de la portada y corre al resto.
+
+    La que se pasa del tope sale sola: es la regla de "una novedad nueva
+    desplaza a la última de las tres".
+    """
+    # +1 a todas las que están en portada, y la nueva al frente.
+    db.execute(
+        update(Novedad)
+        .where(Novedad.orden_portada.is_not(None), Novedad.id != novedad_id)
+        .values(orden_portada=Novedad.orden_portada + 1)
+    )
+    db.execute(
+        update(Novedad).where(Novedad.id == novedad_id).values(orden_portada=0)
+    )
+    # Las que quedaron fuera del tope dejan la portada.
+    db.execute(
+        update(Novedad)
+        .where(Novedad.orden_portada >= tope)
+        .values(orden_portada=None)
+    )
+    db.flush()
+
+
+def sacar_de_portada(db: Session, novedad_id: int) -> None:
+    """La saca de la portada y cierra el hueco que deja."""
+    novedad = db.get(Novedad, novedad_id)
+    if novedad is None or novedad.orden_portada is None:
+        return
+    posicion = novedad.orden_portada
+    novedad.orden_portada = None
+    db.execute(
+        update(Novedad)
+        .where(Novedad.orden_portada.is_not(None), Novedad.orden_portada > posicion)
+        .values(orden_portada=Novedad.orden_portada - 1)
+    )
+    db.flush()

@@ -418,3 +418,112 @@ def test_moderar_exige_rol_admin():
     assert resp.status_code == 200
     assert resp.json()["estado"] == "publicada"
     assert resp.json()["moderado_manual"] is True
+
+
+# ---------------------------------------------------------------------------
+# Orden de "Últimas novedades" en la portada
+# ---------------------------------------------------------------------------
+
+
+def _novedad(db: Session, titulo: str, *, estado: str = "publicada") -> Novedad:
+    n = Novedad(titulo=titulo, estado=estado)
+    db.add(n)
+    db.flush()
+    return n
+
+
+def test_la_portada_respeta_el_orden_fijado_por_el_admin() -> None:
+    db = _session()
+    a, b, c = (_novedad(db, t) for t in ("A", "B", "C"))
+    db.commit()
+
+    novedad_repo.fijar_orden_portada(db, [c.id, a.id, b.id])
+    db.commit()
+
+    assert [n.titulo for n in novedad_repo.listar_portada(db)] == ["C", "A", "B"]
+
+
+def test_una_novedad_nueva_entra_primera_y_desplaza_a_la_ultima() -> None:
+    """La regla del carrusel: entran tres, la cuarta saca a la tercera."""
+    db = _session()
+    a, b, c = (_novedad(db, t) for t in ("A", "B", "C"))
+    novedad_repo.fijar_orden_portada(db, [a.id, b.id, c.id])
+    db.commit()
+
+    nueva = _novedad(db, "Nueva")
+    novedad_repo.promover_a_portada(db, nueva.id)
+    db.commit()
+
+    assert [n.titulo for n in novedad_repo.listar_portada(db)] == ["Nueva", "A", "B"]
+    # La que salió queda sin posición, no borrada.
+    assert db.get(Novedad, c.id).orden_portada is None
+    assert db.get(Novedad, c.id).estado == "publicada"
+
+
+def test_fijar_el_orden_saca_a_las_que_no_estan_en_la_lista() -> None:
+    db = _session()
+    a, b, c = (_novedad(db, t) for t in ("A", "B", "C"))
+    novedad_repo.fijar_orden_portada(db, [a.id, b.id, c.id])
+    db.commit()
+
+    novedad_repo.fijar_orden_portada(db, [b.id])
+    db.commit()
+
+    assert [n.titulo for n in novedad_repo.listar_portada(db)] == ["B"]
+    assert db.get(Novedad, a.id).orden_portada is None
+
+
+def test_despublicar_saca_de_la_portada_y_cierra_el_hueco() -> None:
+    db = _session()
+    a, b, c = (_novedad(db, t) for t in ("A", "B", "C"))
+    novedad_repo.fijar_orden_portada(db, [a.id, b.id, c.id])
+    db.commit()
+
+    novedad_service.moderar(db, b.id, "descartada")
+
+    assert [n.titulo for n in novedad_repo.listar_portada(db)] == ["A", "C"]
+    # Sin huecos: la que estaba tercera pasa a segunda.
+    assert db.get(Novedad, c.id).orden_portada == 1
+
+
+def test_publicar_a_mano_mete_la_novedad_al_frente() -> None:
+    db = _session()
+    a, b = (_novedad(db, t) for t in ("A", "B"))
+    novedad_repo.fijar_orden_portada(db, [a.id, b.id])
+    pendiente = _novedad(db, "Pendiente", estado="pendiente")
+    db.commit()
+
+    novedad_service.moderar(db, pendiente.id, "publicada")
+
+    assert [n.titulo for n in novedad_repo.listar_portada(db)] == ["Pendiente", "A", "B"]
+
+
+def test_sin_orden_fijado_la_portada_cae_a_lo_mas_reciente() -> None:
+    """Base recién migrada: la portada no queda vacía."""
+    db = _session()
+    vieja = _novedad(db, "Vieja")
+    vieja.fecha_publicacion = datetime(2026, 1, 1)
+    nueva = _novedad(db, "Nueva")
+    nueva.fecha_publicacion = datetime(2026, 9, 1)
+    db.commit()
+
+    assert [n.titulo for n in novedad_repo.listar_portada(db)][0] == "Nueva"
+
+
+def test_pedir_las_no_publicadas_sin_ser_admin_da_403() -> None:
+    """Lo descartado es material que decidimos no mostrar."""
+    db = _session()
+    _novedad(db, "Descartada", estado="descartada")
+    db.commit()
+
+    app = FastAPI()
+    app.include_router(novedades_api.router)
+
+    def override_db():
+        yield db
+
+    app.dependency_overrides[get_db] = override_db
+    client = TestClient(app)
+
+    assert client.get("/novedades?estado=descartada").status_code == 403
+    assert client.get("/novedades").status_code == 200

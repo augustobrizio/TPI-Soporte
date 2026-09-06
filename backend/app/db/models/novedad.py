@@ -119,6 +119,13 @@ class Novedad(Base):
     moderado_manual: Mapped[bool] = mapped_column(
         Boolean, nullable=False, server_default=text("false")
     )
+    #: Posición en "Últimas novedades" de la portada: 0 es la primera. NULL =
+    #: no está en la portada. Existe para que el orden no sea siempre el
+    #: cronológico: el admin puede decidir qué se ve arriba. Una novedad nueva
+    #: entra en 0 y corre al resto; la que se pasa del tope sale (vuelve a NULL).
+    orden_portada: Mapped[int | None] = mapped_column(
+        Integer, nullable=True, index=True
+    )
     fecha_publicacion: Mapped[datetime | None] = mapped_column(
         DateTime, nullable=True
     )

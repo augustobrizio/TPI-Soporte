@@ -1,19 +1,19 @@
 """Endpoints REST de novedades."""
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import requerir_admin
+from app.api.deps import UsuarioOpcional, requerir_admin
 from app.db.session import get_db
 from app.schemas.novedad import (
     CategoriaNovedadLiteral,
     CentroOut,
-    EstadoNovedadLiteral,
     ModerarNovedadIn,
     NovedadOut,
+    OrdenPortadaIn,
     ResultadoIngesta,
 )
 from app.services import novedad_service
@@ -25,18 +25,31 @@ router = APIRouter(prefix="/novedades", tags=["novedades"])
 def listar_novedades(
     db: Annotated[Session, Depends(get_db)],
     categoria: CategoriaNovedadLiteral | None = Query(None),
-    estado: EstadoNovedadLiteral | None = Query(
-        "publicada", description="Filtra por estado; None trae todos (admin)"
+    estado: Literal["publicada", "pendiente", "descartada", "todas"] = Query(
+        "publicada",
+        description='Filtra por estado. "todas" trae cualquier estado (admin).',
     ),
     centro: str | None = Query(None, description="Handle del centro (ej. gradienteutn)"),
     limite: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
+    usuario: UsuarioOpcional = None,
 ) -> list[NovedadOut]:
-    """Feed de novedades. Por defecto solo las publicadas."""
+    """Feed de novedades. Por defecto solo las publicadas.
+
+    Pedir otro estado —o todos— es de admin: lo descartado y lo pendiente es
+    material que decidimos no mostrar, y el parámetro estaba abierto.
+    """
+    if estado != "publicada" and not _es_admin(usuario):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Ver novedades no publicadas requiere permisos de administrador.",
+        )
     novedades = novedad_service.listar(
         db,
         categoria=categoria,
-        estado=estado,
+        # "todas" es el valor explícito para no filtrar. Un `estado=` vacío no
+        # servía: no valida contra el literal y el request muere en 422.
+        estado=None if estado == "todas" else estado,
         centro=centro,
         limite=limite,
         offset=offset,
@@ -49,6 +62,51 @@ def listar_novedades(
         dto.imagen_url = imagen_url
         salida.append(dto)
     return salida
+
+
+def _es_admin(usuario: object | None) -> bool:
+    return bool(usuario) and (getattr(usuario, "rol", "") or "").lower() == "admin"
+
+
+def _con_imagenes(novedades) -> list[NovedadOut]:
+    """DTOs con la portada resuelta (dedup de placeholders dentro del set)."""
+    imagenes = novedad_service.resolver_imagenes_portada(novedades)
+    salida: list[NovedadOut] = []
+    for n, imagen_url in zip(novedades, imagenes):
+        dto = NovedadOut.model_validate(n)
+        dto.imagen_url = imagen_url
+        salida.append(dto)
+    return salida
+
+
+@router.get(
+    "/portada",
+    response_model=list[NovedadOut],
+    summary="Las de 'Últimas novedades', en el orden fijado",
+)
+def listar_portada(
+    db: Annotated[Session, Depends(get_db)],
+) -> list[NovedadOut]:
+    """Público: es lo que se ve en la home."""
+    return _con_imagenes(novedad_service.listar_portada(db))
+
+
+@router.put(
+    "/portada",
+    response_model=list[NovedadOut],
+    dependencies=[Depends(requerir_admin)],
+    summary="Fijar qué novedades van en la portada y en qué orden (admin)",
+)
+def fijar_portada(
+    body: OrdenPortadaIn,
+    db: Annotated[Session, Depends(get_db)],
+) -> list[NovedadOut]:
+    """Deja exactamente esas novedades, en ese orden. Las demás salen.
+
+    Una novedad nueva igual entra al frente y corre a las otras: el orden
+    manual fija la posición de arranque, no congela la portada.
+    """
+    return _con_imagenes(novedad_service.fijar_orden_portada(db, body.ids))
 
 
 @router.get("/centros", response_model=list[CentroOut])
