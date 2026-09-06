@@ -231,6 +231,10 @@ export interface DiaCursada {
   se_cursa: boolean;
   /** Título del evento que explica por qué no se cursa. */
   motivo: string | null;
+  /** Texto largo del override manual, si lo hay. */
+  detalle: string | null;
+  /** "admin" o "agente" si el día tiene override; null si sale del calendario. */
+  intervenido_por: string | null;
   eventos: EventoCalendarioOut[];
 }
 
@@ -241,6 +245,21 @@ export interface SemanaCursada {
   hoy: string;
   /** Lunes a viernes. */
   dias: DiaCursada[];
+}
+
+/** Override manual del estado de un día (admin). */
+export interface EstadoDiaIn {
+  se_cursa: boolean;
+  motivo: string | null;
+  detalle: string | null;
+}
+
+export interface EstadoDiaOut {
+  fecha: string;
+  se_cursa: boolean;
+  motivo: string | null;
+  detalle: string | null;
+  origen: string;
 }
 
 export interface EventoCalendarioCreate {

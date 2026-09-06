@@ -23,3 +23,8 @@ export const SITIO_URL = (
 export function urlNovedad(id: number): string {
   return `${SITIO_URL}/novedades/${id}`;
 }
+
+/** URL canónica y absoluta de una semana del calendario. */
+export function urlSemana(lunes: string): string {
+  return `${SITIO_URL}/calendario/semana/${lunes}`;
+}

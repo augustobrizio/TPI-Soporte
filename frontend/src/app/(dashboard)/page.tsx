@@ -6,7 +6,7 @@ import { FondoPortada } from "@/components/frontpage/FondoPortada";
 import { SeccionesIndex } from "@/components/frontpage/SeccionesIndex";
 import { InicioPortada } from "@/features/portada/InicioPortada";
 import { NovedadCard } from "@/features/novedades/NovedadCard";
-import { getSemanaCursada, listarNovedades } from "@/lib/api";
+import { getSemanaCursada, listarPortada } from "@/lib/api";
 import { getUsuarioActual } from "@/lib/auth";
 import type { NovedadOut, SemanaCursada } from "@/lib/types";
 
@@ -23,14 +23,14 @@ import type { NovedadOut, SemanaCursada } from "@/lib/types";
  * todos los dias. Ver `features/portada/InicioPortada.tsx`.
  */
 
-const NOVEDADES_EN_PORTADA = 3;
-
 /** Cookie de "ya vi la bienvenida". No es httpOnly: es preferencia de vista. */
 const COOKIE_BIENVENIDA = "utnhub_bienvenida";
 
 async function ultimasNovedades(): Promise<NovedadOut[]> {
   try {
-    return await listarNovedades({ limite: NOVEDADES_EN_PORTADA });
+    // El orden lo fija el admin (`/novedades/portada`), no la fecha: una
+    // novedad nueva entra al frente y desplaza a la tercera.
+    return await listarPortada();
   } catch {
     // La portada no se cae por las novedades: si el backend no responde, la
     // seccion simplemente no se muestra.
@@ -72,6 +72,7 @@ export default async function Portada() {
         semana={semana}
         autenticado={usuario !== null}
         yaVioBienvenida={yaVioBienvenida || usuario !== null}
+        esAdmin={(usuario?.rol ?? "").toLowerCase() === "admin"}
       />
 
       {/* ── Novedades ────────────────────────────────────────────────── */}

@@ -2,10 +2,12 @@
 
 import { useCallback, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, CalendarOff, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowRight, CalendarOff, ChevronLeft, ChevronRight, Pencil } from "lucide-react";
 
-import type { SemanaCursada } from "@/lib/types";
+import type { DiaCursada, SemanaCursada } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { EditorDia } from "./EditorDia";
+import { CompartirSemana } from "./CompartirSemana";
 
 const DIAS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"];
 const DIAS_CORTOS = ["Lun", "Mar", "Mié", "Jue", "Vie"];
@@ -51,10 +53,18 @@ function encabezado(lunes: string, hoy: string): string {
   return "Semana del";
 }
 
-export function PanelSemanal({ inicial }: { inicial: SemanaCursada }) {
+export function PanelSemanal({
+  inicial,
+  esAdmin = false,
+}: {
+  inicial: SemanaCursada;
+  /** El admin puede fijar a mano el estado de cada día (un paro, una asamblea). */
+  esAdmin?: boolean;
+}) {
   const [semana, setSemana] = useState(inicial);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState(false);
+  const [editando, setEditando] = useState<DiaCursada | null>(null);
   // "Hoy" lo dice el backend (hora de Rosario), no el reloj del visitante.
   const hoy = semana.hoy;
 
@@ -71,6 +81,11 @@ export function PanelSemanal({ inicial }: { inicial: SemanaCursada }) {
       setCargando(false);
     }
   }, []);
+
+  const recargar = useCallback(() => {
+    setEditando(null);
+    void irA(semana.lunes);
+  }, [irA, semana.lunes]);
 
   const esSemanaActual = semana.lunes === inicial.lunes;
   const sinCursada = semana.dias.filter((d) => !d.se_cursa).length;
@@ -98,6 +113,7 @@ export function PanelSemanal({ inicial }: { inicial: SemanaCursada }) {
         </div>
 
         <div className="flex items-center gap-1">
+          <CompartirSemana lunes={semana.lunes} dias={semana.dias} />
           <button
             onClick={() => irA(sumarDias(semana.lunes, -7))}
             disabled={cargando}
@@ -159,13 +175,24 @@ export function PanelSemanal({ inicial }: { inicial: SemanaCursada }) {
                   <span className="sm:hidden">{DIAS_CORTOS[i]}</span>
                   <span className="hidden sm:inline">{DIAS[i]}</span>
                 </h3>
-                <span
-                  className={cn(
-                    "font-label text-xs tabular-nums",
-                    esHoy ? "font-bold text-[var(--shell-accent-fg)]" : "text-[var(--shell-fg-dim)]",
+                <span className="flex items-center gap-1">
+                  {esAdmin && (
+                    <button
+                      onClick={() => setEditando(dia)}
+                      aria-label={`Editar el estado del ${dia.fecha}`}
+                      className="flex h-5 w-5 items-center justify-center rounded text-[var(--shell-fg-dim)] transition-colors hover:bg-[var(--shell-hover)] hover:text-[var(--shell-fg)]"
+                    >
+                      <Pencil className="h-3 w-3" strokeWidth={2} />
+                    </button>
                   )}
-                >
-                  {esHoy ? "Hoy" : aFecha(dia.fecha).getDate()}
+                  <span
+                    className={cn(
+                      "font-label text-xs tabular-nums",
+                      esHoy ? "font-bold text-[var(--shell-accent-fg)]" : "text-[var(--shell-fg-dim)]",
+                    )}
+                  >
+                    {esHoy ? "Hoy" : aFecha(dia.fecha).getDate()}
+                  </span>
                 </span>
               </div>
 
@@ -185,6 +212,11 @@ export function PanelSemanal({ inicial }: { inicial: SemanaCursada }) {
                         {dia.motivo}
                       </p>
                     )}
+                    {dia.detalle && (
+                      <p className="mt-1 text-[11px] leading-snug text-[var(--shell-fg-muted)]">
+                        {dia.detalle}
+                      </p>
+                    )}
                   </>
                 )}
 
@@ -200,6 +232,14 @@ export function PanelSemanal({ inicial }: { inicial: SemanaCursada }) {
           );
         })}
       </div>
+
+      {editando && (
+        <EditorDia
+          dia={editando}
+          onCerrar={() => setEditando(null)}
+          onGuardado={recargar}
+        />
+      )}
 
       <div className="mt-4 flex justify-end">
         <Link

@@ -26,10 +26,13 @@ export function InicioPortada({
   semana,
   autenticado,
   yaVioBienvenida,
+  esAdmin = false,
 }: {
   semana: SemanaCursada | null;
   autenticado: boolean;
   yaVioBienvenida: boolean;
+  /** Habilita la edición manual del estado de los días. */
+  esAdmin?: boolean;
 }) {
   const [bienvenidaAbierta, setBienvenidaAbierta] = useState(!yaVioBienvenida);
 
@@ -44,7 +47,7 @@ export function InicioPortada({
         // `key`: si el servidor manda otra semana (p. ej. cambia el día), el
         // panel se remonta con ella en vez de quedarse en la que el visitante
         // había navegado. Un efecto que resincronice pisaría la navegación.
-        <PanelSemanal key={semana.lunes} inicial={semana} />
+        <PanelSemanal key={semana.lunes} inicial={semana} esAdmin={esAdmin} />
       ) : (
         <p className="rounded-xl border border-[var(--shell-border)] bg-[var(--shell-panel)] px-5 py-8 text-center text-sm text-[var(--shell-fg-muted)]">
           No pude traer la semana del calendario.

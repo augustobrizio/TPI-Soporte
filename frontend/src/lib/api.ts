@@ -13,6 +13,7 @@ import type {
   CriterioOptimizacion,
   ComisionConProfesores,
   EventoCalendarioCreate,
+  EstadoDiaOut,
   EventoCalendarioOut,
   FuenteNovedad,
   GrafoResponse,
@@ -527,6 +528,100 @@ export async function eliminarEvento(id: number): Promise<void> {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Estado de los días (admin)
+// ---------------------------------------------------------------------------
+
+/**
+ * Fija a mano si un día se cursa. Para lo que la facultad no publica como
+ * evento —un paro, una asamblea— y para corregir un feriado mal detectado.
+ */
+export async function definirEstadoDia(
+  fecha: string,
+  payload: { se_cursa: boolean; motivo: string | null; detalle: string | null },
+): Promise<EstadoDiaOut> {
+  const res = await fetch(`${MUTATION_BASE}/calendario/dias/${fecha}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    let body: unknown = null;
+    try { body = await res.json(); } catch { /* ignorar */ }
+    throw new ApiError(res.status, body);
+  }
+  return res.json() as Promise<EstadoDiaOut>;
+}
+
+/** Saca el override: el día vuelve a lo que diga el calendario. */
+export async function borrarEstadoDia(fecha: string): Promise<void> {
+  const res = await fetch(`${MUTATION_BASE}/calendario/dias/${fecha}`, {
+    method: "DELETE",
+    headers: { Accept: "application/json" },
+  });
+  if (!res.ok && res.status !== 404) throw new ApiError(res.status, null);
+}
+
+// ---------------------------------------------------------------------------
+// Novedades: portada y moderación (admin)
+// ---------------------------------------------------------------------------
+
+/** Las de "Últimas novedades", en el orden fijado. Público. */
+export function listarPortada(): Promise<NovedadOut[]> {
+  return request<NovedadOut[]>("/novedades/portada", { revalidate: 0 });
+}
+
+/** Todas las novedades, incluidas pendientes y descartadas. Solo admin. */
+export async function listarNovedadesAdmin(
+  estado?: "publicada" | "pendiente" | "descartada",
+): Promise<NovedadOut[]> {
+  // "todas" es el valor explícito para no filtrar: un `estado=` vacío no
+  // valida contra el literal del backend y devuelve 422.
+  const qs = new URLSearchParams({ limite: "100", estado: estado ?? "todas" });
+  const res = await fetch(`${MUTATION_BASE}/novedades?${qs.toString()}`, {
+    headers: { Accept: "application/json" },
+  });
+  if (!res.ok) {
+    let body: unknown = null;
+    try { body = await res.json(); } catch { /* ignorar */ }
+    throw new ApiError(res.status, body);
+  }
+  return res.json() as Promise<NovedadOut[]>;
+}
+
+/** Deja en la portada exactamente esas novedades, en ese orden. */
+export async function fijarOrdenPortada(ids: number[]): Promise<NovedadOut[]> {
+  const res = await fetch(`${MUTATION_BASE}/novedades/portada`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ ids }),
+  });
+  if (!res.ok) {
+    let body: unknown = null;
+    try { body = await res.json(); } catch { /* ignorar */ }
+    throw new ApiError(res.status, body);
+  }
+  return res.json() as Promise<NovedadOut[]>;
+}
+
+/** Cambia el estado de una novedad (aprobar, descartar, republicar). */
+export async function moderarNovedad(
+  id: number,
+  estado: "publicada" | "pendiente" | "descartada",
+): Promise<NovedadOut> {
+  const res = await fetch(`${MUTATION_BASE}/novedades/${id}/moderar`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ estado }),
+  });
+  if (!res.ok) {
+    let body: unknown = null;
+    try { body = await res.json(); } catch { /* ignorar */ }
+    throw new ApiError(res.status, body);
+  }
+  return res.json() as Promise<NovedadOut>;
+}
+
 export async function sincronizarCalendario(): Promise<ResultadoSincCalendario> {
   const res = await fetch(`${MUTATION_BASE}/calendario/sincronizar`, {
     method: "POST",
@@ -919,6 +1014,12 @@ export const api = {
   previewImportarSysacad,
   confirmarImportarSysacad,
   sincronizarCalendario,
+  definirEstadoDia,
+  borrarEstadoDia,
+  listarPortada,
+  listarNovedadesAdmin,
+  fijarOrdenPortada,
+  moderarNovedad,
   crearEvento,
   actualizarEvento,
   eliminarEvento,
