@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Check, Link2, Share2 } from "lucide-react";
 
 import type { DiaCursada } from "@/lib/types";
@@ -28,7 +28,7 @@ function urlSemana(lunes: string): string {
  * y puede tardar o no llegar. Por eso el mensaje ya dice lo importante —qué
  * días no se cursa— en vez de confiar en que la tarjeta cargue.
  */
-function mensaje(lunes: string, dias: DiaCursada[]): string {
+function mensaje(lunes: string, dias: DiaCursada[], conUrl = true): string {
   const sin = dias.filter((d) => !d.se_cursa);
   const cabecera =
     sin.length === 0
@@ -50,6 +50,35 @@ export function CompartirSemana({
   dias: DiaCursada[];
 }) {
   const [copiado, setCopiado] = useState(false);
+  const [puedeCompartir, setPuedeCompartir] = useState(false);
+
+  // En un `useEffect` y no directo: `navigator.share` no existe en el render
+  // del servidor, y leerlo durante el primer render del cliente rompe la
+  // hidratación (el HTML del server no tiene el botón nativo).
+  useEffect(() => {
+    setPuedeCompartir(typeof navigator !== "undefined" && !!navigator.share);
+  }, []);
+
+  /**
+   * En el celular, el selector nativo del sistema.
+   *
+   * `wa.me/?text=` sin destinatario abre WhatsApp pero no siempre muestra a
+   * quién mandarle, y el mensaje se pierde. La Web Share API abre la hoja de
+   * compartir del sistema, donde se elige WhatsApp y el contacto — que es lo
+   * que uno espera al tocar "compartir" en un teléfono.
+   */
+  async function compartirNativo() {
+    try {
+      await navigator.share({
+        title: "Semana en la UTN FRRO",
+        text: mensaje(lunes, dias, false),
+        url: urlSemana(lunes),
+      });
+    } catch {
+      // Cancelar la hoja de compartir tira `AbortError`: no es un error que
+      // haya que mostrarle a nadie.
+    }
+  }
 
   async function copiar() {
     try {
@@ -72,6 +101,16 @@ export function CompartirSemana({
       </PopoverTrigger>
 
       <PopoverContent className="w-56 p-1.5">
+        {puedeCompartir && (
+          <button
+            onClick={compartirNativo}
+            className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm text-[var(--shell-fg)] transition-colors hover:bg-[var(--shell-hover)]"
+          >
+            <Share2 className="h-4 w-4 shrink-0" strokeWidth={2} />
+            Compartir…
+          </button>
+        )}
+
         <a
           href={`https://wa.me/?text=${encodeURIComponent(mensaje(lunes, dias))}`}
           target="_blank"

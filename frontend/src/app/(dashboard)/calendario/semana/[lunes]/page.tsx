@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { PanelSemanal } from "@/features/panel-semanal/PanelSemanal";
 import { getSemanaCursada } from "@/lib/api";
 import { getUsuarioActual } from "@/lib/auth";
-import { urlSemana } from "@/lib/site";
+import { SITIO_URL, urlSemana } from "@/lib/site";
 import type { SemanaCursada } from "@/lib/types";
 
 /** Sólo `YYYY-MM-DD`: lo que llega por la URL no se reenvía sin mirar. */
@@ -60,18 +60,22 @@ export async function generateMetadata({
   const titulo = `Semana del ${rotulo(semana.lunes)}`;
   const url = urlSemana(semana.lunes);
 
+  // La imagen se declara explícita y no por la convención `opengraph-image`:
+  // esa responde en chunks, sin `Content-Length`, y el WhatsApp de escritorio
+  // cae al thumbnail chico. El route handler la materializa y declara el largo.
+  const imagen = `${SITIO_URL}/api/og/semana/${semana.lunes}`;
+
   return {
     title: titulo,
     description: resumen(semana),
-    // La imagen no se declara acá: la genera `opengraph-image.tsx` de esta
-    // misma carpeta y Next la enlaza solo, con su tamaño y su content-type.
     openGraph: {
       title: `${titulo} · UTNHub`,
       description: resumen(semana),
       url,
       type: "article",
+      images: [{ url: imagen, width: 1080, height: 1080, type: "image/png" }],
     },
-    twitter: { card: "summary_large_image" },
+    twitter: { card: "summary_large_image", images: [imagen] },
     alternates: { canonical: url },
   };
 }
